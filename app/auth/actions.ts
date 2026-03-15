@@ -1,0 +1,71 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/src/utils/supabase/server'
+
+/**
+ * Action to handle user login
+ */
+export async function login(formData: FormData) {
+  const supabase = await createClient()
+
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    // In a real app, you might want to return an error object to show in the UI
+    redirect('/error')
+  }
+
+  // Refresh the data on the current page
+  revalidatePath('/', 'layout')
+  redirect('/')
+}
+
+/**
+ * Action to handle user signup
+ */
+export async function signup(formData: FormData) {
+  const supabase = await createClient()
+
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      // This is the URL the user will be redirected to after clicking the link in their email
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    redirect('/error')
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/')
+}
+
+/**
+ * Action to handle user logout
+ */
+export async function logout() {
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.signOut()
+
+  if (error) {
+    redirect('/error')
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/')
+}
