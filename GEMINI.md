@@ -46,6 +46,30 @@ When developers or Gemini CLI want to **create or update a schema** (tables, pol
 
 ---
 
+## 🏗 Database Schema Reference
+
+### **Table: `public.profiles`**
+This is the primary table for storing user-specific data, lifestyle preferences, and location information. It is linked to the Supabase Auth system via the `id` field.
+
+| Column | SQL Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` | **Primary Key**. References `auth.users.id`. Identifies the user. |
+| `full_name` | `text` | The user's displayed name. |
+| `avatar_url` | `text` | Link to the profile picture (usually from social login or upload). |
+| `age` | `integer` | User's age for matching filters. |
+| `location` | `text` | Human-readable address string (e.g., "Scarborough, Toronto"). |
+| `location_coords` | `geography` | **PostGIS Point**. Stores longitude/latitude for distance calculations. |
+| `role` | `text` | User's objective: `'seeker'` (looking for room) or `'provider'` (listing room). |
+| `lifestyle_tags` | `text[]` | Array of habits (e.g., `{'Non-Smoker', 'Quiet'}`). |
+| `budget_min` | `integer` | Lower bound of the monthly rent budget. |
+| `budget_max` | `integer` | Upper bound of the monthly rent budget. |
+| `preferred_gender` | `text` | Preferred gender for potential roommates. |
+| `move_in_date` | `date` | Expected date to move into a new space. |
+| `updated_at` | `timestamp` | Timestamp of the last profile update. |
+| `created_at` | `timestamp` | Timestamp when the profile was first created. |
+
+---
+
 ## 📝 General Project Rules
 
 1.  **Language for Comments:** **ALL** comments within the source code files (`.ts`, `.tsx`, `.sql`, `.js`, etc.) must be written in **English**. This ensures international collaboration readiness and matches the project's technical documentation style.
@@ -64,7 +88,7 @@ When developers or Gemini CLI want to **create or update a schema** (tables, pol
 
 2.  **UI Component Structure:**
     *   **Layout Components:** All shared UI elements (Navbar, Sidebar, Footer) go to `src/components/layout/`.
-    *   **Page-Specific Components:** Components unique to a page (e.g., Hero, MatchCard for Homepage) go to `src/components/[page-name]/`.
+    *   **Page-Specific Components:** Components unique to a page (e.g., `src/components/home/` for Homepage, `src/components/onboarding/` for Profile creation) go to `src/components/[page-name]/`.
     *   **Base UI Components:** Atomic components (Button, Input, Card) go to `src/components/ui/`.
 
 3.  **Tailwind CSS (v4) Rules:**

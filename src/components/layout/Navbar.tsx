@@ -1,14 +1,15 @@
 import React from 'react';
+import Link from 'next/link';
 
 const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-3" data-purpose="site-navigation">
       <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-8">
         {/* Logo */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <Link href="/" className="flex items-center gap-2 flex-shrink-0 cursor-pointer">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-2xl">S</div>
           <span className="text-xl font-bold text-slate-800 tracking-tight">SyncLiving</span>
-        </div>
+        </Link>
         
         {/* Search Bar */}
         <div className="flex-1 max-w-2xl relative">
@@ -54,6 +55,13 @@ const Navbar: React.FC = () => {
             </svg>
             <span className="text-[10px] font-medium mt-1">Notifications</span>
           </button>
+
+          <Link href="/onboarding" className="flex flex-col items-center text-slate-500 hover:text-primary transition-colors cursor-pointer">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+            </svg>
+            <span className="text-[10px] font-medium mt-1">Profile</span>
+          </Link>
 
           <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
           
