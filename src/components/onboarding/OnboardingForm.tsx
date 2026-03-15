@@ -1,22 +1,59 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateProfile } from '../../../app/onboarding/actions';
 
-const OnboardingForm: React.FC = () => {
+interface OnboardingFormProps {
+  initialData?: any;
+  isModal?: boolean;
+}
+
+const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal }) => {
   const [loading, setLoading] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const router = useRouter();
+
+  const handleCancel = () => {
+    setVisible(false);
+    if (isModal) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+  
+  // Extract coordinates if location_coords exists (handling PostGIS format)
+  let initialLat: number | undefined;
+  let initialLng: number | undefined;
+  
+  if (initialData?.location_coords) {
+    // If it's a string like "POINT(longitude latitude)"
+    if (typeof initialData.location_coords === 'string') {
+      const coords = initialData.location_coords.match(/POINT\((.+) (.+)\)/);
+      if (coords) {
+        initialLng = parseFloat(coords[1]);
+        initialLat = parseFloat(coords[2]);
+      }
+    } else if (initialData.location_coords.coordinates) {
+      // If it's a GeoJSON object
+      initialLng = initialData.location_coords.coordinates[0];
+      initialLat = initialData.location_coords.coordinates[1];
+    }
+  }
+
   const [formData, setFormData] = useState({
-    full_name: '',
-    age: 25,
-    location: '',
-    longitude: undefined as number | undefined,
-    latitude: undefined as number | undefined,
-    role: 'seeker' as 'seeker' | 'provider',
-    lifestyle_tags: [] as string[],
-    budget_min: 800,
-    budget_max: 2500,
-    preferred_gender: 'Any Gender',
-    move_in_date: '',
+    full_name: initialData?.full_name || '',
+    age: initialData?.age || 25,
+    location: initialData?.location || '',
+    longitude: initialLng,
+    latitude: initialLat,
+    role: (initialData?.role as 'seeker' | 'provider') || 'seeker',
+    lifestyle_tags: initialData?.lifestyle_tags || [] as string[],
+    budget_min: initialData?.budget_min || 800,
+    budget_max: initialData?.budget_max || 2500,
+    preferred_gender: initialData?.preferred_gender || 'Any Gender',
+    move_in_date: initialData?.move_in_date || '',
   });
 
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
@@ -66,6 +103,9 @@ const OnboardingForm: React.FC = () => {
       const result = await updateProfile(formData);
       if (result?.error) {
         alert('Error: ' + result.error);
+      } else {
+        // Success! Close modal or redirect
+        handleCancel();
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -74,9 +114,19 @@ const OnboardingForm: React.FC = () => {
     }
   };
 
+  if (!visible) return null;
+
   return (
-    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-200 dark:border-slate-800">
+    <div 
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-slate-900/40 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleCancel();
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-200 dark:border-slate-800"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <header className="flex items-center justify-between px-8 py-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex flex-col">
@@ -87,7 +137,10 @@ const OnboardingForm: React.FC = () => {
               Tell us a bit about yourself to find your perfect match
             </p>
           </div>
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+          <button 
+            onClick={handleCancel}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
             </svg>

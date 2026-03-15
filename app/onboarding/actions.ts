@@ -53,6 +53,7 @@ export async function updateProfile(formData: {
     return { error: error.message };
   }
 
-  // Redirect to homepage after success
-  redirect('/');
+  // Return success instead of redirecting here
+  // The client side (OnboardingForm) will handle closing the modal or redirecting
+  return { success: true };
 }

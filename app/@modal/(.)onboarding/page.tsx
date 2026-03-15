@@ -2,18 +2,14 @@ import React from 'react';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
 import { createClient } from '@/utils/supabase/server';
 
-export default async function OnboardingPage() {
+export default async function OnboardingModalPage() {
   const supabase = await createClient();
 
   // Get current user session
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return (
-      <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <p>User not authenticated</p>
-      </main>
-    );
+    return null;
   }
 
   // Fetch current profile
@@ -23,9 +19,5 @@ export default async function OnboardingPage() {
     .eq('id', user.id)
     .single();
 
-  return (
-    <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-slate-900">
-      <OnboardingForm initialData={profile} />
-    </main>
-  );
+  return <OnboardingForm initialData={profile} isModal={true} />;
 }
