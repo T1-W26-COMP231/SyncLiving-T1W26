@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/src/utils/supabase/server'
+import { createClient } from '@/utils/supabase/server'
 
 /**
  * Action to handle user login
@@ -19,8 +19,7 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    // In a real app, you might want to return an error object to show in the UI
-    redirect('/error')
+    redirect('/login?error=' + encodeURIComponent(error.message))
   }
 
   // Refresh the data on the current page
@@ -47,7 +46,7 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
-    redirect('/error')
+    redirect('/login?error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')
@@ -63,7 +62,7 @@ export async function logout() {
   const { error } = await supabase.auth.signOut()
 
   if (error) {
-    redirect('/error')
+    redirect('/login?error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')

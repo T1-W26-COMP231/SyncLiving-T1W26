@@ -14,12 +14,15 @@ This document serves as the primary source of truth for the project's architectu
     *   `auth/actions.ts`: **Server Actions** for authentication (Login, Signup, Logout).
     *   `auth/callback/route.ts`: (To be added) Route Handler for Supabase Auth redirect.
 
-### 2. **Utility Layer (`/src/utils/supabase`)**
-*   **Purpose:** Houses the core Supabase integration logic, strictly separated by environment.
-*   **Key Files:**
-    *   `client.ts`: Used for **Client Components** (`use client`).
-    *   `server.ts`: Used for **Server Components**, **Route Handlers**, and **Server Actions**.
-    *   `middleware.ts`: Helper to refresh Supabase sessions in Next.js Middleware.
+### 2. **Source Code Layer (`/src`)**
+*   **Purpose:** The central repository for all non-routing application logic and reusable UI elements.
+*   **Key Directories:**
+    *   `components/`: Reusable UI components (Layout, Feature-specific, and Base UI). Refer to the **UI & Design Development Rules** section for detailed sub-structure.
+    *   `utils/`: Shared helper functions and core integrations. 
+        *   `utils/supabase/`: Contains `client.ts`, `server.ts`, and `middleware.ts` for Supabase initialization.
+    *   `hooks/`: Custom React hooks for managing shared state or logic.
+    *   `types/`: Global TypeScript interfaces and generated database types (e.g., `src/types/supabase.ts`).
+    *   `services/`: External API calls or complex business logic layers.
 
 ### 3. **Database & Backend Layer (`/supabase`)**
 *   **Purpose:** Contains all configuration and database management files for Supabase.
@@ -50,14 +53,39 @@ When developers or Gemini CLI want to **create or update a schema** (tables, pol
 
 ---
 
+---
+
+## 🎨 UI & Design Development Rules
+
+1.  **Design Drafts Location:**
+    *   **Folder:** `/design-drafts/`
+    *   **Content:** Contains original `.jpg` screenshots from Figma/Stitch and the corresponding exported `.html` files.
+    *   **Workflow:** Use the HTML structure and Tailwind classes provided in the draft to implement React components.
+
+2.  **UI Component Structure:**
+    *   **Layout Components:** All shared UI elements (Navbar, Sidebar, Footer) go to `src/components/layout/`.
+    *   **Page-Specific Components:** Components unique to a page (e.g., Hero, MatchCard for Homepage) go to `src/components/[page-name]/`.
+    *   **Base UI Components:** Atomic components (Button, Input, Card) go to `src/components/ui/`.
+
+3.  **Tailwind CSS (v4) Rules:**
+    *   **Colors:** Use semantic names like `bg-primary`, `text-secondary`, `border-accent`.
+    *   **Theming:** Custom theme variables are managed in `app/globals.css` under the `@theme` block.
+
+4.  **Implementation Workflow:**
+    *   Analyze `.html` draft from Stitch.
+    *   Convert HTML structure to `.tsx` JSX format.
+    *   Abstract repetitive parts into reusable React components.
+    *   Verify consistency with the `.jpg` design draft.
+
+---
+
 ## 🤖 Rules for Gemini CLI
 
-1.  **Language:** Always respond in **Traditional Chinese (繁體中文)** as per user preference.
-2.  **Comments:** All code comments within source files (`.ts`, `.tsx`, `.sql`) must be in **English**.
-3.  **Environment Variables:** Always use `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` for client/server initialization.
-4.  **Security:** Always enable **Row Level Security (RLS)** for any new table created in a migration.
-5.  **State Management:** Prefer **Server Actions** over client-side `fetch` for data mutations.
-6.  **Style:** Adhere strictly to the existing **Tailwind CSS** and **TypeScript** standards.
+1.  **Comments:** All code comments within source files (`.ts`, `.tsx`, `.sql`) must be in **English**.
+2.  **Environment Variables:** Always use `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` for client/server initialization.
+3.  **Security:** Always enable **Row Level Security (RLS)** for any new table created in a migration.
+4.  **State Management:** Prefer **Server Actions** over client-side `fetch` for data mutations.
+5.  **Style:** Adhere strictly to the existing **Tailwind CSS** and **TypeScript** standards.
 
 ---
 
