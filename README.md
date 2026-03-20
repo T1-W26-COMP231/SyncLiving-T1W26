@@ -15,6 +15,12 @@ SyncLiving is a specialized roommate-finding application designed to reduce the 
 
 ---
 
+## 🎨 UI Design & Drafts
+- **Stitch Project:** [SyncLiving UI Design](https://stitch.withgoogle.com/projects/1957947046545577335)
+- **Local Drafts:** Refer to `/design-drafts/` for HTML/JPG exports of the UI screens.
+
+---
+
 ## 🏃 Getting Started (Local Development)
 
 ### 1. Prerequisites
@@ -71,8 +77,9 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 
 ## 📂 Project Structure
 - `/app`: Next.js routes and UI components.
-- `/src/utils/supabase`: Supabase clients for both Client and Server environments.
-- `/supabase`: Local configuration and migration files.
+- `/src`: Main source code, reusable components, and Supabase integration.
+- `/design-drafts`: Original UI designs (JPG) and exported code (HTML) from Stitch.
+- `/supabase`: Local configuration and SQL migration files.
 - `GEMINI.md`: Project guidelines and coding rules for developers.
 - `project.md`: Full technical report and roadmap.
 
