@@ -76,5 +76,43 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 - `GEMINI.md`: Project guidelines and coding rules for developers.
 - `project.md`: Full technical report and roadmap.
 
+---
+
+## 🎨 UI Design & Collaboration (Google Stitch)
+
+We use **Google Stitch** to design and iterate on our UI. To sync these designs directly into your AI editor (like Cursor or VS Code) using the **Model Context Protocol (MCP)**, follow these steps:
+
+### 1. Get the Shared API Key
+Ask the project owner for the shared **Stitch API Key**. 
+> **⚠️ Security:** Never commit this key to the repository.
+
+### 2. Configure Your AI Editor
+Add the following to your `mcp.json` configuration file (usually found in your IDE's settings):
+
+```json
+{
+  "mcpServers": {
+    "stitch": {
+      "command": "npx",
+      "args": ["@_davideast/stitch-mcp", "proxy"],
+      "env": {
+        "STITCH_API_KEY": "YOUR_SHARED_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+### 3. Usage
+Once connected, you can ask your AI agent to:
+- *"List the screens in our Stitch project."*
+- *"Generate a React component based on the 'Hero Section' design in Stitch."*
+- *"Ensure the current Tailwind colors match the 'Design DNA' from Stitch."*
+
+Refer to the `/design-drafts/` folder for existing static exports of our Stitch designs.
+
+---
+
 ## 🤝 Contribution Rules
 Please refer to [GEMINI.md](./GEMINI.md) for naming conventions and database migration rules before making changes.
+
