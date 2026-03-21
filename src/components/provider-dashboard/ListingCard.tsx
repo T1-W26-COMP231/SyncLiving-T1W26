@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Eye, Heart, Users, MapPin, Edit3, MoreVertical } from 'lucide-react';
+import Link from 'next/link';
 
 export interface ListingType {
   id: string;
@@ -73,10 +74,13 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
           
           {/* Actions */}
           <div className="ml-auto flex gap-3">
-            <button className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center transition-colors">
+            <Link 
+              href={`/provider-dashboard/edit/${listing.id}`}
+              className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
+            >
               <Edit3 size={16} className="mr-2" />
               Edit Listing
-            </button>
+            </Link>
             <button className="p-2 text-gray-400 hover:bg-gray-50 rounded-lg transition-colors">
               <MoreVertical size={20} />
             </button>

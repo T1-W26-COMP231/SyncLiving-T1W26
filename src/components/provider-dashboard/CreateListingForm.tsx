@@ -19,11 +19,20 @@ interface Amenity {
 interface CreateListingFormProps {
   roomTypes: RoomType[];
   amenities: Amenity[];
+  initialData?: {
+    id: string;
+    title: string;
+    address: string;
+    rental_fee: number;
+    house_rules: string;
+    room_type_id: string;
+    amenities_ids: string[];
+  };
 }
 
-export default function CreateListingForm({ roomTypes, amenities }: CreateListingFormProps) {
-  const [selectedRoomType, setSelectedRoomType] = useState(roomTypes[0]?.id || '');
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+export default function CreateListingForm({ roomTypes, amenities, initialData }: CreateListingFormProps) {
+  const [selectedRoomType, setSelectedRoomType] = useState(initialData?.room_type_id || roomTypes[0]?.id || '');
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialData?.amenities_ids || []);
   const [isPending, setIsPending] = useState(false);
 
   const toggleAmenity = (id: string) => {
@@ -31,6 +40,8 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
       prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
     );
   };
+
+  const isEditMode = !!initialData;
 
   return (
     <form className="space-y-10" action={async (formData) => {
@@ -42,6 +53,7 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
       }
     }}>
       {/* Hidden inputs to pass state to Server Action */}
+      {isEditMode && <input type="hidden" name="id" value={initialData.id} />}
       <input type="hidden" name="room_type_id" value={selectedRoomType} />
       <input type="hidden" name="amenities_ids" value={JSON.stringify(selectedAmenities)} />
 
@@ -55,6 +67,7 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
                 label="Listing Title" 
                 placeholder="Enter listing title" 
                 name="title" 
+                defaultValue={initialData?.title}
                 required
               />
             </div>
@@ -64,6 +77,7 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
                 label="Address" 
                 placeholder="Enter property address" 
                 name="address" 
+                defaultValue={initialData?.address}
                 required
               />
             </div>
@@ -100,6 +114,7 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
                 placeholder="1200+" 
                 name="rent" 
                 type="number"
+                defaultValue={initialData?.rental_fee}
                 required
                 iconLeft={<span className="text-slate-500 sm:text-sm">$</span>}
               />
@@ -144,6 +159,7 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
             label="Property Rules & Description" 
             name="description" 
             rows={5} 
+            defaultValue={initialData?.house_rules}
             placeholder="Describe any house rules, expectations, or additional details..." 
           />
         </CardContent>
@@ -193,7 +209,7 @@ export default function CreateListingForm({ roomTypes, amenities }: CreateListin
           disabled={isPending}
           className="inline-flex items-center justify-center rounded-xl border border-transparent bg-primary px-8 py-4 text-sm font-bold text-dark shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
         >
-          {isPending ? 'Publishing...' : 'Publish Listing'}
+          {isPending ? (isEditMode ? 'Updating...' : 'Publishing...') : (isEditMode ? 'Update Listing' : 'Publish Listing')}
         </button>
       </div>
     </form>
