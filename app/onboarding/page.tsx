@@ -10,8 +10,8 @@ export default async function OnboardingPage() {
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <p>User not authenticated</p>
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
+        <p className="text-slate-600">User not authenticated</p>
       </main>
     );
   }
@@ -24,7 +24,7 @@ export default async function OnboardingPage() {
     .single();
 
   return (
-    <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-slate-900">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8 text-slate-900">
       <OnboardingForm initialData={profile} />
     </main>
   );

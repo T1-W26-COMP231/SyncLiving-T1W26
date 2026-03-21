@@ -92,7 +92,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal })
     setFormData(prev => ({
       ...prev,
       lifestyle_tags: prev.lifestyle_tags.includes(tag)
-        ? prev.lifestyle_tags.filter(t => t !== tag)
+        ? prev.lifestyle_tags.filter((t: string) => t !== tag)
         : [...prev.lifestyle_tags, tag]
     }));
   };

@@ -1,6 +1,6 @@
-# GEMINI.md - Project Guidelines & Structure
+# CLAUDE.md - Project Guidelines & Structure
 
-This document serves as the primary source of truth for the project's architecture and development rules for **Gemini CLI**.
+This document serves as the primary source of truth for the project's architecture and development rules for **Claude Code**.
 
 ---
 
@@ -34,7 +34,7 @@ This document serves as the primary source of truth for the project's architectu
 
 ## 🛠 Database Schema Rules (IMPORTANT)
 
-When developers or Gemini CLI want to **create or update a schema** (tables, policies, triggers), follow these rules:
+When developers or Claude Code want to **create or update a schema** (tables, policies, triggers), follow these rules:
 
 1.  **NEVER** modify the database structure directly through the Supabase Dashboard (UI) for permanent changes.
 2.  **Location:** Always add a new `.sql` file in the `supabase/migrations/` folder.
@@ -103,7 +103,7 @@ This is the primary table for storing user-specific data, lifestyle preferences,
 
 ---
 
-## 🤖 Rules for Gemini CLI
+## 🤖 Rules for Claude code
 
 1.  **Comments:** All code comments within source files (`.ts`, `.tsx`, `.sql`) must be in **English**.
 2.  **Environment Variables:** Always use `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` for client/server initialization.

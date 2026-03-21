@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__stitch__list_projects",
+      "mcp__stitch__list_screens",
+      "mcp__stitch__get_screen",
+      "WebFetch(domain:contribution.usercontent.google.com)",
+      "Bash(curl -s \"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzhhYjliNTg4YjZkMjQyMjM4ZmQ2ZGJmMzk4OGU4MjY4EgsSBxDY-dun0gwYAZIBIwoKcHJvamVjdF9pZBIVQhMxOTU3OTQ3MDQ2NTQ1NTc3MzM1&filename=&opi=89354086\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "stitch"
+  ]
+}

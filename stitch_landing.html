@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RoomieMatch | Find Your Perfect Living Partner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#00f0d1",
+              "secondary": "#ccdfad",
+              "background-light": "#f6f8f8",
+              "background-dark": "#101d22",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 md:px-20 py-4 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-3xl">sync</span>
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight tracking-tight">SyncLiving</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-center gap-8">
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#how-it-works">How it Works</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#testimonials">Testimonials</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#">Pricing</a>
+</div>
+<div class="flex gap-3">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-xl h-10 px-4 bg-primary text-white text-sm font-bold">
+                        Sign Up
+                    </button>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-xl h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-bold">
+                        Login
+                    </button>
+</div>
+</header>
+<main class="flex-1">
+<!-- Hero Section -->
+<div class="px-6 md:px-20 py-12 md:py-24">
+<div class="max-w-[1280px] mx-auto">
+<div class="flex flex-col gap-10 lg:flex-row lg:items-center">
+<div class="flex flex-col gap-8 lg:w-1/2">
+<div class="flex flex-col gap-4">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold w-fit">
+<span class="material-symbols-outlined text-sm">bolt</span>
+                                        Find your vibe
+                                    </div>
+<h1 class="text-slate-900 dark:text-white text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight">
+                                        Compatibility-first <br/><span class="text-primary">perfect sync.</span>
+</h1>
+<p class="text-slate-600 dark:text-slate-400 text-lg md:text-xl font-normal leading-relaxed max-w-[540px]">
+                                        Find someone who shares your rhythm, not just your rent. Our matching algorithm connects you based on lifestyle, habits, and values.
+                                    </p>
+</div>
+<div class="flex flex-wrap gap-4">
+<button class="flex min-w-[180px] cursor-pointer items-center justify-center rounded-xl h-14 px-8 text-white text-lg font-bold shadow-lg shadow-primary/25 hover:scale-105 transition-transform bg-[#00f0d1]">
+                                        Find a Roommate
+                                    </button>
+<button class="flex min-w-[180px] cursor-pointer items-center justify-center rounded-xl h-14 px-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-lg font-bold hover:bg-slate-50 transition-colors">
+                                        List a Room
+                                    </button>
+</div>
+</div>
+<div class="lg:w-1/2 relative">
+<div class="w-full aspect-[4/3] bg-primary/20 rounded-xl overflow-hidden shadow-2xl relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Diverse group of friends laughing together in a modern apartment" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCrpcVQzl624RKIg5mGhyUdkQbsWeLXucwZFQCdNpmyvOZCEHCK9jy6yUJBJ-YfE8eByNeaCGqckjR4ZCsaJ2n4Imjichguotxep05SXfgjJpb6tVZA-40p6295XTayTCH5nGSrzdRZ6C45bUByhreHSKUQhPvSLKlyL1ncUmLAwlbcUbWcnyvjgA2mZa6NqNsvsOL-20yiWDZ9JJfDK0d3ZQpto40ohSO2A-b8cZ4MmyPgsUKwumOtfGw1NxRIWwCT7TYWNN8KVCs')"></div>
+</div>
+<div class="absolute -bottom-6 -left-6 p-6 bg-white dark:bg-slate-800 rounded-xl shadow-xl hidden md:flex items-center gap-4">
+<div class="flex -space-x-3">
+<img alt="User 1" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800" data-alt="Portrait of a young woman smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCY9jxbVYfwYbvRV6VyHL4eiKirwtslI27jyJV_QOcyYLNxTRzz-NHzKW8A6STYY6N-_k-GLSjN4q8VNiNDdggjBN2cj7e2-CsP6Ub96n5Ae-9I66e1maEW086LfM9VkWG-1yzxwXfbXV1JBLImlH7rJhWTPwuVynlrHA5D_MA6Q8FbMaro3qpiDNgubvtJ_QrqRj46k0auRjSJqDDwOtvhfTCprO8cD_HymaPyUzjrvuPe-ZHbyscCvdkB24vROWZGDd7IM3wguek"/>
+<img alt="User 2" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800" data-alt="Portrait of a young man smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiUA2WWUWxoUMK96ZvgwTD0PRISqBTUM7l7voNruNc6jnK5w1Fp3Qolb0Dcmdt4WRSjXYHy6jDmCMlZIlzCvgAljkLxW2PfF8pk5gjqNt3yPyDzsc-YuPFhqkwJxOG0fD_4JVw7vSdNsUUCRPWBpxhrWWh-DzM7jWe42M0jbhLD8UT_iBpmgq9ARdDo8w5iyLuUBW9vRP4jW_kKVFCY2i5dWHxn0TsbJqz_-z--yWoYcgRBamEl5UPiY7yVQJ1wzq7V3a6hK6Syt0"/>
+<img alt="User 3" class="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800" data-alt="Portrait of a person with glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVzxLu1FSOFdfL-fevwaYg2GaBZkMXIx2mdlPdUSAUiDLHjCbron3_UHzIn6eOqoN8mRaFkie6ojjUq9WOI3wBsi35NX-rC4ft9Uv3gygHVrKn9JXEhsBSckCXZeiqcq5yhRGwh7EOCwycZsM78v7RAa-aMCX8RMTf1KPeEuHX2bccfEmZO5CIvpc5HtKJ_YOZGBKR4ZoRbHNYlCXkWGRuY0nwYzEX2E5h9ZTkzjkYiNIH-xzF-cdv0oW4FQA2ERmmtxSNqZyd1WE"/>
+</div>
+<p class="text-sm font-semibold">10k+ Active Roomies</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- How It Works Section -->
+<div class="px-6 md:px-20 py-20 bg-slate-50 dark:bg-slate-900/50" id="how-it-works">
+<div class="max-w-[1280px] mx-auto flex flex-col gap-12">
+<div class="flex flex-col gap-4 text-center items-center">
+<h2 class="text-slate-900 dark:text-white text-4xl font-bold tracking-tight">How it works</h2>
+<p class="text-slate-600 dark:text-slate-400 text-lg max-w-[640px]">Our simple three-step process to finding your perfect living situation without the drama.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Feature 1 -->
+<div class="flex flex-col gap-6 rounded-2xl bg-white dark:bg-slate-800 p-8 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl">travel_explore</span>
+</div>
+<div class="flex flex-col gap-2">
+<h3 class="text-slate-900 dark:text-white text-xl font-bold">Smart Discovery</h3>
+<p class="text-slate-600 dark:text-slate-400 text-base leading-relaxed">
+                                        Browse verified profiles that match your specific living preferences, desired neighborhood, and budget.
+                                    </p>
+</div>
+</div>
+<!-- Feature 2 -->
+<div class="flex flex-col gap-6 rounded-2xl bg-white dark:bg-slate-800 p-8 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl">label</span>
+</div>
+<div class="flex flex-col gap-2">
+<h3 class="text-slate-900 dark:text-white text-xl font-bold">Lifestyle Tags</h3>
+<p class="text-slate-600 dark:text-slate-400 text-base leading-relaxed">
+                                        Filter by habits like 'Night Owl', 'Pet Friendly', or 'Clean Freak' to ensure a perfect vibe fit.
+                                    </p>
+</div>
+</div>
+<!-- Feature 3 -->
+<div class="flex flex-col gap-6 rounded-2xl bg-white dark:bg-slate-800 p-8 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl">verified_user</span>
+</div>
+<div class="flex flex-col gap-2">
+<h3 class="text-slate-900 dark:text-white text-xl font-bold">Reputation Scores</h3>
+<p class="text-slate-600 dark:text-slate-400 text-base leading-relaxed">
+                                        Rent with confidence using our community-driven trust and verification system and past roommate reviews.
+                                    </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Testimonials Section -->
+<div class="px-6 md:px-20 py-20" id="testimonials">
+<div class="max-w-[1280px] mx-auto">
+<h2 class="text-slate-900 dark:text-white text-3xl md:text-4xl font-bold tracking-tight mb-12">What our community says</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Testimonial 1 -->
+<div class="flex flex-col gap-6 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-slate-200 overflow-hidden">
+<img alt="Sarah Jenkins" class="w-full h-full object-cover" data-alt="Portrait of a professional woman smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwOazK5OU7RZeogIHEbRJhzOP7v98jwJigqKOw2DMQzJ00tuSZbNbu40pdT-CYl3h-uZnTY-02PZj1GUwIn5rv5jU_jIF4YkA9B99u6IVxJFychP5dhgy2T9iVM7UiexTdb-3Gp8xRMNWbkQE7zZ4oJiP5it9xYRM_1D-JQ3olfpqFf-P1hD1Jkb1t4Y_K1gGXmystLSjfK0tYQ4fms62K2T1SnHLPhvsMspf9e2nONbsPlQoLC3ywePeYerw0DbVcEm-tbW6mZvw"/>
+</div>
+<div class="flex-1">
+<p class="text-slate-900 dark:text-white text-base font-bold">Sarah Jenkins</p>
+<p class="text-slate-500 text-sm">Found a roommate in Austin</p>
+</div>
+</div>
+<div class="flex text-amber-400">
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 italic">
+                                    "Found my best friend and roommate through this app! The lifestyle tags really helped us realize we were a great match before even meeting."
+                                </p>
+</div>
+<!-- Testimonial 2 -->
+<div class="flex flex-col gap-6 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-slate-200 overflow-hidden">
+<img alt="Marcus Chen" class="w-full h-full object-cover" data-alt="Portrait of a young man smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBP4L1WyXCyrg1TGaNzFStnOVl9fWYMLxBf-8LPMjxSUbClIm1pxxM_lWstjgGGqXQJVLdxDvUg5yh4qrElh_7mNVavcPt0U1tLHeyIcgTZ4fOGHKsYBmeAjHIsP9ghMuNZvX488rM9UBqXq05OCtXtgSziWvPAniqM6KxRbjJRLoGmj04HhDOF1M2JK_AXij7GtJcyFsO5N1KC70W8YpHSOvB7TezLYkPLP9pNNakClHT0CZrr14GdJKgJebSw8a0Rifnn1ABOw-c"/>
+</div>
+<div class="flex-1">
+<p class="text-slate-900 dark:text-white text-base font-bold">Marcus Chen</p>
+<p class="text-slate-500 text-sm">Listed a room in Chicago</p>
+</div>
+</div>
+<div class="flex text-amber-400">
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 italic">
+                                    "The reputation scores gave me peace of mind as a first-time landlord. I felt safe knowing who I was inviting into my home."
+                                </p>
+</div>
+<!-- Testimonial 3 -->
+<div class="flex flex-col gap-6 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-slate-200 overflow-hidden">
+<img alt="Elena Rodriguez" class="w-full h-full object-cover" data-alt="Portrait of a smiling woman" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDn2GenG_M9Zc2crVCHhdOQdcPOOkCKEhCk-0ruQQmLHswpGdCMNlDrhN6ywOpJgedjSPhFn5DIA8DcwU6LGxfVA_mX6vnHHzqH31X5bvT7d_Lwb7RmuKXhBq3cbbQ0GyHH8zW2Jw_4-I6NBb5NbW7mLHdcvCCKJjeTtc4WaHo986D3NghcPfJ8EwgWJ8D3h7UYxLv6UpXeuafePWmIdSevzjuFURQbhlKrmstP2jsUG_dyv95L-BORenomctKUobSN4aHDNSucPk4"/>
+</div>
+<div class="flex-1">
+<p class="text-slate-900 dark:text-white text-base font-bold">Elena Rodriguez</p>
+<p class="text-slate-500 text-sm">Relocated to Miami</p>
+</div>
+</div>
+<div class="flex text-amber-400">
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+<span class="material-symbols-outlined fill-1">star</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 italic">
+                                    "I listed my spare room and found a compatible roommate within 4 days. The interface is so easy to use compared to Craigslist."
+                                </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Final CTA Section -->
+<div class="px-6 md:px-20 py-20">
+<div class="max-w-[1280px] mx-auto rounded-3xl p-10 md:p-20 text-center flex flex-col items-center gap-8 relative overflow-hidden bg-[#00f0d1]">
+<div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+<div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+<h2 class="text-white text-4xl md:text-5xl font-extrabold tracking-tight relative z-10">Ready to find your <br/>next great living partner?</h2>
+<p class="text-white/90 text-lg md:text-xl max-w-[600px] relative z-10">Join thousands of people finding more than just a place to stay.</p>
+<div class="flex flex-col sm:flex-row gap-4 relative z-10">
+<button class="bg-white font-bold px-10 py-4 rounded-xl text-lg hover:bg-slate-50 transition-colors text-[#00f0d1]">
+                                Find a Roommate
+                            </button>
+<button class="border border-white/30 text-white font-bold px-10 py-4 rounded-xl text-lg hover:bg-white/10 transition-colors bg-[#00f0d1]">
+                                List my Space
+                            </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="border-t border-slate-200 dark:border-slate-800 px-6 md:px-20 py-12">
+<div class="max-w-[1280px] mx-auto flex flex-col md:flex-row justify-between items-start gap-12">
+<div class="flex flex-col gap-4 max-w-[300px]">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-2xl">sync</span>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold">SyncLiving</h2>
+</div>
+<p class="text-slate-500 text-sm">Revolutionizing how people live together by putting compatibility at the center of the search.</p>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-12">
+<div class="flex flex-col gap-4">
+<h4 class="font-bold text-slate-900 dark:text-white">Product</h4>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Browse Roomies</a>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Add Listing</a>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Security</a>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="font-bold text-slate-900 dark:text-white">Company</h4>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">About Us</a>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Careers</a>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Contact</a>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="font-bold text-slate-900 dark:text-white">Legal</h4>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Privacy Policy</a>
+<a class="text-slate-500 hover:text-primary transition-colors text-sm" href="#">Terms of Service</a>
+</div>
+</div>
+</div>
+<div class="max-w-[1280px] mx-auto mt-12 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+<p class="text-slate-500 text-sm">© 2024 SyncLiving Inc. All rights reserved.</p>
+<div class="flex gap-6">
+<a class="text-slate-400 hover:text-primary" href="#"><span class="material-symbols-outlined">social_leaderboard</span></a>
+<a class="text-slate-400 hover:text-primary" href="#"><span class="material-symbols-outlined">photo_camera</span></a>
+<a class="text-slate-400 hover:text-primary" href="#"><span class="material-symbols-outlined">alternate_email</span></a>
+</div>
+</div>
+</footer>
+</div>
+</div>
+</body></html>
