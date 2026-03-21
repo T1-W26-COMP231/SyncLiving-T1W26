@@ -4,23 +4,24 @@ import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-export async function createListing(formData: FormData) {
+export async function createListing(prevState: any, formData: FormData) {
   const supabase = await createClient();
 
   // Get current user session
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    throw new Error('You must be logged in to manage listings.');
+    return { error: 'You must be logged in to manage listings.' };
   }
 
-  const id = formData.get('id') as string; // Check if editing
+  const id = formData.get('id') as string;
   const title = formData.get('title') as string;
   const address = formData.get('address') as string;
   const rental_fee = parseFloat(formData.get('rent') as string) || 0;
   const house_rules = formData.get('description') as string;
   const status = formData.get('status') as 'draft' | 'published';
   const room_type_id = formData.get('room_type_id') as string;
-  const amenities_ids = formData.get('amenities_ids') ? JSON.parse(formData.get('amenities_ids') as string) : [];
+  const amenities_ids_raw = formData.get('amenities_ids') as string;
+  const amenities_ids = amenities_ids_raw ? JSON.parse(amenities_ids_raw) : [];
 
   let listingId = id;
 
@@ -36,52 +37,52 @@ export async function createListing(formData: FormData) {
     vacant_start_date: new Date().toISOString().split('T')[0],
   };
 
-  if (id) {
-    // Update existing listing
-    const { error: updateError } = await supabase
-      .from('room_listings')
-      .update(listingData)
-      .eq('id', id);
+  try {
+    if (id) {
+      // Update existing listing
+      const { error: updateError } = await supabase
+        .from('room_listings')
+        .update(listingData)
+        .eq('id', id);
 
-    if (updateError) {
-      console.error('Update Error:', updateError);
-      return { error: updateError.message };
+      if (updateError) throw updateError;
+    } else {
+      // Insert new listing
+      const { data: listing, error: insertError } = await supabase
+        .from('room_listings')
+        .insert(listingData)
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      listingId = listing.id;
     }
-  } else {
-    // Insert new listing
-    const { data: listing, error: insertError } = await supabase
-      .from('room_listings')
-      .insert(listingData)
-      .select()
-      .single();
 
-    if (insertError) {
-      console.error('Insert Error:', insertError);
-      return { error: insertError.message };
+    // Handle Room Type
+    if (room_type_id) {
+      const { error: rtError } = await supabase.from('listing_room_types').upsert({
+        listing_id: listingId,
+        room_type_id: room_type_id,
+      });
+      if (rtError) throw rtError;
     }
-    listingId = listing.id;
-  }
 
-  // Handle Room Type (One-to-One / Junction with Primary Key listing_id)
-  if (room_type_id) {
-    await supabase.from('listing_room_types').upsert({
-      listing_id: listingId,
-      room_type_id: room_type_id,
-    });
-  }
-
-  // Handle Amenities (Many-to-Many)
-  // Simple approach for update: Clear all and re-insert
-  if (id) {
-    await supabase.from('listing_amenities').delete().eq('listing_id', id);
-  }
-  
-  if (amenities_ids.length > 0) {
-    const amenitiesToInsert = amenities_ids.map((aid: string) => ({
-      listing_id: listingId,
-      amenity_id: aid,
-    }));
-    await supabase.from('listing_amenities').insert(amenitiesToInsert);
+    // Handle Amenities
+    if (id) {
+      await supabase.from('listing_amenities').delete().eq('listing_id', id);
+    }
+    
+    if (amenities_ids.length > 0) {
+      const amenitiesToInsert = amenities_ids.map((aid: string) => ({
+        listing_id: listingId,
+        amenity_id: aid,
+      }));
+      const { error: amError } = await supabase.from('listing_amenities').insert(amenitiesToInsert);
+      if (amError) throw amError;
+    }
+  } catch (err: any) {
+    console.error('Database Error:', err);
+    return { error: err.message || 'An unexpected database error occurred.' };
   }
 
   revalidatePath('/provider-dashboard');

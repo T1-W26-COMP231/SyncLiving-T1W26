@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useActionState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { FormInput, FormTextarea } from '@/components/ui/FormElements';
 import { createListing } from '../../../app/provider-dashboard/actions';
@@ -31,9 +31,11 @@ interface CreateListingFormProps {
 }
 
 export default function CreateListingForm({ roomTypes, amenities, initialData }: CreateListingFormProps) {
+  const [state, formAction, isPending] = useActionState(createListing, null);
+  
   const [selectedRoomType, setSelectedRoomType] = useState(initialData?.room_type_id || roomTypes[0]?.id || '');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialData?.amenities_ids || []);
-  const [isPending, setIsPending] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'draft' | 'published'>('draft');
 
   const toggleAmenity = (id: string) => {
     setSelectedAmenities(prev => 
@@ -44,16 +46,17 @@ export default function CreateListingForm({ roomTypes, amenities, initialData }:
   const isEditMode = !!initialData;
 
   return (
-    <form className="space-y-10" action={async (formData) => {
-      setIsPending(true);
-      try {
-        await createListing(formData);
-      } finally {
-        setIsPending(false);
-      }
-    }}>
+    <form className="space-y-10" action={formAction}>
+      {/* Error Message Display */}
+      {state?.error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium animate-pulse">
+          Error: {state.error}
+        </div>
+      )}
+
       {/* Hidden inputs to pass state to Server Action */}
       {isEditMode && <input type="hidden" name="id" value={initialData.id} />}
+      <input type="hidden" name="status" value={submitStatus} />
       <input type="hidden" name="room_type_id" value={selectedRoomType} />
       <input type="hidden" name="amenities_ids" value={JSON.stringify(selectedAmenities)} />
 
@@ -195,21 +198,22 @@ export default function CreateListingForm({ roomTypes, amenities, initialData }:
       <div className="flex flex-col-reverse gap-4 sm:flex-row sm:justify-end sm:gap-6 pt-6">
         <button 
           type="submit" 
-          name="status" 
-          value="draft"
+          onClick={() => setSubmitStatus('draft')}
           disabled={isPending}
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50"
         >
-          {isPending ? 'Saving...' : 'Save as Draft'}
+          {isPending && submitStatus === 'draft' ? 'Saving...' : 'Save as Draft'}
         </button>
         <button 
           type="submit" 
-          name="status" 
-          value="published"
+          onClick={() => setSubmitStatus('published')}
           disabled={isPending}
           className="inline-flex items-center justify-center rounded-xl border border-transparent bg-primary px-8 py-4 text-sm font-bold text-dark shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
         >
-          {isPending ? (isEditMode ? 'Updating...' : 'Publishing...') : (isEditMode ? 'Update Listing' : 'Publish Listing')}
+          {isPending && submitStatus === 'published' 
+            ? 'Processing...' 
+            : (isEditMode ? 'Update & Publish' : 'Publish Listing')
+          }
         </button>
       </div>
     </form>
