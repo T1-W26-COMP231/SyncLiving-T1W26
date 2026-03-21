@@ -1,0 +1,155 @@
+-- Migration: 20260320000000_create_room_listings_and_normalization
+-- Description: Implement Room Listing feature, standardized filtering (Amenities & Lifestyle Tags), and Junction Tables for SyncLiving.
+
+-- 1. Create ENUM types for statuses
+CREATE TYPE post_status AS ENUM ('draft', 'published', 'archived');
+CREATE TYPE room_occupancy_status AS ENUM ('vacant', 'occupied');
+
+-- 2. Create Master Table for Lifestyle Tags (Normalization)
+CREATE TABLE public.lifestyle_tags (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text UNIQUE NOT NULL,
+    category text, -- Optional: to categorize tags (e.g., 'Habits', 'Social')
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- 3. Create Master Table for Amenities (Normalization)
+CREATE TABLE public.amenities (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text UNIQUE NOT NULL,
+    category text, -- Optional: to categorize amenities (e.g., 'Essentials', 'Comfort')
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- 4. Create Main Listing Table (room_listings)
+CREATE TABLE public.room_listings (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    provider_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    
+    -- Statuses
+    status post_status DEFAULT 'draft' NOT NULL,
+    room_status room_occupancy_status DEFAULT 'vacant' NOT NULL,
+    
+    -- Location Information
+    address text NOT NULL,
+    city text NOT NULL,
+    postal_code text NOT NULL,
+    -- (Optional) Use PostGIS point for matching logic if needed later
+    -- location_coords geography(POINT, 4326),
+
+    -- Financials & Content
+    rental_fee numeric(10, 2) NOT NULL CHECK (rental_fee >= 0),
+    room_type text NOT NULL, -- e.g., 'Private', 'Shared'
+    house_rules text,
+    photos text[] DEFAULT '{}', -- Array of URLs stored in blob storage
+    
+    -- Timeline
+    vacant_start_date date NOT NULL,
+    expected_move_in_date date,
+    lease_start_date date,
+    lease_end_date date,
+    
+    -- Timestamps
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    published_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+-- 5. Junction Tables for standardized filtering
+-- many-to-many relationship between room_listings and lifestyle_tags
+CREATE TABLE public.listing_lifestyle_tags (
+    listing_id uuid REFERENCES public.room_listings(id) ON DELETE CASCADE,
+    tag_id uuid REFERENCES public.lifestyle_tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (listing_id, tag_id)
+);
+
+-- many-to-many relationship between room_listings and amenities
+CREATE TABLE public.listing_amenities (
+    listing_id uuid REFERENCES public.room_listings(id) ON DELETE CASCADE,
+    amenity_id uuid REFERENCES public.amenities(id) ON DELETE CASCADE,
+    PRIMARY KEY (listing_id, amenity_id)
+);
+
+-- 6. Enable Row Level Security (RLS)
+ALTER TABLE public.lifestyle_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.amenities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.room_listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.listing_lifestyle_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.listing_amenities ENABLE ROW LEVEL SECURITY;
+
+-- 7. Define RLS Policies
+
+-- Lifestyle Tags & Amenities: Read access for everyone
+CREATE POLICY "Public read for lifestyle_tags" ON public.lifestyle_tags FOR SELECT USING (true);
+CREATE POLICY "Public read for amenities" ON public.amenities FOR SELECT USING (true);
+
+-- Room Listings: 
+-- 1. Everyone can view 'published' listings
+CREATE POLICY "Public read for published listings" 
+ON public.room_listings FOR SELECT 
+USING (status = 'published');
+
+-- 2. Providers can view/manage their own listings (even draft/archived)
+CREATE POLICY "Providers manage own listings" 
+ON public.room_listings FOR ALL 
+USING (auth.uid() = provider_id);
+
+-- Junction Tables Policies
+CREATE POLICY "Public read for listing_tags" ON public.listing_lifestyle_tags FOR SELECT USING (true);
+CREATE POLICY "Public read for listing_amenities" ON public.listing_amenities FOR SELECT USING (true);
+
+CREATE POLICY "Providers manage own listing_tags" 
+ON public.listing_lifestyle_tags FOR ALL 
+USING (EXISTS (SELECT 1 FROM public.room_listings WHERE id = listing_id AND provider_id = auth.uid()));
+
+CREATE POLICY "Providers manage own listing_amenities" 
+ON public.listing_amenities FOR ALL 
+USING (EXISTS (SELECT 1 FROM public.room_listings WHERE id = listing_id AND provider_id = auth.uid()));
+
+-- 8. Add trigger for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_room_listings_updated_at
+    BEFORE UPDATE ON public.room_listings
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_updated_at_column();
+
+-- 9. Insert Initial Seed Data for Lifestyle Tags
+INSERT INTO public.lifestyle_tags (name, category) VALUES
+    ('#EarlyRiser', 'Daily Routine'),
+    ('#NightOwl', 'Daily Routine'),
+    ('#RemoteWork', 'Daily Routine'),
+    ('#StudentLife', 'Daily Routine'),
+    ('#Tidy', 'Cleanliness'),
+    ('#DeepCleaner', 'Cleanliness'),
+    ('#Minimalist', 'Cleanliness'),
+    ('#NonSmoker', 'Cleanliness'),
+    ('#Quiet', 'Social/Noise'),
+    ('#Social', 'Social/Noise'),
+    ('#IntrovertFriendly', 'Social/Noise'),
+    ('#OccasionalGuests', 'Social/Noise'),
+    ('#PetFriendly', 'Preferences'),
+    ('#LGBTQ+Friendly', 'Preferences'),
+    ('#VeganFriendly', 'Preferences'),
+    ('#AlcoholFree', 'Preferences');
+
+-- 10. Insert Initial Seed Data for Amenities
+INSERT INTO public.amenities (name, category) VALUES
+    ('High-Speed WiFi', 'Utilities'),
+    ('In-suite Laundry', 'Essentials'),
+    ('Kitchen Access', 'Essentials'),
+    ('Utilities Included', 'Utilities'),
+    ('Air Conditioning', 'Comfort'),
+    ('Private Bathroom', 'Comfort'),
+    ('Furnished Room', 'Comfort'),
+    ('Gym Access', 'Building'),
+    ('Parking Spot', 'Exterior'),
+    ('Near Transit/Subway', 'Exterior'),
+    ('Bicycle Storage', 'Exterior'),
+    ('Balcony/Backyard', 'Exterior');
