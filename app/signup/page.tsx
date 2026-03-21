@@ -29,42 +29,8 @@ export default function SignUpPage({
           <h1 className="text-2xl font-bold text-foreground mb-1">Create Account</h1>
           <p className="text-gray-500 text-sm mb-5">Join SyncLiving for compatibility-first living</p>
 
-          {/* Progress indicator */}
-          <div className="mb-5">
-            <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-              <span>Step 1 of 5: Account Setup</span>
-              <span>20%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
-              <div className="bg-primary h-1.5 rounded-full w-1/5" />
-            </div>
-          </div>
-
-          {/* Info banner */}
-          <div className="bg-blue-50 border-l-4 border-primary p-3 mb-5 rounded-r-lg flex items-start gap-2">
-            <span className="material-symbols-outlined text-primary text-base mt-0.5">info</span>
-            <p className="text-xs text-gray-600">
-              <span className="font-medium">Next:</span> Compatibility Quiz to find your perfect roommates
-            </p>
-          </div>
-
-          {/* Social login — Google + Apple */}
-          <div className="mb-5">
-            <SocialLoginButtons
-              googleAction={signInWithGoogle}
-              appleAction={signInWithApple}
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-5">
-            <hr className="flex-1 border-0 h-px bg-gray-200" />
-            <span className="text-gray-400 text-xs">or with email</span>
-            <hr className="flex-1 border-0 h-px bg-gray-200" />
-          </div>
-
           {/* Form */}
-          <form method="POST" className="space-y-4">
+          <form action={signup} className="space-y-4">
             <SearchParamsHandler searchParams={searchParams} />
 
             {/* Full Name */}
@@ -154,7 +120,7 @@ export default function SignUpPage({
               type="submit"
               className="w-full bg-primary text-foreground font-semibold py-3 rounded-full hover:opacity-90 transition flex items-center justify-center gap-2 text-sm"
             >
-              Continue to Compatibility Quiz
+              Create Account
             </button>
           </form>
         </div>
