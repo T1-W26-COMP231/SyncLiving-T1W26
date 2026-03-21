@@ -1,0 +1,49 @@
+import React from 'react';
+import { createClient } from '@/utils/supabase/server';
+import ProviderDashboardClient from '@/components/provider-dashboard/ProviderDashboardClient';
+import { ListingType } from '@/components/provider-dashboard/ListingCard';
+
+export default async function ProviderDashboard() {
+  const supabase = await createClient();
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <div>Please log in to view your dashboard.</div>;
+  }
+
+  // Fetch real listings for this provider
+  const { data: listingsData, error } = await supabase
+    .from('room_listings')
+    .select('*')
+    .eq('provider_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching listings:', error);
+  }
+
+  // Map database data to ListingType
+  const listings: ListingType[] = (listingsData || []).map(item => ({
+    id: item.id,
+    title: item.title,
+    price: item.rental_fee,
+    location: item.address,
+    distance: 'Calculating...', // Placeholder
+    status: item.status as 'published' | 'draft' | 'archived',
+    imageUrl: item.photos?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    stats: {
+      views: 0, // Placeholder
+      favorites: 0, // Placeholder
+      inquiries: 0, // Placeholder
+    }
+  }));
+
+  return (
+    <ProviderDashboardClient 
+      initialListings={listings} 
+      inquiries={[]} 
+    />
+  );
+}
