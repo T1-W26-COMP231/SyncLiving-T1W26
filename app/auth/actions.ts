@@ -24,7 +24,7 @@ export async function login(formData: FormData) {
 
   // Refresh the data on the current page
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect('/provider-dashboard')
 }
 
 /**
@@ -50,7 +50,7 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/')
+  redirect('/provider-dashboard')
 }
 
 /**
