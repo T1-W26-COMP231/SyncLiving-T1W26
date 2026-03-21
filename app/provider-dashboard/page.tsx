@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ListingCard, ListingType } from '@/components/provider-dashboard/ListingCard';
 import { Search, Plus } from 'lucide-react';
 
@@ -79,10 +80,10 @@ export default function ProviderDashboard() {
         <div className="flex-1">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h2 className="text-3xl font-bold text-[#101d22]">My Listings</h2>
-            <button className="bg-[#00e5d1] hover:bg-[#00c9b7] text-[#101d22] font-semibold py-2.5 px-5 rounded-lg flex items-center transition-colors">
+            <Link href="/provider-dashboard/create" className="bg-[#00e5d1] hover:bg-[#00c9b7] text-[#101d22] font-semibold py-2.5 px-5 rounded-lg flex items-center transition-colors">
               <Plus size={20} className="mr-2" />
               Create New Listing
-            </button>
+            </Link>
           </div>
 
           {/* Search & Filters */}
