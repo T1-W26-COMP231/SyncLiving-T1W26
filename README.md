@@ -104,33 +104,27 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 We use **Google Stitch** to design and iterate on our UI. To sync these designs directly into your AI editor (like Cursor or VS Code) using the **Model Context Protocol (MCP)**, follow these steps:
 
 ### 1. Get the Shared API Key
-See the design: https://stitch.withgoogle.com/projects/1957947046545577335
-If you use gemini CLI, please run the command in terminal.
+See the design: https://stitch.withgoogle.com/projects/1957947046545577335 
+If you use **gemini CLI**, please run the command in powershell.
 ```bash
 gemini extensions install https://github.com/gemini-cli-extensions/stitch
 ```
-follow the instruction from gemini. Ask the project owner for the shared **Stitch API Key**. 
+Ask the project owner for the shared **Stitch API Key**. 
+Run
+```bash
+$MY_STITCH_KEY = "PASTE_STITCH_API_KEY_HERE"
+```
+```bash
+
+(Get-Content "$HOME\.gemini\extensions\Stitch\gemini-extension-apikey.json") -replace "YOUR_API_KEY", $MY_STITCH_KEY | Set-Content "$HOME\.gemini\extensions\Stitch\gemini-extension.json"
+```
 try step 2 only if problem exists.
 > **⚠️ Security:** Never commit this key to the repository.
 
 ### 2. Configure Your AI Editor
-Add the following to your `.mcp.json` file in the project root (for **Claude Code**):
+Go to your C:\Users\(username)\.gemini\extensions\Stitch
+Change the file **gemini-extension-apikey.json** directly
 
-```json
-{
-  "mcpServers": {
-    "stitch": {
-      "type": "http",
-      "url": "https://stitch.googleapis.com/mcp",
-      "env": {
-        "STITCH_API_KEY": "YOUR_SHARED_API_KEY_HERE"
-      }
-    }
-  }
-}
-```
-
-> **Note:** `.mcp.json` is git-ignored. Each developer must create their own local copy with the shared key.
 
 ### 3. Usage
 Once connected, you can ask your AI agent to:
