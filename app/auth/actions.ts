@@ -46,11 +46,57 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
-    redirect('/login?error=' + encodeURIComponent(error.message))
+    redirect('/signup?error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')
   redirect('/')
+}
+
+/**
+ * Action to initiate Google OAuth login.
+ * Supabase returns a redirect URL; we redirect the browser to it.
+ */
+export async function signInWithGoogle() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    redirect('/login?error=' + encodeURIComponent(error.message))
+  }
+
+  if (data.url) {
+    redirect(data.url)
+  }
+}
+
+/**
+ * Action to initiate Apple OAuth login.
+ * Supabase returns a redirect URL; we redirect the browser to it.
+ */
+export async function signInWithApple() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    redirect('/login?error=' + encodeURIComponent(error.message))
+  }
+
+  if (data.url) {
+    redirect(data.url)
+  }
 }
 
 /**
