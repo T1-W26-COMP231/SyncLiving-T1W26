@@ -48,7 +48,7 @@ export async function updateSession(request: NextRequest) {
   if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
     // Redirect authenticated users away from auth pages
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/provider-dashboard'
     return NextResponse.redirect(url)
   }
 
