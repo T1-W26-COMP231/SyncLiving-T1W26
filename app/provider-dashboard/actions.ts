@@ -23,19 +23,41 @@ export async function createListing(prevState: any, formData: FormData) {
   const amenities_ids_raw = formData.get('amenities_ids') as string;
   const amenities_ids = amenities_ids_raw ? JSON.parse(amenities_ids_raw) : [];
 
+  // New location fields
+  const city = (formData.get('city') as string) || 'Default City';
+  const postal_code = (formData.get('postal_code') as string) || 'A1B 2C3';
+  const lat = formData.get('lat') as string;
+  const lng = formData.get('lng') as string;
+
+  // Debugging logs
+  console.log('--- CREATE/UPDATE LISTING ---');
+  console.log('ID:', id);
+  console.log('Address:', address);
+  console.log('Coords (Lat/Lng):', lat, lng);
+  console.log('Status:', status);
+
   let listingId = id;
 
-  const listingData = {
+  const listingData: any = {
     provider_id: user.id,
     title,
     address,
-    city: 'Default City',
-    postal_code: 'A1B 2C3',
+    city,
+    postal_code,
     rental_fee,
     house_rules,
     status,
     vacant_start_date: new Date().toISOString().split('T')[0],
   };
+
+  // Ensure coords are added as valid PostGIS string
+  if (lat && lng && lat !== '' && lng !== '') {
+    // PostGIS geography expects POINT(longitude latitude)
+    listingData.location_coords = `POINT(${lng} ${lat})`;
+    console.log('Generated Coords String:', listingData.location_coords);
+  } else {
+    console.warn('Coordinates missing, field will be NULL in DB.');
+  }
 
   try {
     if (id) {

@@ -8,7 +8,8 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const supabase = await createClient();
 
-  // Parallel fetch: Listing Data, Room Types, Amenities, and current relations
+  // Fetch Listing Data with raw coordinates
+  // Note: We'll parse the geography point in the server action or here
   const [
     listingRes,
     roomTypesRes,
@@ -27,6 +28,16 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     return notFound();
   }
 
+  // Handle geography data (usually comes as GeoJSON or WKB string in Supabase)
+  // If it's a point, we might need to handle its extraction
+  // For now, we'll assume the form will re-geocode if address changes, 
+  // but let's try to pass existing ones if they exist.
+  
+  // Note: Standard Supabase select on geography returns WKB. 
+  // To get Lat/Lng easily, we'd usually use a RPC or specialized select.
+  // For this implementation, we'll focus on ensuring NEW saves work first, 
+  // and provide a placeholder for edit.
+
   const initialData = {
     id: listingRes.data.id,
     title: listingRes.data.title,
@@ -34,7 +45,11 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     rental_fee: listingRes.data.rental_fee,
     house_rules: listingRes.data.house_rules,
     room_type_id: currentRoomTypeRes.data?.room_type_id || '',
-    amenities_ids: currentAmenitiesRes.data?.map(a => a.amenity_id) || []
+    amenities_ids: currentAmenitiesRes.data?.map(a => a.amenity_id) || [],
+    city: listingRes.data.city,
+    postal_code: listingRes.data.postal_code,
+    // coordinates are tricky to parse from WKB here, 
+    // we'll rely on the user re-selecting or a future robust parser.
   };
 
   return (

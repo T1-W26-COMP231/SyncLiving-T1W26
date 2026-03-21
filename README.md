@@ -40,15 +40,29 @@ Before running the project on **Windows**, ensure you have installed:
      - **Note:** Make sure Docker is running before executing any Supabase CLI commands.
 
 ### 2. Environment Setup
-Create a `.env.local` file in the root directory and add your Supabase credentials:
+Create a `.env.local` file in the root directory and add your Supabase and Google Maps credentials:
 
 ```bash
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Google Maps Configuration (for Address Autocomplete)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
-### 3. Start Supabase (Local)
+### 3. Map Services Setup
+To enable address validation and geolocation in the provider dashboard, you must:
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a project and an API Key.
+3. **CRITICAL:** Enable the following **Legacy/Standard APIs** (the "New" versions are not yet supported by our client libraries):
+   - **Maps JavaScript API** (Loads the core SDK)
+   - **Places API** (Enables address autocomplete dropdown)
+   - **Geocoding API** (Converts address strings to Lat/Lng coordinates)
+4. Update your `.env.local` with the new key and restart the dev server.
+
+### 4. Start Supabase (Local)
 Run the following command to start the Docker containers and apply database migrations:
 
 ```bash
