@@ -21,10 +21,20 @@ CREATE TABLE public.amenities (
     created_at timestamp with time zone DEFAULT now()
 );
 
+-- 3.5 Create Master Table for Room Types (Normalization)
+CREATE TABLE public.room_types (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text UNIQUE NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
 -- 4. Create Main Listing Table (room_listings)
 CREATE TABLE public.room_listings (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     provider_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    
+    -- Content
+    title text NOT NULL,
     
     -- Statuses
     status post_status DEFAULT 'draft' NOT NULL,
@@ -39,7 +49,6 @@ CREATE TABLE public.room_listings (
 
     -- Financials & Content
     rental_fee numeric(10, 2) NOT NULL CHECK (rental_fee >= 0),
-    room_type text NOT NULL, -- e.g., 'Private', 'Shared'
     house_rules text,
     photos text[] DEFAULT '{}', -- Array of URLs stored in blob storage
     
@@ -70,18 +79,27 @@ CREATE TABLE public.listing_amenities (
     PRIMARY KEY (listing_id, amenity_id)
 );
 
+-- relationship between room_listings and room_types (One type per listing)
+CREATE TABLE public.listing_room_types (
+    listing_id uuid PRIMARY KEY REFERENCES public.room_listings(id) ON DELETE CASCADE,
+    room_type_id uuid REFERENCES public.room_types(id) ON DELETE CASCADE
+);
+
 -- 6. Enable Row Level Security (RLS)
 ALTER TABLE public.lifestyle_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.amenities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.room_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.listing_lifestyle_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.listing_amenities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.listing_room_types ENABLE ROW LEVEL SECURITY;
 
 -- 7. Define RLS Policies
 
--- Lifestyle Tags & Amenities: Read access for everyone
+-- Lifestyle Tags, Amenities & Room Types: Read access for everyone
 CREATE POLICY "Public read for lifestyle_tags" ON public.lifestyle_tags FOR SELECT USING (true);
 CREATE POLICY "Public read for amenities" ON public.amenities FOR SELECT USING (true);
+CREATE POLICY "Public read for room_types" ON public.room_types FOR SELECT USING (true);
 
 -- Room Listings: 
 -- 1. Everyone can view 'published' listings
@@ -104,6 +122,12 @@ USING (EXISTS (SELECT 1 FROM public.room_listings WHERE id = listing_id AND prov
 
 CREATE POLICY "Providers manage own listing_amenities" 
 ON public.listing_amenities FOR ALL 
+USING (EXISTS (SELECT 1 FROM public.room_listings WHERE id = listing_id AND provider_id = auth.uid()));
+
+CREATE POLICY "Public read for listing_room_types" ON public.listing_room_types FOR SELECT USING (true);
+
+CREATE POLICY "Providers manage own listing_room_types" 
+ON public.listing_room_types FOR ALL 
 USING (EXISTS (SELECT 1 FROM public.room_listings WHERE id = listing_id AND provider_id = auth.uid()));
 
 -- 8. Add trigger for updated_at
@@ -153,3 +177,10 @@ INSERT INTO public.amenities (name, category) VALUES
     ('Near Transit/Subway', 'Exterior'),
     ('Bicycle Storage', 'Exterior'),
     ('Balcony/Backyard', 'Exterior');
+
+-- 11. Insert Initial Seed Data for Room Types
+INSERT INTO public.room_types (name) VALUES
+    ('Private Room'),
+    ('Shared Room'),
+    ('Entire Apartment'),
+    ('Studio');

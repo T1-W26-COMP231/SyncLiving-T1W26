@@ -3,19 +3,48 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { FormInput, FormTextarea } from '@/components/ui/FormElements';
+import { createListing } from '../../../app/provider-dashboard/actions';
 
-const ROOM_TYPES = [
-  { id: 'private', label: 'Private Room' },
-  { id: 'shared', label: 'Shared Room' },
-  { id: 'entire', label: 'Entire Apartment' },
-  { id: 'studio', label: 'Studio' },
-];
+interface RoomType {
+  id: string;
+  name: string;
+}
 
-export default function CreateListingForm() {
-  const [selectedRoomType, setSelectedRoomType] = useState('private');
+interface Amenity {
+  id: string;
+  name: string;
+  category: string | null;
+}
+
+interface CreateListingFormProps {
+  roomTypes: RoomType[];
+  amenities: Amenity[];
+}
+
+export default function CreateListingForm({ roomTypes, amenities }: CreateListingFormProps) {
+  const [selectedRoomType, setSelectedRoomType] = useState(roomTypes[0]?.id || '');
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [isPending, setIsPending] = useState(false);
+
+  const toggleAmenity = (id: string) => {
+    setSelectedAmenities(prev => 
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
+  };
 
   return (
-    <form className="space-y-10" onSubmit={(e) => e.preventDefault()}>
+    <form className="space-y-10" action={async (formData) => {
+      setIsPending(true);
+      try {
+        await createListing(formData);
+      } finally {
+        setIsPending(false);
+      }
+    }}>
+      {/* Hidden inputs to pass state to Server Action */}
+      <input type="hidden" name="room_type_id" value={selectedRoomType} />
+      <input type="hidden" name="amenities_ids" value={JSON.stringify(selectedAmenities)} />
+
       {/* Listing Details Section */}
       <Card>
         <CardHeader title="Listing Details" subtitle="Step 1" />
@@ -26,6 +55,7 @@ export default function CreateListingForm() {
                 label="Listing Title" 
                 placeholder="Enter listing title" 
                 name="title" 
+                required
               />
             </div>
             
@@ -34,13 +64,14 @@ export default function CreateListingForm() {
                 label="Address" 
                 placeholder="Enter property address" 
                 name="address" 
+                required
               />
             </div>
 
             <div className="col-span-full">
               <label className="block text-sm font-semibold text-slate-700">Room Type</label>
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {ROOM_TYPES.map((type) => (
+                {roomTypes.map((type) => (
                   <label 
                     key={type.id}
                     className={`relative flex cursor-pointer items-center justify-center rounded-xl border px-3 py-3 shadow-sm focus:outline-none transition-all
@@ -51,13 +82,13 @@ export default function CreateListingForm() {
                   >
                     <input 
                       type="radio" 
-                      name="room-type" 
+                      name="room-type-radio" 
                       value={type.id} 
                       className="sr-only" 
                       checked={selectedRoomType === type.id}
                       onChange={() => setSelectedRoomType(type.id)}
                     />
-                    <span className="text-xs font-bold">{type.label}</span>
+                    <span className="text-xs font-bold">{type.name}</span>
                   </label>
                 ))}
               </div>
@@ -68,6 +99,8 @@ export default function CreateListingForm() {
                 label="Monthly Rent" 
                 placeholder="1200+" 
                 name="rent" 
+                type="number"
+                required
                 iconLeft={<span className="text-slate-500 sm:text-sm">$</span>}
               />
             </div>
@@ -75,22 +108,50 @@ export default function CreateListingForm() {
         </CardContent>
       </Card>
 
-      {/* Amenities & Rules Section */}
+      {/* Amenities Section */}
       <Card>
-        <CardHeader title="Amenities & Rules" subtitle="Step 2" />
+        <CardHeader title="Amenities" subtitle="Step 2" />
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {amenities.map((amenity) => (
+              <button
+                key={amenity.id}
+                type="button"
+                onClick={() => toggleAmenity(amenity.id)}
+                className={`
+                  flex items-center gap-2 p-3 rounded-xl border text-sm font-medium transition-all
+                  ${selectedAmenities.includes(amenity.id)
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-slate-100 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }
+                `}
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {selectedAmenities.includes(amenity.id) ? 'check_circle' : 'add_circle'}
+                </span>
+                {amenity.name}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* House Rules Section */}
+      <Card>
+        <CardHeader title="House Rules" subtitle="Step 3" />
         <CardContent>
           <FormTextarea 
-            label="Description" 
+            label="Property Rules & Description" 
             name="description" 
             rows={5} 
-            placeholder="Describe the property, amenities, and any house rules..." 
+            placeholder="Describe any house rules, expectations, or additional details..." 
           />
         </CardContent>
       </Card>
 
       {/* Property Photos Section */}
       <Card>
-        <CardHeader title="Property Photos" subtitle="Step 3" />
+        <CardHeader title="Property Photos" subtitle="Step 4" />
         <CardContent>
           <div className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm group-hover:scale-110 transition-transform">
@@ -116,11 +177,23 @@ export default function CreateListingForm() {
 
       {/* Form Actions */}
       <div className="flex flex-col-reverse gap-4 sm:flex-row sm:justify-end sm:gap-6 pt-6">
-        <button type="button" className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all">
-          Save as Draft
+        <button 
+          type="submit" 
+          name="status" 
+          value="draft"
+          disabled={isPending}
+          className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50"
+        >
+          {isPending ? 'Saving...' : 'Save as Draft'}
         </button>
-        <button type="submit" className="inline-flex items-center justify-center rounded-xl border border-transparent bg-primary px-8 py-4 text-sm font-bold text-dark shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
-          Publish Listing
+        <button 
+          type="submit" 
+          name="status" 
+          value="published"
+          disabled={isPending}
+          className="inline-flex items-center justify-center rounded-xl border border-transparent bg-primary px-8 py-4 text-sm font-bold text-dark shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
+        >
+          {isPending ? 'Publishing...' : 'Publish Listing'}
         </button>
       </div>
     </form>

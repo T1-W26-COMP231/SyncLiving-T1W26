@@ -2,8 +2,20 @@ import React from 'react';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import CreateListingForm from '@/components/provider-dashboard/CreateListingForm';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/server';
 
-export default function CreateListingPage() {
+export default async function CreateListingPage() {
+  const supabase = await createClient();
+  
+  // Parallel fetch for room types and amenities
+  const [roomTypesRes, amenitiesRes] = await Promise.all([
+    supabase.from('room_types').select('id, name').order('name'),
+    supabase.from('amenities').select('id, name, category').order('name')
+  ]);
+
+  const roomTypes = roomTypesRes.data || [];
+  const amenities = amenitiesRes.data || [];
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
       {/* Navigation Header */}
@@ -34,7 +46,10 @@ export default function CreateListingPage() {
         </div>
 
         {/* Client Form Component */}
-        <CreateListingForm />
+        <CreateListingForm 
+          roomTypes={roomTypes} 
+          amenities={amenities} 
+        />
       </main>
 
       {/* Footer */}
