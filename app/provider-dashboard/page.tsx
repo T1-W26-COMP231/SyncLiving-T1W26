@@ -13,6 +13,16 @@ export default async function ProviderDashboard() {
     return <div>Please log in to view your dashboard.</div>;
   }
 
+  // Fetch user profile (full data for onboarding form pre-population)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  const userName = user.email?.split('@')[0] || 'User';
+  const name = profile?.full_name || user.email?.split('@')[0] || 'User';
+
   // Fetch real listings for this provider
   const { data: listingsData, error } = await supabase
     .from('room_listings')
@@ -41,9 +51,12 @@ export default async function ProviderDashboard() {
   }));
 
   return (
-    <ProviderDashboardClient 
-      initialListings={listings} 
-      inquiries={[]} 
+    <ProviderDashboardClient
+      initialListings={listings}
+      inquiries={[]}
+      userName={userName}
+      name={name}
+      initialProfile={profile}
     />
   );
 }
