@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateProfile } from '../../../app/onboarding/actions';
+import { createClient } from '@/utils/supabase/client';
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star,
   Camera, Plus, X, Home, Building2, UserSearch,
-  Check, ChevronLeft, ChevronRight, Search,
+  Check, ChevronLeft, ChevronRight, Search, Trash2
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,9 +108,12 @@ function FieldLabel({ children, optional }: { children: React.ReactNode; optiona
 
 const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, onClose }) => {
   const router   = useRouter();
+  const supabase = createClient();
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(true);
+  
+  const morePhotosInputRef = useRef<HTMLInputElement>(null);
 
   // Parse initial PostGIS / GeoJSON coordinates
   let initialLat: number | undefined;
@@ -137,13 +141,25 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     preferred_gender: initialData?.preferred_gender || 'Any Gender',
     move_in_date:     initialData?.move_in_date     || '',
     lifestyle_tags:  (initialData?.lifestyle_tags   || []) as string[],
-    bio:              '',
+    bio:              initialData?.bio              || '',
   });
 
   // ── Photo state ─────────────────────────────────────────────────────────────
-  const [profilePhotoUrl,  setProfilePhotoUrl]  = useState<string | null>(null);
-  const [morePhotoUrls,    setMorePhotoUrls]    = useState<(string | null)[]>(Array(5).fill(null));
-  const [spacePhotoUrls,   setSpacePhotoUrls]   = useState<(string | null)[]>(Array(4).fill(null));
+  const [profilePhotoUrl,  setProfilePhotoUrl]  = useState<string | null>(
+    initialData?.avatar_url 
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${initialData.avatar_url}` 
+      : null
+  );
+  const [avatarFile,       setAvatarFile]       = useState<File | null>(null);
+  
+  // Dynamic photos state
+  const [morePhotos,       setMorePhotos]       = useState<{file?: File, url: string, path?: string}[]>(
+    (initialData?.photos || []).map((path: string) => ({
+      path,
+      url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${path}`
+    }))
+  );
+  const [spacePhotos,      setSpacePhotos]      = useState<{file?: File, url: string}[]>([]);
   const [spaceNote,        setSpaceNote]        = useState('');
 
   // ── My Space toggle — default ON when housing purpose has space ─────────────
@@ -186,19 +202,40 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   // ── Photo pickers ────────────────────────────────────────────────────────────
   const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setProfilePhotoUrl(URL.createObjectURL(file));
+    if (file) {
+      setAvatarFile(file);
+      setProfilePhotoUrl(URL.createObjectURL(file));
+    }
   };
 
-  const pickMorePhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMorePhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const handleMorePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newPhotos = newFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file)
+      }));
+      setMorePhotos(prev => [...prev, ...newPhotos]);
+    }
   };
 
-  const pickSpacePhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSpacePhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const removeMorePhoto = (index: number) => {
+    setMorePhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSpacePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newPhotos = newFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file)
+      }));
+      setSpacePhotos(prev => [...prev, ...newPhotos]);
+    }
+  };
+
+  const removeSpacePhoto = (index: number) => {
+    setSpacePhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   // ── Lifestyle tags ────────────────────────────────────────────────────────────
@@ -223,6 +260,50 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      let finalAvatarUrl = initialData?.avatar_url;
+
+      // 1. Upload avatar if changed
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}/avatar_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { data, error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(filePath, avatarFile, {
+            contentType: avatarFile.type,
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+        finalAvatarUrl = data.path;
+      }
+
+      // 2. Upload "More Photos"
+      const finalPhotos: string[] = [];
+      for (const photo of morePhotos) {
+        if (photo.file) {
+          const fileExt = photo.file.name.split('.').pop();
+          const fileName = `${user.id}/more_${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `${fileName}`;
+
+          const { data, error: uploadError } = await supabase.storage
+            .from('property-images')
+            .upload(filePath, photo.file, {
+              contentType: photo.file.type,
+              upsert: true
+            });
+
+          if (uploadError) throw uploadError;
+          finalPhotos.push(data.path);
+        } else if (photo.path) {
+          finalPhotos.push(photo.path);
+        }
+      }
+
       const result = await updateProfile({
         full_name:        formData.full_name,
         age:              formData.age,
@@ -235,7 +316,11 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
         budget_max:       formData.budget_max,
         preferred_gender: formData.preferred_gender,
         move_in_date:     formData.move_in_date,
+        avatar_url:       finalAvatarUrl,
+        photos:           finalPhotos,
+        bio:              formData.bio,
       });
+
       if (result?.error) {
         alert('Error: ' + result.error);
       } else {
@@ -243,6 +328,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       }
     } catch (err) {
       console.error('Submit error:', err);
+      alert('An error occurred during submission.');
     } finally {
       setLoading(false);
     }
@@ -554,40 +640,55 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                 </div>
               </section>
 
-              {/* More photos — 3-col grid */}
+              {/* More photos — Dynamic selection */}
               <section>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <span className="text-base leading-none">📷</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">More Photos</span>
                   </div>
-                  <span className="text-[10px] font-medium text-slate-400 italic">Add up to 5 more</span>
+                  <span className="text-[10px] font-medium text-slate-400 italic">Show more of your personality</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <label key={i} className="aspect-square cursor-pointer group block">
-                      <div className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                        morePhotoUrls[i]
-                          ? 'border-primary'
-                          : 'border-slate-200 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
-                      }`}>
-                        {morePhotoUrls[i] ? (
-                          <img src={morePhotoUrls[i]!} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                        ) : (
-                          <Camera size={20} className="text-slate-300 group-hover:text-primary transition-colors" />
-                        )}
-                      </div>
-                      <input type="file" accept="image/*" className="sr-only" onChange={e => pickMorePhoto(i, e)} />
-                    </label>
-                  ))}
-                  {/* Tips tile */}
-                  <div className="aspect-square rounded-xl bg-secondary/20 flex flex-col items-center justify-center p-3 text-center">
-                    <span className="text-lg mb-1">💡</span>
-                    <span className="text-[9px] font-bold text-slate-600 leading-tight">
-                      Shoot in natural light for best results!
-                    </span>
+                
+                {/* Add Photo Button */}
+                <div 
+                  onClick={() => morePhotosInputRef.current?.click()}
+                  className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer mb-6"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm group-hover:scale-110 transition-transform">
+                    <Camera size={24} className="text-primary" />
                   </div>
+                  <div className="mt-3">
+                    <p className="text-sm font-bold text-dark">Add More Photos</p>
+                    <p className="text-[10px] text-slate-500">Select multiple files</p>
+                  </div>
+                  <input 
+                    ref={morePhotosInputRef}
+                    type="file" 
+                    className="hidden" 
+                    multiple 
+                    accept="image/*"
+                    onChange={handleMorePhotosChange}
+                  />
                 </div>
+
+                {/* Previews Grid */}
+                {morePhotos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {morePhotos.map((photo, i) => (
+                      <div key={i} className="group relative aspect-square rounded-xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm">
+                        <img src={photo.url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeMorePhoto(i)}
+                          className="absolute top-1.5 right-1.5 size-7 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <X size={14} strokeWidth={3} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* ── My Space section ──────────────────────────────────── */}
@@ -627,27 +728,38 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                   <div className="mt-4 space-y-5 pl-1">
                     {/* Space photos */}
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Space Photos</span>
-                        <span className="text-[10px] italic text-slate-400">Common areas, room, etc. — up to 4</span>
+                        <span className="text-[10px] italic text-slate-400">Common areas, room, etc.</span>
                       </div>
-                      <div className="grid grid-cols-4 gap-3">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <label key={i} className="aspect-square cursor-pointer group block">
-                            <div className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                              spacePhotoUrls[i]
-                                ? 'border-primary'
-                                : 'border-slate-200 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
-                            }`}>
-                              {spacePhotoUrls[i] ? (
-                                <img src={spacePhotoUrls[i]!} alt={`Space ${i + 1}`} className="w-full h-full object-cover" />
-                              ) : (
-                                <Camera size={16} className="text-slate-300 group-hover:text-primary transition-colors" />
-                              )}
-                            </div>
-                            <input type="file" accept="image/*" className="sr-only" onChange={e => pickSpacePhoto(i, e)} />
-                          </label>
+                      
+                      {/* Space Photos Selection */}
+                      <div className="flex flex-wrap gap-3">
+                        {/* Previews */}
+                        {spacePhotos.map((photo, i) => (
+                          <div key={i} className="group relative size-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm">
+                            <img src={photo.url} alt={`Space ${i + 1}`} className="h-full w-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeSpacePhoto(i)}
+                              className="absolute top-1 right-1 size-5 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={10} strokeWidth={3} />
+                            </button>
+                          </div>
                         ))}
+                        
+                        {/* Add Button Tile */}
+                        <label className="size-20 cursor-pointer group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-primary hover:bg-primary/5 transition-all">
+                          <Plus size={20} className="text-slate-400 group-hover:text-primary transition-colors" />
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="sr-only" 
+                            multiple
+                            onChange={handleSpacePhotosChange} 
+                          />
+                        </label>
                       </div>
                     </div>
 

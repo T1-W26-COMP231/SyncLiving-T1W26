@@ -10,6 +10,8 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS preferred_age_max INTEGER,
   ADD COLUMN IF NOT EXISTS preferred_gender TEXT,
   ADD COLUMN IF NOT EXISTS move_in_date DATE,
+  ADD COLUMN IF NOT EXISTS photos TEXT[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS bio TEXT,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
 
 -- If you need any specific new policy, you can add them here.

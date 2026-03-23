@@ -15,6 +15,9 @@ export async function updateProfile(formData: {
   budget_max: number;
   preferred_gender: string;
   move_in_date: string;
+  avatar_url?: string;
+  photos?: string[];
+  bio?: string;
 }) {
   const supabase = await createClient();
 
@@ -45,6 +48,9 @@ export async function updateProfile(formData: {
       budget_max: formData.budget_max,
       preferred_gender: formData.preferred_gender,
       move_in_date: formData.move_in_date,
+      avatar_url: formData.avatar_url,
+      photos: formData.photos,
+      bio: formData.bio,
       updated_at: new Date().toISOString(),
     });
 
