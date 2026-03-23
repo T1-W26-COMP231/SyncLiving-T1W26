@@ -41,6 +41,7 @@ interface CreateListingFormProps {
     postal_code?: string;
     lat?: number;
     lng?: number;
+    photos?: string[];
   };
 }
 
@@ -131,7 +132,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
     <>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
       />
 
       <form action={formAction}>

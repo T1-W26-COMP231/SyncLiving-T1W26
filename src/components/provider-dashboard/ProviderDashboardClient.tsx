@@ -45,7 +45,7 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
         {/* Welcome Header */}
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-extrabold text-dark tracking-tight">Welcome, {name}</h1>
-          <p className="text-slate-500 font-medium">Find the most compatible roommates for your space.</p>
+          <p className="text-slate-500 font-medium">Manage your property listings and find the best tenants.</p>
         </div>
 
         {/* Two Section CTAs - Reference "SyncLiving - Final Dashboard with Listings" */}
@@ -85,7 +85,7 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-dark mb-2">List Your Room</h2>
-                  <p className="text-slate-500 text-sm leading-relaxed max-w-sm">
+                  <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
                     Ready to fill an empty space? Create a detailed listing with photos, amenities, 
                     and roommate preferences to attract high-quality applicants today.
                   </p>
@@ -165,23 +165,6 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
           onClose={() => setShowSettingsModal(false)}
         />
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, change, icon }: { label: string; value: string; change: string; icon: React.ReactNode }) {
-  return (
-    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="size-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-          {icon}
-        </div>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
-      </div>
-      <div>
-        <h4 className="text-2xl font-extrabold text-dark">{value}</h4>
-        <p className="text-[11px] font-bold text-green-500 mt-1 uppercase tracking-tighter">{change}</p>
-      </div>
     </div>
   );
 }

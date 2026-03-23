@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateProfile } from '../../../app/onboarding/actions';
+import { createClient } from '@/utils/supabase/client';
+import usePlacesAutocomplete, {
+  getGeocode,
+  getLatLng,
+} from "use-places-autocomplete";
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star,
   Camera, Plus, X, Home, UserSearch,
@@ -260,9 +265,25 @@ function FieldLabel({ children, optional }: { children: React.ReactNode; optiona
 
 const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, onClose }) => {
   const router   = useRouter();
+  const supabase = createClient();
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+  
+  const morePhotosInputRef = useRef<HTMLInputElement>(null);
+
+  // Poll for google maps availability
+  useEffect(() => {
+    const checkGoogle = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        setIsGoogleLoaded(true);
+      } else {
+        setTimeout(checkGoogle, 100);
+      }
+    };
+    checkGoogle();
+  }, []);
 
   // Parse initial PostGIS / GeoJSON coordinates
   let initialLat: number | undefined;
@@ -363,33 +384,34 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     }
   };
 
-  const handleSelectSuggestion = (s: any) => {
-    setFormData(p => ({
-      ...p,
-      location:  s.display_name,
-      latitude:  parseFloat(s.lat),
-      longitude: parseFloat(s.lon),
-    }));
-    setShowSuggestions(false);
-    setLocationSuggestions([]);
+  const handleMorePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newPhotos = newFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file)
+      }));
+      setMorePhotos(prev => [...prev, ...newPhotos]);
+    }
   };
 
-  // ── Photo pickers ────────────────────────────────────────────────────────────
-  const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setProfilePhotoUrl(URL.createObjectURL(file));
+  const removeMorePhoto = (index: number) => {
+    setMorePhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const pickMorePhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMorePhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const handleSpacePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newPhotos = newFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file)
+      }));
+      setSpacePhotos(prev => [...prev, ...newPhotos]);
+    }
   };
 
-  const pickSpacePhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSpacePhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const removeSpacePhoto = (index: number) => {
+    setSpacePhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const toggleSpaceVibe = (vibe: string) => {
@@ -448,6 +470,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       }
     } catch (err) {
       console.error('Submit error:', err);
+      alert('An error occurred during submission.');
     } finally {
       setLoading(false);
     }
@@ -849,6 +872,14 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                         : 'Optionally show others your current living environment'}
                     </p>
                   </div>
+                  <input 
+                    ref={morePhotosInputRef}
+                    type="file" 
+                    className="hidden" 
+                    multiple 
+                    accept="image/*"
+                    onChange={handleMorePhotosChange}
+                  />
                 </div>
                 <button
                   type="button"

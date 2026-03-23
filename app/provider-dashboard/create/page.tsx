@@ -3,9 +3,14 @@ import CreateListingForm from '@/components/provider-dashboard/CreateListingForm
 import Navbar from '@/components/layout/Navbar';
 import { createClient } from '@/utils/supabase/server';
 
+import LandingNavbar from '@/components/landing/LandingNavbar';
+
 export default async function CreateListingPage() {
   const supabase = await createClient();
   
+  // Get current user for navbar
+  const { data: { user } } = await supabase.auth.getUser();
+
   // Parallel fetch for room types and amenities
   const [roomTypesRes, amenitiesRes] = await Promise.all([
     supabase.from('room_types').select('id, name').order('name'),
