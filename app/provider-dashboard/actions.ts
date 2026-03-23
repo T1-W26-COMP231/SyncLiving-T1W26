@@ -23,6 +23,9 @@ export async function createListing(prevState: any, formData: FormData) {
   const amenities_ids_raw = formData.get('amenities_ids') as string;
   const amenities_ids = amenities_ids_raw ? JSON.parse(amenities_ids_raw) : [];
 
+  const photos_raw = formData.get('photos') as string;
+  const photos = photos_raw ? JSON.parse(photos_raw) : [];
+
   // New location fields
   const city = (formData.get('city') as string) || 'Default City';
   const postal_code = (formData.get('postal_code') as string) || 'A1B 2C3';
@@ -32,9 +35,8 @@ export async function createListing(prevState: any, formData: FormData) {
   // Debugging logs
   console.log('--- CREATE/UPDATE LISTING ---');
   console.log('ID:', id);
+  console.log('Photos:', photos);
   console.log('Address:', address);
-  console.log('Coords (Lat/Lng):', lat, lng);
-  console.log('Status:', status);
 
   let listingId = id;
 
@@ -47,6 +49,7 @@ export async function createListing(prevState: any, formData: FormData) {
     rental_fee,
     house_rules,
     status,
+    photos,
     vacant_start_date: new Date().toISOString().split('T')[0],
   };
 

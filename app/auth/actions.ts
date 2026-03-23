@@ -24,7 +24,7 @@ export async function login(formData: FormData) {
 
   // Refresh the data on the current page
   revalidatePath('/', 'layout')
-  redirect('/provider-dashboard')
+  redirect('/')
 }
 
 /**
@@ -35,11 +35,15 @@ export async function signup(formData: FormData) {
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const full_name = formData.get('full_name') as string
 
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      data: {
+        full_name: full_name,
+      },
       // This is the URL the user will be redirected to after clicking the link in their email
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
     },
@@ -50,7 +54,7 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/provider-dashboard')
+  redirect('/')
 }
 
 /**

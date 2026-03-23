@@ -13,6 +13,22 @@ export default async function ProviderDashboard() {
     return <div>Please log in to view your dashboard.</div>;
   }
 
+  // Fetch user profile (full data for onboarding form pre-population)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  const userName = user.email?.split('@')[0] || 'User';
+  const name = profile?.full_name || user.email?.split('@')[0] || 'User';
+
+  // Fetch room types and amenities for the Create Listing modal
+  const [roomTypesRes, amenitiesRes] = await Promise.all([
+    supabase.from('room_types').select('id, name').order('name'),
+    supabase.from('amenities').select('id, name, category').order('name'),
+  ]);
+
   // Fetch real listings for this provider
   const { data: listingsData, error } = await supabase
     .from('room_listings')
@@ -25,25 +41,39 @@ export default async function ProviderDashboard() {
   }
 
   // Map database data to ListingType
-  const listings: ListingType[] = (listingsData || []).map(item => ({
-    id: item.id,
-    title: item.title,
-    price: item.rental_fee,
-    location: item.address,
-    distance: 'Calculating...', // Placeholder
-    status: item.status as 'published' | 'draft' | 'archived',
-    imageUrl: item.photos?.[0] || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    stats: {
-      views: 0, // Placeholder
-      favorites: 0, // Placeholder
-      inquiries: 0, // Placeholder
-    }
-  }));
+  const listings: ListingType[] = (listingsData || []).map(item => {
+    // Construct the full image URL from photos array
+    const firstPhoto = item.photos && item.photos.length > 0 ? item.photos[0] : null;
+    const imageUrl = firstPhoto 
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${firstPhoto}`
+      : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+
+    return {
+      id: item.id,
+      title: item.title,
+      price: item.rental_fee,
+      location: item.address,
+      distance: 'Calculating...', // Placeholder
+      status: item.status as 'published' | 'draft' | 'archived',
+      imageUrl: imageUrl,
+      photos: item.photos || [],
+      stats: {
+        views: 0, // Placeholder
+        favorites: 0, // Placeholder
+        inquiries: 0, // Placeholder
+      }
+    };
+  });
 
   return (
-    <ProviderDashboardClient 
-      initialListings={listings} 
-      inquiries={[]} 
+    <ProviderDashboardClient
+      initialListings={listings}
+      inquiries={[]}
+      userName={userName}
+      name={name}
+      initialProfile={profile}
+      roomTypes={roomTypesRes.data || []}
+      amenities={amenitiesRes.data || []}
     />
   );
 }
