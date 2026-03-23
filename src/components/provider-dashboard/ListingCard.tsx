@@ -10,7 +10,8 @@ export interface ListingType {
   location: string;
   distance: string;
   status: 'published' | 'draft' | 'archived';
-  imageUrl: string;
+  imageUrl?: string;
+  photos?: string[];
   stats: {
     views: number;
     favorites: number;
@@ -23,12 +24,17 @@ interface ListingCardProps {
 }
 
 export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
+  const displayImage = listing.imageUrl || 
+    (listing.photos && listing.photos.length > 0 
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${listing.photos[0]}`
+      : '/placeholder-property.jpg');
+
   return (
     <div className="flex flex-col md:flex-row bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
       {/* Image Section */}
       <div className="relative w-full md:w-64 h-48 md:h-auto">
         <img 
-          src={listing.imageUrl} 
+          src={displayImage} 
           alt={listing.title} 
           className="w-full h-full object-cover"
         />

@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useActionState } from 'react';
+import React, { useState, useActionState, useRef, startTransition } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { FormInput, FormTextarea } from '@/components/ui/FormElements';
 import { createListing } from '../../../app/provider-dashboard/actions';
 import AddressAutocomplete from './AddressAutocomplete';
 import Script from 'next/script';
+import { createClient } from '@/utils/supabase/client';
+import Image from 'next/image';
 
 interface RoomType {
   id: string;
@@ -33,16 +35,26 @@ interface CreateListingFormProps {
     postal_code?: string;
     lat?: number;
     lng?: number;
+    photos?: string[];
   };
 }
 
 export default function CreateListingForm({ roomTypes, amenities, initialData }: CreateListingFormProps) {
+  const supabase = createClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [state, formAction, isPending] = useActionState(createListing, null);
   
   const [selectedRoomType, setSelectedRoomType] = useState(initialData?.room_type_id || roomTypes[0]?.id || '');
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialData?.amenities_ids || []);
   const [submitStatus, setSubmitStatus] = useState<'draft' | 'published'>('draft');
   
+  // State for property photos
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>(initialData?.photos || []);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedPaths, setUploadedPaths] = useState<string[]>(initialData?.photos || []);
+
   // State for location details extracted from Google Maps
   const [location, setLocation] = useState({
     city: initialData?.city || '',
@@ -61,16 +73,83 @@ export default function CreateListingForm({ roomTypes, amenities, initialData }:
     setLocation({ city, postalCode, lat, lng });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+      
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPreviews(prev => prev.filter((_, i) => i !== index));
+    // If it's a new file, remove it from selectedFiles
+    // Note: This logic assumes new previews are added after initialData photos
+    const initialPhotosCount = initialData?.photos?.length || 0;
+    if (index >= initialPhotosCount) {
+      setSelectedFiles(prev => prev.filter((_, i) => i !== (index - initialPhotosCount)));
+    } else {
+      setUploadedPaths(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleSubmit = async (formData: FormData) => {
+    setIsUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const newUploadedPaths = [...uploadedPaths];
+
+      // Upload new files
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        console.log(`Attempting to upload to: property-images/${filePath}`);
+
+        const { data, error } = await supabase.storage
+          .from('property-images')
+          .upload(filePath, file, {
+            contentType: file.type,
+            upsert: true
+          });
+
+        if (error) {
+          console.error("Supabase Storage Error:", error);
+          throw error;
+        }
+        newUploadedPaths.push(data.path);
+      }
+
+      // Add photos to formData
+      formData.append('photos', JSON.stringify(newUploadedPaths));
+      
+      // Wrap in startTransition to satisfy React 19's requirements for useActionState
+      startTransition(() => {
+        formAction(formData);
+      });
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      alert("Failed to upload images. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const isEditMode = !!initialData;
 
   return (
     <>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
       />
       
-      <form className="space-y-10" action={formAction}>
+      <form className="space-y-10" action={handleSubmit}>
         {/* Error Message Display */}
         {state?.error && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium animate-pulse">
@@ -199,25 +278,58 @@ export default function CreateListingForm({ roomTypes, amenities, initialData }:
         <Card>
           <CardHeader title="Property Photos" subtitle="Step 4" />
           <CardContent>
-            <div className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer"
+            >
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-primary text-3xl">add_a_photo</span>
               </div>
               <div className="mt-4 flex flex-col gap-1">
                 <p className="text-base font-bold text-slate-900">Add Property Photos</p>
-                <p className="text-sm text-slate-500">Drag and drop or click to browse</p>
+                <p className="text-sm text-slate-500">Click to browse your gallery</p>
               </div>
-              <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" multiple />
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                className="hidden" 
+                multiple 
+                accept="image/*"
+                onChange={handleFileChange}
+              />
             </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-300">
-                  <span className="material-symbols-outlined text-4xl">image</span>
-                  <span className="mt-2 text-[10px] font-bold uppercase tracking-tighter">image</span>
-                </div>
-              ))}
-            </div>
+            {previews.length > 0 && (
+              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {previews.map((src, index) => (
+                  <div key={index} className="group relative aspect-square rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+                    <img 
+                      src={src.startsWith('blob:') ? src : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${src}`} 
+                      alt={`Preview ${index}`} 
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="absolute top-2 right-2 h-8 w-8 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {previews.length === 0 && (
+              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="aspect-square flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-300">
+                    <span className="material-symbols-outlined text-4xl">image</span>
+                    <span className="mt-2 text-[10px] font-bold uppercase tracking-tighter">image</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -226,18 +338,18 @@ export default function CreateListingForm({ roomTypes, amenities, initialData }:
           <button 
             type="submit" 
             onClick={() => setSubmitStatus('draft')}
-            disabled={isPending}
+            disabled={isPending || isUploading}
             className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-8 py-4 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50"
           >
-            {isPending && submitStatus === 'draft' ? 'Saving...' : 'Save as Draft'}
+            {(isPending || isUploading) && submitStatus === 'draft' ? 'Saving...' : 'Save as Draft'}
           </button>
           <button 
             type="submit" 
             onClick={() => setSubmitStatus('published')}
-            disabled={isPending}
+            disabled={isPending || isUploading}
             className="inline-flex items-center justify-center rounded-xl border border-transparent bg-primary px-8 py-4 text-sm font-bold text-dark shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
           >
-            {isPending && submitStatus === 'published' 
+            {(isPending || isUploading) && submitStatus === 'published' 
               ? 'Processing...' 
               : (isEditMode ? 'Update & Publish' : 'Publish Listing')
             }

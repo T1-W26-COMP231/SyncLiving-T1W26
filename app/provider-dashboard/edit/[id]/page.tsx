@@ -48,6 +48,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     amenities_ids: currentAmenitiesRes.data?.map(a => a.amenity_id) || [],
     city: listingRes.data.city,
     postal_code: listingRes.data.postal_code,
+    photos: listingRes.data.photos || [],
     // coordinates are tricky to parse from WKB here, 
     // we'll rely on the user re-selecting or a future robust parser.
   };
