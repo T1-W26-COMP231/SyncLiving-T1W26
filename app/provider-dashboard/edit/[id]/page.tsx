@@ -3,10 +3,14 @@ import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import CreateListingForm from '@/components/provider-dashboard/CreateListingForm';
 import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
+import LandingNavbar from '@/components/landing/LandingNavbar';
 
 export default async function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+
+  // Get current user for navbar
+  const { data: { user } } = await supabase.auth.getUser();
 
   // Fetch Listing Data with raw coordinates
   // Note: We'll parse the geography point in the server action or here
@@ -28,16 +32,6 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     return notFound();
   }
 
-  // Handle geography data (usually comes as GeoJSON or WKB string in Supabase)
-  // If it's a point, we might need to handle its extraction
-  // For now, we'll assume the form will re-geocode if address changes, 
-  // but let's try to pass existing ones if they exist.
-  
-  // Note: Standard Supabase select on geography returns WKB. 
-  // To get Lat/Lng easily, we'd usually use a RPC or specialized select.
-  // For this implementation, we'll focus on ensuring NEW saves work first, 
-  // and provide a placeholder for edit.
-
   const initialData = {
     id: listingRes.data.id,
     title: listingRes.data.title,
@@ -55,12 +49,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <SyncLivingLogo size="md" />
-          <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-        </div>
-      </header>
+      <LandingNavbar user={user} />
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-10">

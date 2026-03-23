@@ -10,6 +10,7 @@ import {
   Zap
 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
+import LandingNavbar from '@/components/landing/LandingNavbar';
 
 interface ProviderDashboardClientProps {
   initialListings: ListingType[];
@@ -17,9 +18,10 @@ interface ProviderDashboardClientProps {
   userName: string;
   name: string;
   initialProfile?: any;
+  user?: any;
 }
 
-export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile }: ProviderDashboardClientProps) {
+export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile, user }: ProviderDashboardClientProps) {
   const [activeTab,         setActiveTab]         = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
   const [searchQuery,       setSearchQuery]       = useState('');
   const [showProfileModal,  setShowProfileModal]  = useState(false);
@@ -37,8 +39,8 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
   return (
     <div className="min-h-screen bg-[#f8fafb] font-sans pb-20">
       
-      {/* Reusable Top Navigation Bar */}
-      <Navbar userName={userName} activeTab="Listings" />
+      {/* Reusable Landing Navigation Bar */}
+      <LandingNavbar user={user} />
 
       {/* Main Dashboard Area */}
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">

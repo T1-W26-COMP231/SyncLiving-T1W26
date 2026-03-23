@@ -66,6 +66,7 @@ export default async function ProviderDashboard() {
       userName={userName}
       name={name}
       initialProfile={profile}
+      user={user}
     />
   );
 }
