@@ -41,12 +41,12 @@ const Navbar: React.FC = () => {
             <span className="text-[10px] font-medium mt-1">Review</span>
           </button>
 
-          <button className="flex flex-col items-center text-slate-500 hover:text-primary transition-colors relative">
+          <Link href="/messages" className="flex flex-col items-center text-slate-500 hover:text-primary transition-colors relative">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
             </svg>
             <span className="text-[10px] font-medium mt-1">Messages</span>
-          </button>
+          </Link>
 
           <button className="flex flex-col items-center text-slate-500 hover:text-primary transition-colors relative">
             <span className="absolute top-0 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>

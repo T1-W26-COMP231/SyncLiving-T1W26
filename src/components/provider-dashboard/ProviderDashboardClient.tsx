@@ -58,7 +58,7 @@ export default function ProviderDashboardClient({ initialListings, inquiries }: 
             <NavLink label="Listings" href="/provider-dashboard" active />
             <NavLink label="Discovery" href="#" />
             <NavLink label="Matches" href="#" badge="12" />
-            <NavLink label="Messages" href="#" badge="3" />
+            <NavLink label="Messages" href="/messages" badge="3" />
           </nav>
 
           {/* Right Actions */}
