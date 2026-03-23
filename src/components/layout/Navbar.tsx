@@ -40,7 +40,7 @@ const Navbar: React.FC<NavbarProps> = ({ userName = 'User', activeTab = 'Listing
           <NavLink label="Listings" href="/provider-dashboard" active={activeTab === 'Listings'} />
           <NavLink label="Discovery" href="#" active={activeTab === 'Discovery'} />
           <NavLink label="Matches" href="#" badge="12" active={activeTab === 'Matches'} />
-          <NavLink label="Messages" href="#" badge="3" active={activeTab === 'Messages'} />
+          <NavLink label="Messages" href="/messages" badge="3" active={activeTab === 'Messages'} />
         </nav>
 
         {/* Right Actions */}
