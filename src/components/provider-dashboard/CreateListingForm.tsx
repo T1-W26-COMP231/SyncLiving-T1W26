@@ -319,17 +319,6 @@ export default function CreateListingForm({ roomTypes, amenities, initialData }:
                 ))}
               </div>
             )}
-            
-            {previews.length === 0 && (
-              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="aspect-square flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-300">
-                    <span className="material-symbols-outlined text-4xl">image</span>
-                    <span className="mt-2 text-[10px] font-bold uppercase tracking-tighter">image</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
 
