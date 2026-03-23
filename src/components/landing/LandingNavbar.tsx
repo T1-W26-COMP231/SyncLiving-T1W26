@@ -22,6 +22,9 @@ const LandingNavbar = ({ user }: LandingNavbarProps) => {
           <Link href="/provider-dashboard" className="text-slate-600 hover:text-primary transition-colors text-sm font-bold">
             Listings
           </Link>
+          <Link href="/seeker-preferences" className="text-slate-600 hover:text-primary transition-colors text-sm font-bold">
+            Preference
+          </Link>
           <Link href="/onboarding" className="text-slate-600 hover:text-primary transition-colors text-sm font-bold">
             Profile
           </Link>
