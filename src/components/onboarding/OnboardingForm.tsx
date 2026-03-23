@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateProfile } from '../../../app/onboarding/actions';
+import { createClient } from '@/utils/supabase/client';
+import usePlacesAutocomplete, {
+  getGeocode,
+  getLatLng,
+} from "use-places-autocomplete";
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star,
   Camera, Plus, X, Home, Building2, UserSearch,
-  Check, ChevronLeft, ChevronRight, Search,
+  Check, ChevronLeft, ChevronRight, Search, Trash2, MapPin
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,9 +112,25 @@ function FieldLabel({ children, optional }: { children: React.ReactNode; optiona
 
 const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, onClose }) => {
   const router   = useRouter();
+  const supabase = createClient();
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+  
+  const morePhotosInputRef = useRef<HTMLInputElement>(null);
+
+  // Poll for google maps availability
+  useEffect(() => {
+    const checkGoogle = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        setIsGoogleLoaded(true);
+      } else {
+        setTimeout(checkGoogle, 100);
+      }
+    };
+    checkGoogle();
+  }, []);
 
   // Parse initial PostGIS / GeoJSON coordinates
   let initialLat: number | undefined;
@@ -137,13 +158,61 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     preferred_gender: initialData?.preferred_gender || 'Any Gender',
     move_in_date:     initialData?.move_in_date     || '',
     lifestyle_tags:  (initialData?.lifestyle_tags   || []) as string[],
-    bio:              '',
+    bio:              initialData?.bio              || '',
   });
 
+  // ── Google Places Autocomplete ───────────────────────────────────────────────
+  const {
+    ready,
+    value: addressValue,
+    suggestions: { status: addressStatus, data: addressData },
+    setValue: setAddressValue,
+    clearSuggestions: clearAddressSuggestions,
+  } = usePlacesAutocomplete({
+    requestOptions: {
+      componentRestrictions: { country: "ca" },
+    },
+    debounce: 300,
+    defaultValue: initialData?.location || '',
+    initOnMount: isGoogleLoaded,
+  });
+
+  const handleAddressSelect = async (suggestion: any) => {
+    const address = suggestion.description;
+    setAddressValue(address, false);
+    clearAddressSuggestions();
+
+    try {
+      const results = await getGeocode({ address });
+      const { lat, lng } = await getLatLng(results[0]);
+      
+      setFormData(prev => ({
+        ...prev,
+        location: address,
+        latitude: lat,
+        longitude: lng
+      }));
+    } catch (error) {
+      console.error("Error selecting address: ", error);
+    }
+  };
+
   // ── Photo state ─────────────────────────────────────────────────────────────
-  const [profilePhotoUrl,  setProfilePhotoUrl]  = useState<string | null>(null);
-  const [morePhotoUrls,    setMorePhotoUrls]    = useState<(string | null)[]>(Array(5).fill(null));
-  const [spacePhotoUrls,   setSpacePhotoUrls]   = useState<(string | null)[]>(Array(4).fill(null));
+  const [profilePhotoUrl,  setProfilePhotoUrl]  = useState<string | null>(
+    initialData?.avatar_url 
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${initialData.avatar_url}` 
+      : null
+  );
+  const [avatarFile,       setAvatarFile]       = useState<File | null>(null);
+  
+  // Dynamic photos state
+  const [morePhotos,       setMorePhotos]       = useState<{file?: File, url: string, path?: string}[]>(
+    (initialData?.photos || []).map((path: string) => ({
+      path,
+      url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${path}`
+    }))
+  );
+  const [spacePhotos,      setSpacePhotos]      = useState<{file?: File, url: string}[]>([]);
   const [spaceNote,        setSpaceNote]        = useState('');
 
   // ── My Space toggle — default ON when housing purpose has space ─────────────
@@ -153,52 +222,43 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     setIncludeMySpace(hasSpacePurpose(formData.housingPurpose));
   }, [formData.housingPurpose]);
 
-  // ── Location autocomplete ────────────────────────────────────────────────────
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
-  const [showSuggestions,     setShowSuggestions]     = useState(false);
-
-  const searchLocation = async (query: string) => {
-    setFormData(p => ({ ...p, location: query }));
-    if (query.length < 3) { setLocationSuggestions([]); return; }
-    try {
-      const res  = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
-      );
-      const data = await res.json();
-      setLocationSuggestions(data);
-      setShowSuggestions(true);
-    } catch (err) {
-      console.error('Geocoding error:', err);
-    }
-  };
-
-  const handleSelectSuggestion = (s: any) => {
-    setFormData(p => ({
-      ...p,
-      location:  s.display_name,
-      latitude:  parseFloat(s.lat),
-      longitude: parseFloat(s.lon),
-    }));
-    setShowSuggestions(false);
-    setLocationSuggestions([]);
-  };
-
   // ── Photo pickers ────────────────────────────────────────────────────────────
   const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setProfilePhotoUrl(URL.createObjectURL(file));
+    if (file) {
+      setAvatarFile(file);
+      setProfilePhotoUrl(URL.createObjectURL(file));
+    }
   };
 
-  const pickMorePhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMorePhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const handleMorePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newPhotos = newFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file)
+      }));
+      setMorePhotos(prev => [...prev, ...newPhotos]);
+    }
   };
 
-  const pickSpacePhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSpacePhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const removeMorePhoto = (index: number) => {
+    setMorePhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSpacePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newPhotos = newFiles.map(file => ({
+        file,
+        url: URL.createObjectURL(file)
+      }));
+      setSpacePhotos(prev => [...prev, ...newPhotos]);
+    }
+  };
+
+  const removeSpacePhoto = (index: number) => {
+    setSpacePhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   // ── Lifestyle tags ────────────────────────────────────────────────────────────
@@ -223,6 +283,50 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      let finalAvatarUrl = initialData?.avatar_url;
+
+      // 1. Upload avatar if changed
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}/avatar_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { data, error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(filePath, avatarFile, {
+            contentType: avatarFile.type,
+            upsert: true
+          });
+
+        if (uploadError) throw uploadError;
+        finalAvatarUrl = data.path;
+      }
+
+      // 2. Upload "More Photos"
+      const finalPhotos: string[] = [];
+      for (const photo of morePhotos) {
+        if (photo.file) {
+          const fileExt = photo.file.name.split('.').pop();
+          const fileName = `${user.id}/more_${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `${fileName}`;
+
+          const { data, error: uploadError } = await supabase.storage
+            .from('property-images')
+            .upload(filePath, photo.file, {
+              contentType: photo.file.type,
+              upsert: true
+            });
+
+          if (uploadError) throw uploadError;
+          finalPhotos.push(data.path);
+        } else if (photo.path) {
+          finalPhotos.push(photo.path);
+        }
+      }
+
       const result = await updateProfile({
         full_name:        formData.full_name,
         age:              formData.age,
@@ -235,7 +339,11 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
         budget_max:       formData.budget_max,
         preferred_gender: formData.preferred_gender,
         move_in_date:     formData.move_in_date,
+        avatar_url:       finalAvatarUrl,
+        photos:           finalPhotos,
+        bio:              formData.bio,
       });
+
       if (result?.error) {
         alert('Error: ' + result.error);
       } else {
@@ -243,6 +351,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       }
     } catch (err) {
       console.error('Submit error:', err);
+      alert('An error occurred during submission.');
     } finally {
       setLoading(false);
     }
@@ -345,36 +454,46 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                 </div>
               </section>
 
-              {/* Location */}
+              {/* Location - GOOGLE MAPS IMPLEMENTATION */}
               <section>
                 <SectionLabel emoji="📍" label="Location" />
                 <div className="relative">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={e => searchLocation(e.target.value)}
-                    onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                    placeholder="Search city or neighborhood…"
-                    className={`${inputCls} pl-10`}
-                  />
-                  {showSuggestions && locationSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                      {locationSuggestions.map((s, i) => (
+                  <div className="relative rounded-xl shadow-sm">
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      value={addressValue}
+                      onChange={(e) => setAddressValue(e.target.value)}
+                      disabled={!ready || !isGoogleLoaded}
+                      placeholder={isGoogleLoaded ? "Search city or neighborhood…" : "Loading address service..."}
+                      className={`${inputCls} pl-10`}
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  {addressStatus === "OK" && (
+                    <div className="absolute z-[60] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                      {addressData.map((suggestion) => (
                         <button
-                          key={i}
+                          key={suggestion.place_id}
                           type="button"
-                          onClick={() => handleSelectSuggestion(s)}
+                          onClick={() => handleAddressSelect(suggestion)}
                           className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
                         >
-                          <p className="font-medium text-dark truncate">{s.display_name}</p>
+                          <div className="flex items-start gap-2">
+                            <MapPin size={14} className="mt-0.5 text-slate-400 shrink-0" />
+                            <div>
+                              <p className="font-medium text-dark">{suggestion.structured_formatting.main_text}</p>
+                              <p className="text-[10px] text-slate-500">{suggestion.structured_formatting.secondary_text}</p>
+                            </div>
+                          </div>
                         </button>
                       ))}
                     </div>
                   )}
+                  
                   {formData.latitude && (
-                    <p className="text-[10px] text-slate-400 mt-1.5 pl-1">
-                      📌 {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                    <p className="text-[10px] text-slate-400 mt-1.5 pl-1 flex items-center gap-1">
+                      <Check size={10} className="text-green-500" /> Location verified
                     </p>
                   )}
                 </div>
@@ -554,40 +673,55 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                 </div>
               </section>
 
-              {/* More photos — 3-col grid */}
+              {/* More photos — Dynamic selection */}
               <section>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <span className="text-base leading-none">📷</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">More Photos</span>
                   </div>
-                  <span className="text-[10px] font-medium text-slate-400 italic">Add up to 5 more</span>
+                  <span className="text-[10px] font-medium text-slate-400 italic">Show more of your personality</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <label key={i} className="aspect-square cursor-pointer group block">
-                      <div className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                        morePhotoUrls[i]
-                          ? 'border-primary'
-                          : 'border-slate-200 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
-                      }`}>
-                        {morePhotoUrls[i] ? (
-                          <img src={morePhotoUrls[i]!} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                        ) : (
-                          <Camera size={20} className="text-slate-300 group-hover:text-primary transition-colors" />
-                        )}
-                      </div>
-                      <input type="file" accept="image/*" className="sr-only" onChange={e => pickMorePhoto(i, e)} />
-                    </label>
-                  ))}
-                  {/* Tips tile */}
-                  <div className="aspect-square rounded-xl bg-secondary/20 flex flex-col items-center justify-center p-3 text-center">
-                    <span className="text-lg mb-1">💡</span>
-                    <span className="text-[9px] font-bold text-slate-600 leading-tight">
-                      Shoot in natural light for best results!
-                    </span>
+                
+                {/* Add Photo Button */}
+                <div 
+                  onClick={() => morePhotosInputRef.current?.click()}
+                  className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer mb-6"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm group-hover:scale-110 transition-transform">
+                    <Camera size={24} className="text-primary" />
                   </div>
+                  <div className="mt-3">
+                    <p className="text-sm font-bold text-dark">Add More Photos</p>
+                    <p className="text-[10px] text-slate-500">Select multiple files</p>
+                  </div>
+                  <input 
+                    ref={morePhotosInputRef}
+                    type="file" 
+                    className="hidden" 
+                    multiple 
+                    accept="image/*"
+                    onChange={handleMorePhotosChange}
+                  />
                 </div>
+
+                {/* Previews Grid */}
+                {morePhotos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {morePhotos.map((photo, i) => (
+                      <div key={i} className="group relative aspect-square rounded-xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm">
+                        <img src={photo.url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeMorePhoto(i)}
+                          className="absolute top-1.5 right-1.5 size-7 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <X size={14} strokeWidth={3} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* ── My Space section ──────────────────────────────────── */}
@@ -627,27 +761,38 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                   <div className="mt-4 space-y-5 pl-1">
                     {/* Space photos */}
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Space Photos</span>
-                        <span className="text-[10px] italic text-slate-400">Common areas, room, etc. — up to 4</span>
+                        <span className="text-[10px] italic text-slate-400">Common areas, room, etc.</span>
                       </div>
-                      <div className="grid grid-cols-4 gap-3">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <label key={i} className="aspect-square cursor-pointer group block">
-                            <div className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                              spacePhotoUrls[i]
-                                ? 'border-primary'
-                                : 'border-slate-200 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
-                            }`}>
-                              {spacePhotoUrls[i] ? (
-                                <img src={spacePhotoUrls[i]!} alt={`Space ${i + 1}`} className="w-full h-full object-cover" />
-                              ) : (
-                                <Camera size={16} className="text-slate-300 group-hover:text-primary transition-colors" />
-                              )}
-                            </div>
-                            <input type="file" accept="image/*" className="sr-only" onChange={e => pickSpacePhoto(i, e)} />
-                          </label>
+                      
+                      {/* Space Photos Selection */}
+                      <div className="flex flex-wrap gap-3">
+                        {/* Previews */}
+                        {spacePhotos.map((photo, i) => (
+                          <div key={i} className="group relative size-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm">
+                            <img src={photo.url} alt={`Space ${i + 1}`} className="h-full w-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeSpacePhoto(i)}
+                              className="absolute top-1 right-1 size-5 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={10} strokeWidth={3} />
+                            </button>
+                          </div>
                         ))}
+                        
+                        {/* Add Button Tile */}
+                        <label className="size-20 cursor-pointer group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-primary hover:bg-primary/5 transition-all">
+                          <Plus size={20} className="text-slate-400 group-hover:text-primary transition-colors" />
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="sr-only" 
+                            multiple
+                            onChange={handleSpacePhotosChange} 
+                          />
+                        </label>
                       </div>
                     </div>
 
