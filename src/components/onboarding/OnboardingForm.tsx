@@ -4,10 +4,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateProfile } from '../../../app/onboarding/actions';
 import { createClient } from '@/utils/supabase/client';
+import usePlacesAutocomplete, {
+  getGeocode,
+  getLatLng,
+} from "use-places-autocomplete";
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star,
   Camera, Plus, X, Home, Building2, UserSearch,
-  Check, ChevronLeft, ChevronRight, Search, Trash2
+  Check, ChevronLeft, ChevronRight, Search, Trash2, MapPin
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -112,8 +116,21 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   
   const morePhotosInputRef = useRef<HTMLInputElement>(null);
+
+  // Poll for google maps availability
+  useEffect(() => {
+    const checkGoogle = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        setIsGoogleLoaded(true);
+      } else {
+        setTimeout(checkGoogle, 100);
+      }
+    };
+    checkGoogle();
+  }, []);
 
   // Parse initial PostGIS / GeoJSON coordinates
   let initialLat: number | undefined;
@@ -144,6 +161,42 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     bio:              initialData?.bio              || '',
   });
 
+  // ── Google Places Autocomplete ───────────────────────────────────────────────
+  const {
+    ready,
+    value: addressValue,
+    suggestions: { status: addressStatus, data: addressData },
+    setValue: setAddressValue,
+    clearSuggestions: clearAddressSuggestions,
+  } = usePlacesAutocomplete({
+    requestOptions: {
+      componentRestrictions: { country: "ca" },
+    },
+    debounce: 300,
+    defaultValue: initialData?.location || '',
+    initOnMount: isGoogleLoaded,
+  });
+
+  const handleAddressSelect = async (suggestion: any) => {
+    const address = suggestion.description;
+    setAddressValue(address, false);
+    clearAddressSuggestions();
+
+    try {
+      const results = await getGeocode({ address });
+      const { lat, lng } = await getLatLng(results[0]);
+      
+      setFormData(prev => ({
+        ...prev,
+        location: address,
+        latitude: lat,
+        longitude: lng
+      }));
+    } catch (error) {
+      console.error("Error selecting address: ", error);
+    }
+  };
+
   // ── Photo state ─────────────────────────────────────────────────────────────
   const [profilePhotoUrl,  setProfilePhotoUrl]  = useState<string | null>(
     initialData?.avatar_url 
@@ -168,36 +221,6 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   useEffect(() => {
     setIncludeMySpace(hasSpacePurpose(formData.housingPurpose));
   }, [formData.housingPurpose]);
-
-  // ── Location autocomplete ────────────────────────────────────────────────────
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
-  const [showSuggestions,     setShowSuggestions]     = useState(false);
-
-  const searchLocation = async (query: string) => {
-    setFormData(p => ({ ...p, location: query }));
-    if (query.length < 3) { setLocationSuggestions([]); return; }
-    try {
-      const res  = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
-      );
-      const data = await res.json();
-      setLocationSuggestions(data);
-      setShowSuggestions(true);
-    } catch (err) {
-      console.error('Geocoding error:', err);
-    }
-  };
-
-  const handleSelectSuggestion = (s: any) => {
-    setFormData(p => ({
-      ...p,
-      location:  s.display_name,
-      latitude:  parseFloat(s.lat),
-      longitude: parseFloat(s.lon),
-    }));
-    setShowSuggestions(false);
-    setLocationSuggestions([]);
-  };
 
   // ── Photo pickers ────────────────────────────────────────────────────────────
   const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -431,36 +454,46 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                 </div>
               </section>
 
-              {/* Location */}
+              {/* Location - GOOGLE MAPS IMPLEMENTATION */}
               <section>
                 <SectionLabel emoji="📍" label="Location" />
                 <div className="relative">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={e => searchLocation(e.target.value)}
-                    onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                    placeholder="Search city or neighborhood…"
-                    className={`${inputCls} pl-10`}
-                  />
-                  {showSuggestions && locationSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                      {locationSuggestions.map((s, i) => (
+                  <div className="relative rounded-xl shadow-sm">
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      value={addressValue}
+                      onChange={(e) => setAddressValue(e.target.value)}
+                      disabled={!ready || !isGoogleLoaded}
+                      placeholder={isGoogleLoaded ? "Search city or neighborhood…" : "Loading address service..."}
+                      className={`${inputCls} pl-10`}
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  {addressStatus === "OK" && (
+                    <div className="absolute z-[60] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                      {addressData.map((suggestion) => (
                         <button
-                          key={i}
+                          key={suggestion.place_id}
                           type="button"
-                          onClick={() => handleSelectSuggestion(s)}
+                          onClick={() => handleAddressSelect(suggestion)}
                           className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
                         >
-                          <p className="font-medium text-dark truncate">{s.display_name}</p>
+                          <div className="flex items-start gap-2">
+                            <MapPin size={14} className="mt-0.5 text-slate-400 shrink-0" />
+                            <div>
+                              <p className="font-medium text-dark">{suggestion.structured_formatting.main_text}</p>
+                              <p className="text-[10px] text-slate-500">{suggestion.structured_formatting.secondary_text}</p>
+                            </div>
+                          </div>
                         </button>
                       ))}
                     </div>
                   )}
+                  
                   {formData.latitude && (
-                    <p className="text-[10px] text-slate-400 mt-1.5 pl-1">
-                      📌 {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                    <p className="text-[10px] text-slate-400 mt-1.5 pl-1 flex items-center gap-1">
+                      <Check size={10} className="text-green-500" /> Location verified
                     </p>
                   )}
                 </div>
