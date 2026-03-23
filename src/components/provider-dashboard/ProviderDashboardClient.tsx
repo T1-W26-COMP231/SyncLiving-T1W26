@@ -1,29 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import OnboardingForm from '@/components/onboarding/OnboardingForm';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ListingCard, ListingType } from './ListingCard';
-import { 
-  Search, 
-  Plus, 
-  LayoutDashboard, 
-  Home, 
-  Users, 
-  MessageSquare, 
-  Settings, 
-  LogOut,
-  Bell,
-  ChevronDown,
-  TrendingUp,
-  BarChart3,
-  Calendar,
-  Sparkles,
-  Zap
-} from 'lucide-react';
-import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
-import { logout } from '../../../app/auth/actions';
+import { Search, Home, Sparkles, Zap } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
+import SettingsModal from '@/components/settings/SettingsModal';
 
 interface ProviderDashboardClientProps {
   initialListings: ListingType[];
@@ -31,12 +13,15 @@ interface ProviderDashboardClientProps {
   userName: string;
   name: string;
   initialProfile?: any;
+  roomTypes?: { id: string; name: string }[];
+  amenities?: { id: string; name: string; category: string | null }[];
 }
 
-export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile }: ProviderDashboardClientProps) {
+export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile, roomTypes = [], amenities = [] }: ProviderDashboardClientProps) {
+  const router = useRouter();
   const [activeTab,         setActiveTab]         = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
   const [searchQuery,       setSearchQuery]       = useState('');
-  const [showProfileModal,  setShowProfileModal]  = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const filteredListings = initialListings.filter(listing => {
     const statusMatch = activeTab === 'All' || 
@@ -52,7 +37,7 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
     <div className="min-h-screen bg-[#f8fafb] font-sans pb-20">
       
       {/* Reusable Top Navigation Bar */}
-      <Navbar userName={userName} activeTab="Listings" />
+      <Navbar userName={userName} activeTab="Listings" onOpenSettings={() => setShowSettingsModal(true)} />
 
       {/* Main Dashboard Area */}
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
@@ -82,10 +67,10 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
                 </div>
               </div>
               <button
-                onClick={() => setShowProfileModal(true)}
+                onClick={() => router.push('/onboarding')}
                 className="w-fit bg-primary hover:brightness-105 text-dark font-bold py-3 px-8 rounded-full transition-all active:scale-95 shadow-lg shadow-primary/20"
               >
-                Add a Profile
+                {initialProfile?.full_name ? 'Edit Profile' : 'Add a Profile'}
               </button>
             </div>
           </div>
@@ -106,12 +91,12 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
                   </p>
                 </div>
               </div>
-              <Link 
-                href="/provider-dashboard/create"
+              <button
+                onClick={() => router.push('/provider-dashboard/create')}
                 className="w-fit bg-dark hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-full transition-all active:scale-95 shadow-lg shadow-dark/20"
               >
                 Add New Listing
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -173,12 +158,11 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
           </div>
         </div>
       </main>
-      {/* Profile creation modal */}
-      {showProfileModal && (
-        <OnboardingForm
-          initialData={initialProfile}
-          isModal
-          onClose={() => setShowProfileModal(false)}
+      {/* Settings modal */}
+      {showSettingsModal && (
+        <SettingsModal
+          initialProfile={initialProfile}
+          onClose={() => setShowSettingsModal(false)}
         />
       )}
     </div>

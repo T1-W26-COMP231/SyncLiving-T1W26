@@ -23,6 +23,12 @@ export default async function ProviderDashboard() {
   const userName = user.email?.split('@')[0] || 'User';
   const name = profile?.full_name || user.email?.split('@')[0] || 'User';
 
+  // Fetch room types and amenities for the Create Listing modal
+  const [roomTypesRes, amenitiesRes] = await Promise.all([
+    supabase.from('room_types').select('id, name').order('name'),
+    supabase.from('amenities').select('id, name, category').order('name'),
+  ]);
+
   // Fetch real listings for this provider
   const { data: listingsData, error } = await supabase
     .from('room_listings')
@@ -57,6 +63,8 @@ export default async function ProviderDashboard() {
       userName={userName}
       name={name}
       initialProfile={profile}
+      roomTypes={roomTypesRes.data || []}
+      amenities={amenitiesRes.data || []}
     />
   );
 }
