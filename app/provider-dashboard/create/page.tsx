@@ -1,7 +1,6 @@
 import React from 'react';
-import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import CreateListingForm from '@/components/provider-dashboard/CreateListingForm';
-import Link from 'next/link';
+import Navbar from '@/components/layout/Navbar';
 import { createClient } from '@/utils/supabase/server';
 
 import LandingNavbar from '@/components/landing/LandingNavbar';
@@ -22,36 +21,22 @@ export default async function CreateListingPage() {
   const amenities = amenitiesRes.data || [];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
-      <LandingNavbar user={user} />
+    <div className="min-h-screen bg-[#f8fafb] font-sans pb-20">
+      <Navbar activeTab="Listings" />
 
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        {/* Page Header */}
-        <div className="mb-10">
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl uppercase">CREATE NEW LISTING</h1>
-          <p className="mt-3 text-lg font-medium text-slate-500">Provider View • New Property Registration</p>
+      <main className="max-w-3xl mx-auto px-6 py-10">
+        <div className="flex flex-col gap-1 mb-8">
+          <h1 className="text-3xl font-extrabold text-dark tracking-tight">
+            Create New Listing
+          </h1>
+          <p className="text-slate-500 font-medium">Fill in the details below to list your room.</p>
         </div>
 
-        {/* Client Form Component */}
-        <CreateListingForm 
-          roomTypes={roomTypes} 
-          amenities={amenities} 
+        <CreateListingForm
+          roomTypes={roomTypes}
+          amenities={amenities}
         />
       </main>
-
-      {/* Footer */}
-      <footer className="mt-20 border-t border-slate-200 bg-white py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
-            <p className="text-sm font-medium text-slate-500">© {new Date().getFullYear()} SyncLiving. All rights reserved.</p>
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-              <Link href="#" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">Terms of Service</Link>
-              <Link href="#" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">Privacy Policy</Link>
-              <Link href="#" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">Help Center</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
