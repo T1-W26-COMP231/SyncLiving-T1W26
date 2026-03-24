@@ -1,252 +1,237 @@
 'use client';
 
 import React from 'react';
-import { 
-  SlidersHorizontal, 
-  UserCircle, 
-  Heart, 
-  Clock, 
-  Users, 
-  Cigarette, 
-  PawPrint, 
-  Sparkles, 
-  UserPlus,
-  Map as MapIcon,
-} from 'lucide-react';
+import { SlidersHorizontal, UserCircle } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import SettingsModal from '@/components/settings/SettingsModal';
-import { createClient } from '@/utils/supabase/client';
 
 const roommates = [
   {
-    name: "Sarah Jenkins",
-    match: "98%",
-    role: "New York University • Senior",
-    price: "$1,100/mo",
-    tags: ["Early Bird", "Non-Smoker", "No Pets"],
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150"
+    name: 'Sarah Jenkins',
+    match: '98%',
+    role: 'New York University • Senior',
+    price: '$1,100',
+    tags: ['Early Bird', 'Non-Smoker', 'No Pets'],
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=400&h=300',
   },
   {
-    name: "David Chen",
-    match: "85%",
-    role: "Brooklyn • Software Engineer",
-    price: "$1,450/mo",
-    tags: ["Night Owl", "Cat Owner", "Vegan"],
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150"
+    name: 'David Chen',
+    match: '85%',
+    role: 'Brooklyn • Software Engineer',
+    price: '$1,450',
+    tags: ['Night Owl', 'Cat Owner', 'Vegan'],
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400&h=300',
   },
   {
-    name: "Maya Williams",
-    match: "92%",
-    role: "Columbia University • PhD Student",
-    price: "$950/mo",
-    tags: ["Quiet Study", "Non-Smoker", "Cleanly"],
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150"
+    name: 'Maya Williams',
+    match: '92%',
+    role: 'Columbia University • PhD Student',
+    price: '$950',
+    tags: ['Quiet Study', 'Non-Smoker', 'Cleanly'],
+    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=400&h=300',
   },
   {
-    name: "Liam Thompson",
-    match: "78%",
-    role: "Astoria • Marketing Manager",
-    price: "$1,200/mo",
-    tags: ["Social Weekend", "Chef", "Dog Friendly"],
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150"
-  }
+    name: 'Liam Thompson',
+    match: '78%',
+    role: 'Astoria • Marketing Manager',
+    price: '$1,200',
+    tags: ['Social', 'Weekend Chef', 'Dog Friendly'],
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400&h=300',
+  },
 ];
 
 const RoommateDiscovery: React.FC = () => {
-  const [showSettingsModal, setShowSettingsModal] = React.useState(false);
-  const [profile, setProfile] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    const fetchProfile = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(data);
-      }
-    };
-    fetchProfile();
-  }, []);
-
   return (
-    <>
-      <div className={`transition-all duration-300 ${showSettingsModal ? 'blur-md brightness-50' : ''}`}>
-        <div className="min-h-screen bg-slate-50 font-sans text-dark antialiased">
-          <Navbar activeTab="Discovery" onOpenSettings={() => setShowSettingsModal(true)} />
+    <div className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+          <Navbar activeTab="Discovery" />
 
-          <main className="max-w-7xl mx-auto px-6 py-12">
-            {/* Hero Section */}
-            <section className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-              <div className="max-w-2xl">
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-dark">
-                  Find Your Perfect Match
-                </h1>
-                <p className="text-lg text-slate-500 font-medium">
-                  Personalized roommate recommendations based on your lifestyle, habits, and values.
-                </p>
+          <main className="max-w-7xl mx-auto w-full px-6 py-8">
+
+            {/* Hero */}
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-extrabold text-dark tracking-tight">Find your perfect match</h1>
+                <p className="text-slate-500 font-medium mt-1">Personalized roommate recommendations based on your lifestyle.</p>
               </div>
-              <div className="flex flex-wrap gap-4">
-                <button className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-full font-bold text-dark hover:border-primary hover:text-primary transition-all shadow-sm cursor-pointer">
-                  <SlidersHorizontal size={18} />
+              <div className="flex items-center gap-3">
+                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm">
+                  <SlidersHorizontal size={16} />
                   Advanced Filters
                 </button>
-                <button className="flex items-center gap-2 px-6 py-3 bg-primary text-dark rounded-full font-bold hover:bg-primary/90 transition-all shadow-md cursor-pointer">
-                  <UserCircle size={18} />
+                <button className="flex items-center gap-2 px-4 py-2 bg-primary text-dark rounded-full text-sm font-bold shadow-sm hover:brightness-105 transition-all">
+                  <UserCircle size={16} />
                   Edit Your Profile
                 </button>
               </div>
-            </section>
+            </div>
 
-            {/* Filter Chips */}
-            <div className="flex flex-wrap gap-3 mb-10 overflow-x-auto pb-2 no-scrollbar">
-              <button className="px-5 py-2.5 bg-primary text-dark rounded-full text-sm font-bold whitespace-nowrap shadow-sm cursor-pointer">All Matches</button>
-              <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-bold hover:border-primary hover:text-dark transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer">
-                <Cigarette size={14} /> Non-Smoker
-              </button>
-              <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-bold hover:border-primary hover:text-dark transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer">
-                <PawPrint size={14} /> No Pets
-              </button>
-              <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-bold hover:border-primary hover:text-dark transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer">
-                <Sparkles size={14} /> Cleanly
-              </button>
-              <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-full text-sm font-bold hover:border-primary hover:text-dark transition-all whitespace-nowrap cursor-pointer">
-                Budget: $800-1200
-              </button>
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-3 mb-8 pb-2 overflow-x-auto no-scrollbar">
+              <button className="px-4 py-2 rounded-full bg-primary text-dark text-sm font-semibold">All Matches</button>
+              <button className="px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:border-primary transition-all">Non-Smoker</button>
+              <button className="px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:border-primary transition-all">No Pets</button>
+              <button className="px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:border-primary transition-all">Cleanly</button>
+              <button className="px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:border-primary transition-all">Budget: $800–1200</button>
             </div>
 
             {/* Roommate Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
               {roommates.map((person, i) => (
-                <div key={i} className="bg-white rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 group">
-                  <div className="relative h-56 bg-slate-100">
-                    <img src={person.image} alt={person.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <button className="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-md rounded-full text-slate-400 hover:text-red-500 transition-colors shadow-sm cursor-pointer">
-                      <Heart size={20} />
+                <div key={i} className="bg-white rounded-xl overflow-hidden border border-slate-200 group hover:shadow-xl transition-all duration-300">
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={person.image}
+                      alt={person.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <button className="absolute top-3 right-3 size-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-400 hover:text-red-500 transition-colors shadow-sm">
+                      <span className="material-symbols-outlined text-xl">favorite</span>
                     </button>
-                    <div className="absolute bottom-4 left-4 px-4 py-1.5 bg-primary text-dark text-xs font-black rounded-full shadow-lg">
-                      {person.match} Match
+                    <div className="absolute bottom-3 left-3">
+                      <span className="bg-primary text-dark px-3 py-1 rounded-full text-xs font-bold shadow-lg">{person.match} Match</span>
                     </div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="font-black text-lg mb-1 group-hover:text-primary transition-colors text-dark">{person.name}</h3>
-                    <p className="text-xs text-slate-400 font-bold mb-3 tracking-wider">{person.role}</p>
-                    <p className="text-primary font-black text-xl mb-4">{person.price}</p>
-                    <div className="flex flex-wrap gap-2 mb-6">
+                  <div className="p-5">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="text-lg font-bold text-dark">{person.name}</h3>
+                        <p className="text-sm text-slate-500">{person.role}</p>
+                      </div>
+                      <span className="text-primary font-bold text-lg">
+                        {person.price}<span className="text-xs text-slate-400 font-normal">/mo</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 my-4">
                       {person.tags.map((tag, j) => (
-                        <span key={j} className="px-2.5 py-1 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg tracking-widest border border-slate-100">
+                        <span key={j} className="bg-slate-100 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-slate-600">
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button className="py-3 text-xs font-black text-slate-600 bg-slate-50 rounded-full hover:bg-slate-100 transition-all tracking-widest cursor-pointer">View Profile</button>
-                      <button className="py-3 text-xs font-black text-dark bg-primary rounded-full hover:bg-primary/90 transition-all tracking-widest shadow-sm cursor-pointer">Connect</button>
+                    <div className="flex items-center justify-between mt-4">
+                      <button className="text-sm font-bold text-primary hover:underline">View Profile</button>
+                      <button className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold hover:bg-primary hover:text-dark transition-all">
+                        Connect
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* More matches card */}
+              <div className="border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+                <div className="size-16 rounded-full bg-slate-200 flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-3xl text-slate-400">person_search</span>
+                </div>
+                <h4 className="text-lg font-bold text-slate-700">More matches coming!</h4>
+                <p className="text-sm text-slate-500 mt-2 mb-6">We&apos;re finding more roommates that fit your criteria.</p>
+                <button className="px-6 py-2 bg-dark text-white rounded-full text-sm font-bold hover:bg-slate-800 transition-all">
+                  Refine Preferences
+                </button>
+              </div>
             </div>
 
-            {/* More Matches Section */}
-            <section className="bg-primary/5 rounded-[48px] p-16 text-center mb-24 border border-primary/10">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-md mb-8 text-primary">
-                <UserPlus size={36} />
-              </div>
-              <h2 className="text-3xl font-black mb-3 text-dark tracking-tight">More Matches Coming!</h2>
-              <p className="text-slate-500 mb-10 font-medium max-w-lg mx-auto">We&apos;re constantly updating our database to find roommates that perfectly fit your lifestyle criteria.</p>
-              <button className="px-10 py-4 bg-white text-dark border-2 border-primary/20 rounded-full font-black hover:bg-primary hover:border-primary transition-all shadow-sm tracking-widest text-sm cursor-pointer">
-                Refine Preferences
-              </button>
-            </section>
-
             {/* Lifestyle Preferences */}
-            <section className="mb-24">
-              <div className="mb-12">
-                <h2 className="text-4xl font-black mb-4 text-dark">Lifestyle Preferences</h2>
-                <p className="text-slate-500 font-medium max-w-2xl">Fine-tune your discovery by prioritizing what matters most in your daily living environment. We use these to calculate your compatibility scores.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                <div className="space-y-10">
-                  <div className="flex gap-6 items-start">
-                    <div className="flex-shrink-0 w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary border border-primary/20">
-                      <Clock size={28} />
+            <section className="mt-4 bg-white rounded-2xl p-8 border border-slate-200 mb-16">
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="md:w-1/3">
+                  <h2 className="text-2xl font-bold text-dark mb-3">Lifestyle Preferences</h2>
+                  <p className="text-slate-500 text-sm">Fine-tune your discovery by prioritizing what matters most in your daily living environment.</p>
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-primary">schedule</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-dark">Schedule Alignment</p>
+                        <p className="text-xs text-slate-500">Match with early birds or night owls</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-black text-xl mb-2 text-dark tracking-tight">Schedule Alignment</h3>
-                      <p className="text-slate-500 font-medium">Match with early birds who appreciate quiet mornings or night owls who share your evening energy.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-6 items-start">
-                    <div className="flex-shrink-0 w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 border border-purple-200">
-                      <Users size={28} />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-xl mb-2 text-dark tracking-tight">Social Vibe</h3>
-                      <p className="text-slate-500 font-medium">Whether you prefer a quiet sanctuary for deep study or a social hub for weekend gatherings.</p>
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-primary">group</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-dark">Social Vibe</p>
+                        <p className="text-xs text-slate-500">Introverted vs Extroverted spaces</p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-10">
-                  <div>
-                    <div className="flex items-center gap-3 font-black text-dark mb-5 tracking-wider text-sm">
-                      <Cigarette size={20} className="text-primary" /> Smoking Habits
+                <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl border border-primary bg-primary/5">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-dark">Smoking Habits</span>
+                      <span className="material-symbols-outlined text-primary text-xl">smoke_free</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {['Strictly Non-Smoking', 'Outdoor Smoking OK', 'Social Smoker', 'No Preference'].map((opt) => (
-                        <button key={opt} className="px-5 py-4 text-xs font-black border border-slate-200 rounded-full hover:border-primary hover:text-dark transition-all text-left tracking-widest bg-white cursor-pointer">
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
+                    <select className="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option>Strictly Non-Smoking</option>
+                      <option>Outdoor Smoking OK</option>
+                      <option>Social Smoker</option>
+                      <option>No Preference</option>
+                    </select>
                   </div>
-
-                  <div>
-                    <div className="flex items-center gap-3 font-black text-dark mb-5 tracking-wider text-sm">
-                      <PawPrint size={20} className="text-primary" /> Pet Friendliness
+                  <div className="p-4 rounded-xl border border-slate-200 hover:border-primary transition-colors">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-dark">Pet Friendliness</span>
+                      <span className="material-symbols-outlined text-slate-400 text-xl">pets</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {['No Pets', 'Dog Friendly', 'Cat Friendly', 'All Pets Welcome'].map((opt) => (
-                        <button key={opt} className="px-5 py-4 text-xs font-black border border-slate-200 rounded-full hover:border-primary hover:text-dark transition-all text-left tracking-widest bg-white cursor-pointer">
-                          {opt}
-                        </button>
-                      ))}
+                    <select className="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option>No Pets</option>
+                      <option>Dog Friendly</option>
+                      <option>Cat Friendly</option>
+                      <option>All Pets Welcome</option>
+                    </select>
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-200 hover:border-primary transition-colors">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-dark">Cleanliness Level</span>
+                      <span className="material-symbols-outlined text-slate-400 text-xl">cleaning_services</span>
                     </div>
+                    <select className="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option>Very Tidy</option>
+                      <option>Lived-in Comfort</option>
+                      <option>Moderate</option>
+                      <option>Flexible</option>
+                    </select>
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-200 hover:border-primary transition-colors">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-dark">Guest Policy</span>
+                      <span className="material-symbols-outlined text-slate-400 text-xl">diversity_3</span>
+                    </div>
+                    <select className="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option>Rarely Guests</option>
+                      <option>Weekends Only</option>
+                      <option>Social Household</option>
+                      <option>Open Door Policy</option>
+                    </select>
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Location Search */}
-            <section className="bg-dark rounded-[48px] p-16 text-white overflow-hidden relative shadow-2xl">
+            {/* Location Discovery banner */}
+            <div className="rounded-2xl overflow-hidden relative min-h-[300px] flex items-center p-8 mb-8">
+              <div className="absolute inset-0 bg-slate-900">
+                <img
+                  src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&q=60&w=1400"
+                  alt="City map"
+                  className="w-full h-full object-cover opacity-40 grayscale"
+                />
+              </div>
               <div className="relative z-10 max-w-md">
-                <h2 className="text-4xl font-black mb-6 tracking-tight leading-tight">Location Discovery</h2>
-                <p className="text-slate-400 mb-10 font-medium text-lg">Explore roommate matches by neighborhood proximity to your workplace or campus using our interactive map.</p>
-                <button className="flex items-center gap-3 px-10 py-5 bg-primary text-dark rounded-full font-black hover:bg-primary/90 transition-all shadow-xl tracking-widest text-sm cursor-pointer">
-                  <MapIcon size={22} />
+                <h2 className="text-3xl font-bold text-white mb-4">Location Search</h2>
+                <p className="text-slate-300 mb-6">Explore roommate matches by neighborhood proximity to your workplace or campus.</p>
+                <button className="flex items-center gap-2 px-6 py-3 bg-primary text-dark rounded-full font-bold hover:brightness-105 transition-all">
+                  <span className="material-symbols-outlined">map</span>
                   Open Map Discovery
                 </button>
               </div>
-              {/* Decorative Map Element */}
-              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent hidden md:block">
-                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
-              </div>
-            </section>
+            </div>
+
           </main>
-
-          <Footer />
-        </div>
-      </div>
-
-      {showSettingsModal && (
-        <SettingsModal 
-          initialProfile={profile} 
-          onClose={() => setShowSettingsModal(false)} 
-        />
-      )}
-    </>
+    </div>
   );
 };
 

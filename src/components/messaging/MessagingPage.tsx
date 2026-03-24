@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MessagingNavbar } from './MessagingNavbar';
+import Navbar from '@/components/layout/Navbar';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
 import { HouseRules } from './HouseRules';
@@ -79,8 +79,8 @@ export default function MessagingPage() {
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background">
-      <MessagingNavbar />
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background font-sans">
+      <Navbar activeTab="Messages" />
       <main className="flex flex-1 overflow-hidden">
         <Sidebar 
           matches={matches} 

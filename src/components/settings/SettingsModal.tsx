@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { updatePreferences, updateRoomPreferences } from '../../../app/settings/actions';
 
-
 interface SettingsModalProps {
   initialProfile?: any;
   onClose: () => void;
