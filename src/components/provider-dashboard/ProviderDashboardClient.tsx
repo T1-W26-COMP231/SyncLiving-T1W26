@@ -19,29 +19,29 @@ interface ProviderDashboardClientProps {
 
 export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile, roomTypes = [], amenities = [] }: ProviderDashboardClientProps) {
   const router = useRouter();
-  const [activeTab,         setActiveTab]         = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
-  const [searchQuery,       setSearchQuery]       = useState('');
+  const [activeTab, setActiveTab] = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const filteredListings = initialListings.filter(listing => {
-    const statusMatch = activeTab === 'All' || 
+    const statusMatch = activeTab === 'All' ||
       (activeTab === 'Published' && listing.status === 'published') ||
       (activeTab === 'Drafts' && listing.status === 'draft') ||
       (activeTab === 'Archived' && listing.status === 'archived');
-      
+
     const matchesSearch = listing.title.toLowerCase().includes(searchQuery.toLowerCase());
     return statusMatch && matchesSearch;
   });
 
   return (
     <div className="min-h-screen bg-[#f8fafb] font-sans pb-20">
-      
+
       {/* Reusable Top Navigation Bar */}
       <Navbar userName={userName} activeTab="Listings" onOpenSettings={() => setShowSettingsModal(true)} />
 
       {/* Main Dashboard Area */}
       <main className="max-w-7xl mx-auto px-6 py-10 space-y-10">
-        
+
         {/* Welcome Header */}
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-extrabold text-dark tracking-tight">Welcome, {name}</h1>
@@ -61,7 +61,7 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Find your compatible roommate</h2>
                   <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-                    Our compatibility-first matching system connects you with individuals who share your lifestyle, 
+                    Our compatibility-first matching system connects you with individuals who share your lifestyle,
                     values, and living habits for a stress-free shared experience.
                   </p>
                 </div>
@@ -86,7 +86,7 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
                 <div>
                   <h2 className="text-2xl font-bold text-dark mb-2">List Your Room</h2>
                   <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                    Ready to fill an empty space? Create a detailed listing with photos, amenities, 
+                    Ready to fill an empty space? Create a detailed listing with photos, amenities,
                     and roommate preferences to attract high-quality applicants today.
                   </p>
                 </div>
@@ -108,18 +108,17 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
               <h2 className="text-2xl font-bold text-dark tracking-tight">Your Current Listings</h2>
               <p className="text-sm text-slate-500 font-medium">Tracking {initialListings.length} properties in your portfolio</p>
             </div>
-            
+
             {/* Filter Tabs */}
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
               {['All', 'Published', 'Drafts', 'Archived'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
-                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-                    activeTab === tab 
-                      ? 'bg-white text-dark shadow-sm' 
+                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === tab
+                      ? 'bg-white text-dark shadow-sm'
                       : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   {tab}
                 </button>
@@ -129,9 +128,9 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
 
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by title, location or keywords..." 
+            <input
+              type="text"
+              placeholder="Search by title, location or keywords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"

@@ -37,10 +37,10 @@ const Navbar: React.FC<NavbarProps> = ({ userName = 'User', activeTab = 'Listing
 
         {/* Main Navigation */}
         <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
-          <NavLink label="Listings"   href="/provider-dashboard" active={activeTab === 'Listings'}   />
-          <NavLink label="Discovery"  href="#"                   active={activeTab === 'Discovery'}  />
-          <NavLink label="Matches"    href="#" badge="12"        active={activeTab === 'Matches'}    />
-          <NavLink label="Messages"   href="#" badge="3"         active={activeTab === 'Messages'}   />
+          <NavLink label="Listings" href="/provider-dashboard" active={activeTab === 'Listings'} />
+          <NavLink label="Discovery" href="#" active={activeTab === 'Discovery'} />
+          <NavLink label="Matches" href="#" badge="12" active={activeTab === 'Matches'} />
+          <NavLink label="Messages" href="/messages" badge="3" active={activeTab === 'Messages'} />
         </nav>
 
         {/* Right Actions */}
@@ -124,9 +124,8 @@ function NavLink({ label, href, active = false, badge }: { label: string; href: 
   return (
     <Link
       href={href}
-      className={`relative py-2 px-1 text-sm font-bold transition-colors flex items-center gap-2 ${
-        active ? 'text-primary' : 'text-slate-500 hover:text-dark'
-      }`}
+      className={`relative py-2 px-1 text-sm font-bold transition-colors flex items-center gap-2 ${active ? 'text-primary' : 'text-slate-500 hover:text-dark'
+        }`}
     >
       {label}
       {badge && (
