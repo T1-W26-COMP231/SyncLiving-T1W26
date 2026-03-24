@@ -40,15 +40,29 @@ Before running the project on **Windows**, ensure you have installed:
      - **Note:** Make sure Docker is running before executing any Supabase CLI commands.
 
 ### 2. Environment Setup
-Create a `.env.local` file in the root directory and add your Supabase credentials:
+Create a `.env.local` file in the root directory and add your Supabase and Google Maps credentials:
 
 ```bash
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Google Maps Configuration (for Address Autocomplete)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
-### 3. Start Supabase (Local)
+### 3. Map Services Setup
+To enable address validation and geolocation in the provider dashboard, you must:
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a project and an API Key.
+3. **CRITICAL:** Enable the following **Legacy/Standard APIs** (the "New" versions are not yet supported by our client libraries):
+   - **Maps JavaScript API** (Loads the core SDK)
+   - **Places API** (Enables address autocomplete dropdown)
+   - **Geocoding API** (Converts address strings to Lat/Lng coordinates)
+4. Update your `.env.local` with the new key and restart the dev server.
+
+### 4. Start Supabase (Local)
 Run the following command to start the Docker containers and apply database migrations:
 
 ```bash
@@ -90,33 +104,27 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 We use **Google Stitch** to design and iterate on our UI. To sync these designs directly into your AI editor (like Cursor or VS Code) using the **Model Context Protocol (MCP)**, follow these steps:
 
 ### 1. Get the Shared API Key
-See the design: https://stitch.withgoogle.com/projects/1957947046545577335
-If you use gemini CLI, please run the command in terminal.
+See the design: https://stitch.withgoogle.com/projects/1957947046545577335 
+If you use **gemini CLI**, please run the command in powershell.
 ```bash
 gemini extensions install https://github.com/gemini-cli-extensions/stitch
 ```
-follow the instruction from gemini. Ask the project owner for the shared **Stitch API Key**. 
+Ask the project owner for the shared **Stitch API Key**. 
+Run
+```bash
+$MY_STITCH_KEY = "PASTE_STITCH_API_KEY_HERE"
+```
+```bash
+
+(Get-Content "$HOME\.gemini\extensions\Stitch\gemini-extension-apikey.json") -replace "YOUR_API_KEY", $MY_STITCH_KEY | Set-Content "$HOME\.gemini\extensions\Stitch\gemini-extension.json"
+```
 try step 2 only if problem exists.
 > **⚠️ Security:** Never commit this key to the repository.
 
 ### 2. Configure Your AI Editor
-Add the following to your `.mcp.json` file in the project root (for **Claude Code**):
+Go to your C:\Users\(username)\.gemini\extensions\Stitch
+Change the file **gemini-extension-apikey.json** directly
 
-```json
-{
-  "mcpServers": {
-    "stitch": {
-      "type": "http",
-      "url": "https://stitch.googleapis.com/mcp",
-      "env": {
-        "STITCH_API_KEY": "YOUR_SHARED_API_KEY_HERE"
-      }
-    }
-  }
-}
-```
-
-> **Note:** `.mcp.json` is git-ignored. Each developer must create their own local copy with the shared key.
 
 ### 3. Usage
 Once connected, you can ask your AI agent to:

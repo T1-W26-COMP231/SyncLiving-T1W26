@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { login, signInWithGoogle, signInWithApple } from '../auth/actions';
+import { login } from '../auth/actions';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
-import SocialLoginButtons from '@/components/ui/SocialLoginButtons';
 
 // Image URLs from Stitch design
 const RIGHT_PANEL_BG = 'https://lh3.googleusercontent.com/aida-public/AB6AXuANxTu1f2OWe9cYJlXVnbdn0khNksqJI0nFyoOabFIGCGQhnCGbZAa34HlWmQ7qPnBwcw0Up_CTp9XzFS9_ZZrd6B2Z-Ed3pCEj7K2kHwF1p46tdmp-grwu9p3cswCK-SDKJ4YhZ-k2yyRrKwlY_vLnAMWiwD8J4NMV1jfGkSAgxOEUqWZgX05LRQOhl5-TNGfdHpvBQbFOAjiUb5ThHmOVMAwdQEdNMY0NhELketqR8qoW2lp5pvLRAE33WoyTPTUiVhiDL8ZTlvQ';
@@ -15,7 +14,7 @@ export default function LoginPage({
   return (
     <div className="bg-background min-h-screen flex items-center justify-center p-0 md:p-6 font-sans">
       {/* Centered card */}
-      <div className="flex w-full max-w-[1200px] bg-white min-h-[800px] shadow-2xl rounded-none md:rounded-xl overflow-hidden">
+      <div className="flex w-full max-w-[1200px] bg-white min-h-[650px] shadow-2xl rounded-none md:rounded-xl overflow-hidden">
 
         {/* Left column — form */}
         <div className="flex-1 flex flex-col justify-center px-8 md:px-16 py-12 lg:max-w-[550px]">
@@ -27,23 +26,6 @@ export default function LoginPage({
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
             <p className="text-slate-500">Simplify your shared living experience today.</p>
-          </div>
-
-          {/* Social login — Google + Apple */}
-          <div className="mb-8">
-            <SocialLoginButtons
-              googleAction={signInWithGoogle}
-              appleAction={signInWithApple}
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="relative flex items-center mb-8">
-            <div className="flex-grow border-t border-slate-200" />
-            <span className="flex-shrink mx-4 text-slate-400 text-sm uppercase tracking-wider">
-              or sign in with email
-            </span>
-            <div className="flex-grow border-t border-slate-200" />
           </div>
 
           {/* Email / password form */}
