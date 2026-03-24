@@ -1,0 +1,84 @@
+import React from 'react';
+import { User } from './types';
+import { Button } from '@/components/ui/Button';
+
+interface MessageItemProps {
+  message: {
+    id: string;
+    content: string;
+    type?: string;
+    timestamp?: string;
+    created_at?: string;
+    actionData?: {
+      title: string;
+      description: string;
+      actionLabel: string;
+    };
+  };
+  sender?: User;
+  isMe?: boolean;
+}
+
+export const MessageItem: React.FC<MessageItemProps> = ({ message, sender, isMe }) => {
+  const timestamp = message.timestamp || new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (message.type === 'action' && message.actionData) {
+    return (
+      <div className="flex items-start gap-3 max-w-2xl">
+        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-primary">edit_note</span>
+        </div>
+        <div className="flex flex-1 flex-col gap-2">
+          <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">
+              {message.actionData.title}
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400 italic mb-3">
+              &quot;{message.actionData.description}&quot;
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm">
+                {message.actionData.actionLabel}
+              </Button>
+              <Button variant="outline" size="sm">
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-start gap-3 max-w-2xl ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
+      {isMe ? (
+        <div className="size-10 rounded-full bg-slate-400 flex items-center justify-center shrink-0 text-white font-bold text-xs uppercase overflow-hidden">
+          YOU
+        </div>
+      ) : (
+        <img
+          alt={sender?.name || 'User'}
+          className="size-10 rounded-full shrink-0 object-cover"
+          src={sender?.avatarUrl || `https://ui-avatars.com/api/?name=${sender?.name || 'U'}`}
+        />
+      )}
+      <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : ''}`}>
+        <div className="flex items-center gap-2">
+          {!isMe && <span className="text-sm font-bold">{sender?.name}</span>}
+          <span className="text-[10px] text-slate-400">{timestamp}</span>
+          {isMe && <span className="text-sm font-bold">You</span>}
+        </div>
+        <div
+          className={`p-4 rounded-xl shadow-sm border ${
+            isMe
+              ? 'bg-primary text-white border-transparent rounded-tr-none'
+              : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700 rounded-tl-none'
+          }`}
+        >
+          <p className="text-sm leading-relaxed">{message.content}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
