@@ -235,14 +235,15 @@ function DualRangeSlider({
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionLabel({
-  Icon, label, optional,
+  Icon, label, optional, required,
 }: {
-  Icon: React.FC<any>; label: string; optional?: boolean;
+  Icon: React.FC<any>; label: string; optional?: boolean; required?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 mb-4">
       <Icon size={14} className="text-primary shrink-0" />
       <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
+      {required && <span className="text-red-500 text-xs font-bold">*</span>}
       {optional && (
         <span className="text-[10px] font-normal italic text-slate-400 normal-case tracking-normal">
           optional
@@ -252,10 +253,11 @@ function SectionLabel({
   );
 }
 
-function FieldLabel({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
+function FieldLabel({ children, optional, required }: { children: React.ReactNode; optional?: boolean; required?: boolean }) {
   return (
     <label className="block text-sm font-semibold text-slate-700 mb-1.5">
       {children}
+      {required && <span className="ml-0.5 text-red-500">*</span>}
       {optional && <span className="ml-1.5 text-[10px] font-normal italic text-slate-400">optional</span>}
     </label>
   );
@@ -635,7 +637,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
               <SectionLabel Icon={User} label="Personal Details" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <FieldLabel>Full Name</FieldLabel>
+                  <FieldLabel required>Full Name</FieldLabel>
                   <input
                     type="text"
                     value={formData.full_name}
@@ -673,7 +675,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
 
             {/* Location */}
             <section>
-              <SectionLabel Icon={MapPin} label="Location" />
+              <SectionLabel Icon={MapPin} label="Location" required />
               <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
@@ -775,7 +777,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
 
             {/* Move-in date */}
             <section>
-              <SectionLabel Icon={Calendar} label="Estimated Move-in Date" />
+              <SectionLabel Icon={Calendar} label="Estimated Move-in Date" required />
               <input
                 type="date"
                 value={formData.move_in_date}
@@ -810,7 +812,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                             <dim.Icon size={14} className="text-primary" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-dark leading-none">{dim.label}</p>
+                            <p className="text-sm font-bold text-dark leading-none">{dim.label}<span className="ml-0.5 text-red-500">*</span></p>
                             <p className="text-[10px] text-slate-400 mt-0.5">{dim.description}</p>
                           </div>
                         </div>
@@ -939,7 +941,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
           <>
             {/* Profile photo */}
             <section>
-              <SectionLabel Icon={User} label="Profile Photo" />
+              <SectionLabel Icon={User} label="Profile Photo" required />
               <div className="flex flex-col items-center gap-2">
                 <label className="relative group cursor-pointer">
                   <div className={`w-28 h-28 rounded-full border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${
