@@ -19,6 +19,9 @@ const LandingNavbar = ({ user }: LandingNavbarProps) => {
         
         {/* Navigation Links */}
         <nav className="hidden md:flex items-center gap-8">
+          <Link href="/discovery" className="text-slate-600 hover:text-primary transition-colors text-sm font-bold">
+            Discovery
+          </Link>
           <Link href="/provider-dashboard" className="text-slate-600 hover:text-primary transition-colors text-sm font-bold">
             Listings
           </Link>

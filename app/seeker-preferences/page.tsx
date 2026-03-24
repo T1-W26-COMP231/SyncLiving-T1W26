@@ -1,6 +1,5 @@
 import React from 'react';
 import { createClient } from '@/utils/supabase/server';
-import LandingNavbar from '@/components/landing/LandingNavbar';
 import SeekerPreferencesClient from '@/components/seeker-preferences/SeekerPreferencesClient';
 import { redirect } from 'next/navigation';
 
@@ -57,27 +56,14 @@ export default async function SeekerPreferencesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafb] font-sans pb-20">
-      <LandingNavbar user={user} />
-      
-      <main className="max-w-4xl mx-auto px-6 py-12">
-        <div className="mb-10">
-          <h1 className="text-4xl font-black tracking-tight text-dark sm:text-5xl uppercase">Roommate Preferences</h1>
-          <p className="mt-3 text-lg font-medium text-slate-500">
-            Tell us who you'd love to live with and what your dream home looks like.
-          </p>
-        </div>
-
-        <SeekerPreferencesClient 
-          allTags={allTags}
-          allAmenities={allAmenities}
-          allRoomTypes={allRoomTypes}
-          initialTagIds={initialTagIds}
-          initialAmenityIds={initialAmenityIds}
-          initialRoomTypeIds={initialRoomTypeIds}
-          initialData={initialData}
-        />
-      </main>
-    </div>
+    <SeekerPreferencesClient 
+      allTags={allTags}
+      allAmenities={allAmenities}
+      allRoomTypes={allRoomTypes}
+      initialTagIds={initialTagIds}
+      initialAmenityIds={initialAmenityIds}
+      initialRoomTypeIds={initialRoomTypeIds}
+      initialData={initialData}
+    />
   );
 }

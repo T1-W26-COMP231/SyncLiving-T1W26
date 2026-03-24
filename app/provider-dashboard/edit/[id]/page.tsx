@@ -1,19 +1,21 @@
 import React from 'react';
-import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import CreateListingForm from '@/components/provider-dashboard/CreateListingForm';
 import { createClient } from '@/utils/supabase/server';
-import { notFound } from 'next/navigation';
-import LandingNavbar from '@/components/landing/LandingNavbar';
+import { notFound, redirect } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
 
 export default async function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  // Get current user for navbar
+  // Get current user
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch Listing Data with raw coordinates
-  // Note: We'll parse the geography point in the server action or here
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Fetch Listing Data
   const [
     listingRes,
     roomTypesRes,
@@ -43,13 +45,11 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     city: listingRes.data.city,
     postal_code: listingRes.data.postal_code,
     photos: listingRes.data.photos || [],
-    // coordinates are tricky to parse from WKB here, 
-    // we'll rely on the user re-selecting or a future robust parser.
   };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
-      <LandingNavbar user={user} />
+      <Navbar activeTab="Listings" />
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-10">

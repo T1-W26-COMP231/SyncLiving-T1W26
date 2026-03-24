@@ -33,7 +33,7 @@ const HeroSection = () => {
 
             <div className="flex flex-wrap gap-4">
               <Link
-                href="/signup"
+                href="/discovery"
                 className="flex min-w-[180px] cursor-pointer items-center justify-center rounded-full h-14 px-8 text-white text-lg font-bold shadow-lg shadow-primary/25 hover:scale-105 transition-transform bg-primary"
               >
                 Find a Roommate

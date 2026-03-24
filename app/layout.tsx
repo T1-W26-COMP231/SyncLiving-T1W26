@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+//import Navbar from '@/components/layout/Navbar';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -25,6 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
+
+  const userName = "John Doe"; // Replace with actual user data
+
   return (
     <html lang="en">
       <head>
@@ -34,6 +38,9 @@ export default function RootLayout({
         />
       </head>
       <body className={`${plusJakartaSans.variable} ${geistMono.variable} antialiased`}>
+
+        {/*<Navbar userName={userName} />*/}
+
         {children}
         {modal}
       </body>

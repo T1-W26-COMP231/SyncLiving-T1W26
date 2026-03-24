@@ -2,6 +2,7 @@ import React from 'react';
 import { createClient } from '@/utils/supabase/server';
 import ProviderDashboardClient from '@/components/provider-dashboard/ProviderDashboardClient';
 import { ListingType } from '@/components/provider-dashboard/ListingCard';
+import { redirect } from 'next/navigation';
 
 export default async function ProviderDashboard() {
   const supabase = await createClient();
@@ -10,20 +11,17 @@ export default async function ProviderDashboard() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return <div>Please log in to view your dashboard.</div>;
+    redirect('/login');
   }
 
-  // Fetch user profile (full data for onboarding form pre-population)
+  // Fetch user profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
-  const userName = user.email?.split('@')[0] || 'User';
-  const name = profile?.full_name || user.email?.split('@')[0] || 'User';
-
-  // Fetch room types and amenities for the Create Listing modal
+  // Fetch room types and amenities
   const [roomTypesRes, amenitiesRes] = await Promise.all([
     supabase.from('room_types').select('id, name').order('name'),
     supabase.from('amenities').select('id, name, category').order('name'),
@@ -42,7 +40,6 @@ export default async function ProviderDashboard() {
 
   // Map database data to ListingType
   const listings: ListingType[] = (listingsData || []).map(item => {
-    // Construct the full image URL from photos array
     const firstPhoto = item.photos && item.photos.length > 0 ? item.photos[0] : null;
     const imageUrl = firstPhoto 
       ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${firstPhoto}`
@@ -53,14 +50,14 @@ export default async function ProviderDashboard() {
       title: item.title,
       price: item.rental_fee,
       location: item.address,
-      distance: 'Calculating...', // Placeholder
+      distance: 'Calculating...',
       status: item.status as 'published' | 'draft' | 'archived',
       imageUrl: imageUrl,
       photos: item.photos || [],
       stats: {
-        views: 0, // Placeholder
-        favorites: 0, // Placeholder
-        inquiries: 0, // Placeholder
+        views: 0,
+        favorites: 0,
+        inquiries: 0,
       }
     };
   });
@@ -69,8 +66,6 @@ export default async function ProviderDashboard() {
     <ProviderDashboardClient
       initialListings={listings}
       inquiries={[]}
-      userName={userName}
-      name={name}
       initialProfile={profile}
       roomTypes={roomTypesRes.data || []}
       amenities={amenitiesRes.data || []}

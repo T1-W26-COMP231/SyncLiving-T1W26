@@ -2,14 +2,17 @@ import React from 'react';
 import CreateListingForm from '@/components/provider-dashboard/CreateListingForm';
 import Navbar from '@/components/layout/Navbar';
 import { createClient } from '@/utils/supabase/server';
-
-import LandingNavbar from '@/components/landing/LandingNavbar';
+import { redirect } from 'next/navigation';
 
 export default async function CreateListingPage() {
   const supabase = await createClient();
   
-  // Get current user for navbar
+  // Get current user
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
 
   // Parallel fetch for room types and amenities
   const [roomTypesRes, amenitiesRes] = await Promise.all([

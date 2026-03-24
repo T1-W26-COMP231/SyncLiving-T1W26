@@ -5,16 +5,39 @@ import Link from 'next/link';
 import { Search, Bell, ChevronDown, Settings, LogOut } from 'lucide-react';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import { logout } from '../../../app/auth/actions';
+import { createClient } from '@/utils/supabase/client';
+
 
 interface NavbarProps {
-  userName?: string;
   activeTab?: string;
   onOpenSettings?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ userName = 'User', activeTab = 'Listings', onOpenSettings }) => {
+const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings', onOpenSettings }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [userName, setUserName] = useState<string>('User');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch user data
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+        
+        const name = profile?.full_name || user.email?.split('@')[0] || 'User';
+        setUserName(name);
+      }
+    };
+    
+    fetchUser();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -31,9 +54,9 @@ const Navbar: React.FC<NavbarProps> = ({ userName = 'User', activeTab = 'Listing
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-3 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
         {/* Logo */}
-        <div className="flex-shrink-0">
+        <Link href="/" className="flex-shrink-0 hover:opacity-80 transition-opacity">
           <SyncLivingLogo size="md" />
-        </div>
+        </Link>
 
         {/* Main Navigation */}
         <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">

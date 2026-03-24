@@ -1,27 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ListingCard, ListingType } from './ListingCard';
 import { Search, Home, Sparkles, Zap } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import SettingsModal from '@/components/settings/SettingsModal';
+import { createClient } from '@/utils/supabase/client';
 
 interface ProviderDashboardClientProps {
   initialListings: ListingType[];
   inquiries: any[];
-  userName: string;
-  name: string;
   initialProfile?: any;
   roomTypes?: { id: string; name: string }[];
   amenities?: { id: string; name: string; category: string | null }[];
 }
 
-export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile, roomTypes = [], amenities = [] }: ProviderDashboardClientProps) {
+export default function ProviderDashboardClient({ initialListings, inquiries, initialProfile, roomTypes = [], amenities = [] }: ProviderDashboardClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [userName, setUserName] = useState<string>('User');
+
+  // Fetch user data for welcome message
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+        setUserName(profile?.full_name || user.email?.split('@')[0] || 'User');
+      }
+    };
+    fetchUser();
+  }, []);
 
   const filteredListings = initialListings.filter(listing => {
     const statusMatch = activeTab === 'All' ||
@@ -48,15 +61,30 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
           <p className="text-slate-500 font-medium">Manage your property listings and find the best tenants.</p>
         </div>
 
-        {/* Two Section CTAs - Reference "SyncLiving - Final Dashboard with Listings" */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Find your compatible roommate */}
-          <div className="relative overflow-hidden group bg-dark rounded-[2.5rem] p-8 text-white shadow-2xl shadow-dark/20 border border-white/5">
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-primary opacity-10 blur-[80px] group-hover:opacity-20 transition-opacity"></div>
-            <div className="relative z-10 h-full flex flex-col justify-between gap-8">
-              <div className="space-y-4">
-                <div className="size-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary border border-primary/20">
-                  <Sparkles size={28} />
+            {/* Two Section CTAs - Reference "SyncLiving - Final Dashboard with Listings" */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Find your compatible roommate */}
+              <div className="relative overflow-hidden group bg-dark rounded-[2.5rem] p-8 text-white shadow-2xl shadow-dark/20 border border-white/5">
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-primary opacity-10 blur-[80px] group-hover:opacity-20 transition-opacity"></div>
+                <div className="relative z-10 h-full flex flex-col justify-between gap-8">
+                  <div className="space-y-4">
+                    <div className="size-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary border border-primary/20">
+                      <Sparkles size={28} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">Find your compatible roommate</h2>
+                      <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+                        Our compatibility-first matching system connects you with individuals who share your lifestyle, 
+                        values, and living habits for a stress-free shared experience.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push('/onboarding')}
+                    className="w-fit bg-primary hover:brightness-105 text-dark font-bold py-3 px-8 rounded-full transition-all active:scale-95 shadow-lg shadow-primary/20"
+                  >
+                    {initialProfile?.full_name ? 'Edit Profile' : 'Add a Profile'}
+                  </button>
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Find your compatible roommate</h2>
@@ -66,22 +94,14 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => router.push('/onboarding')}
-                className="w-fit bg-primary hover:brightness-105 text-dark font-bold py-3 px-8 rounded-full transition-all active:scale-95 shadow-lg shadow-primary/20"
-              >
-                {initialProfile?.full_name ? 'Edit Profile' : 'Add a Profile'}
-              </button>
             </div>
-          </div>
 
-          {/* List Your Room */}
-          <div className="relative overflow-hidden group bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-xl shadow-slate-200/50">
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 bg-primary opacity-5 blur-[80px] group-hover:opacity-10 transition-opacity"></div>
-            <div className="relative z-10 h-full flex flex-col justify-between gap-8">
-              <div className="space-y-4">
-                <div className="size-14 rounded-2xl bg-slate-100 flex items-center justify-center text-dark border border-slate-200">
-                  <Zap size={28} />
+            {/* Listings Section */}
+            <div className="space-y-6 pt-4">
+              <div className="flex flex-col sm:flex-row justify-between items-end gap-4 border-b border-slate-200 pb-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-bold text-dark tracking-tight">Your Current Listings</h2>
+                  <p className="text-sm text-slate-500 font-medium">Tracking {initialListings.length} properties in your portfolio</p>
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-dark mb-2">List Your Room</h2>
@@ -137,26 +157,28 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
             />
           </div>
 
-          {/* Listings Feed */}
-          <div className="space-y-4">
-            {filteredListings.length > 0 ? (
-              filteredListings.map(listing => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))
-            ) : (
-              <div className="text-center py-24 bg-white rounded-[2rem] border border-dashed border-slate-200">
-                <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-                  <Home size={40} />
-                </div>
-                <h3 className="text-xl font-bold text-dark">No listings found</h3>
-                <p className="text-slate-500 font-medium max-w-xs mx-auto mt-2">
-                  Try clearing your filters or create your first listing to get started.
-                </p>
+              {/* Listings Feed */}
+              <div className="space-y-4">
+                {filteredListings.length > 0 ? (
+                  filteredListings.map(listing => (
+                    <ListingCard key={listing.id} listing={listing} />
+                  ))
+                ) : (
+                  <div className="text-center py-24 bg-white rounded-[2rem] border border-dashed border-slate-200">
+                    <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                      <Home size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-dark">No listings found</h3>
+                    <p className="text-slate-500 font-medium max-w-xs mx-auto mt-2">
+                      Try clearing your filters or create your first listing to get started.
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
       {/* Settings modal */}
       {showSettingsModal && (
         <SettingsModal
@@ -164,6 +186,6 @@ export default function ProviderDashboardClient({ initialListings, inquiries, us
           onClose={() => setShowSettingsModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }

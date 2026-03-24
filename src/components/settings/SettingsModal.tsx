@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, DollarSign, Calendar, User, PawPrint, Cigarette, Heart, Save } from 'lucide-react';
 import { updatePreferences } from '../../../app/settings/actions';
 
+
 interface SettingsModalProps {
   initialProfile?: any;
   onClose: () => void;
