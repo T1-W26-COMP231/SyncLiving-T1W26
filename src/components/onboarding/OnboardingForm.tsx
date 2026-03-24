@@ -9,7 +9,7 @@ import usePlacesAutocomplete, {
   getLatLng,
 } from "use-places-autocomplete";
 import {
-  Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star,
+  Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star, Leaf,
   Camera, Plus, X, Home, UserSearch,
   Check, ChevronLeft, ChevronRight, Search,
   User, MapPin, Calendar, SlidersHorizontal, FileText,
@@ -44,11 +44,11 @@ const FCRM_DIMENSIONS: {
     description: 'How often do you have guests over?',
     Icon: Users,
     options: [
-      { tag: 'TheHermit',      label: '#TheHermit',      value: 0.1 },
-      { tag: 'QuietLiving',    label: '#QuietLiving',    value: 0.3 },
-      { tag: 'BalancedSocial', label: '#BalancedSocial', value: 0.5 },
-      { tag: 'FrequentHost',   label: '#FrequentHost',   value: 0.7 },
-      { tag: 'OpenHouse',      label: '#OpenHouse',      value: 0.9 },
+      { tag: 'TheHermit',      label: 'The Hermit',       value: 0.1 },
+      { tag: 'QuietLiving',    label: 'Quiet Living',     value: 0.3 },
+      { tag: 'BalancedSocial', label: 'Balanced Social',  value: 0.5 },
+      { tag: 'FrequentHost',   label: 'Frequent Host',    value: 0.7 },
+      { tag: 'OpenHouse',      label: 'Open House',       value: 0.9 },
     ],
   },
   {
@@ -57,11 +57,11 @@ const FCRM_DIMENSIONS: {
     description: 'Typical noise level at home',
     Icon: Volume2,
     options: [
-      { tag: 'LibraryZone', label: '#LibraryZone', value: 0.1 },
-      { tag: 'QuietFocus',  label: '#QuietFocus',  value: 0.3 },
-      { tag: 'AmbientLife', label: '#AmbientLife', value: 0.5 },
-      { tag: 'VibrantHome', label: '#VibrantHome', value: 0.7 },
-      { tag: 'HighDecibel', label: '#HighDecibel', value: 0.9 },
+      { tag: 'LibraryZone', label: 'Library Zone',  value: 0.1 },
+      { tag: 'QuietFocus',  label: 'Quiet Focus',   value: 0.3 },
+      { tag: 'AmbientLife', label: 'Ambient Life',  value: 0.5 },
+      { tag: 'VibrantHome', label: 'Vibrant Home',  value: 0.7 },
+      { tag: 'HighDecibel', label: 'High Decibel',  value: 0.9 },
     ],
   },
   {
@@ -70,11 +70,11 @@ const FCRM_DIMENSIONS: {
     description: 'Cleanliness & tidiness level',
     Icon: Sparkles,
     options: [
-      { tag: 'ChaosLover',      label: '#ChaosLover',      value: 0.1 },
-      { tag: 'LifeOverLaundry', label: '#LifeOverLaundry', value: 0.3 },
-      { tag: 'AverageTidy',     label: '#AverageTidy',     value: 0.5 },
-      { tag: 'PubliclyTidy',    label: '#PubliclyTidy',    value: 0.7 },
-      { tag: 'Minimalist24_7',  label: '#Minimalist24/7',  value: 0.9 },
+      { tag: 'ChaosLover',      label: 'Chaos Lover',       value: 0.1 },
+      { tag: 'LifeOverLaundry', label: 'Life Over Laundry', value: 0.3 },
+      { tag: 'AverageTidy',     label: 'Average Tidy',      value: 0.5 },
+      { tag: 'PubliclyTidy',    label: 'Publicly Tidy',     value: 0.7 },
+      { tag: 'Minimalist24_7',  label: 'Minimalist 24/7',   value: 0.9 },
     ],
   },
   {
@@ -83,11 +83,11 @@ const FCRM_DIMENSIONS: {
     description: 'Sleep & daily activity schedule',
     Icon: Clock,
     options: [
-      { tag: 'StrictEarlyBird', label: '#StrictEarlyBird', value: 0.1 },
-      { tag: 'AM_Routine',      label: '#AM_Routine',      value: 0.3 },
-      { tag: 'The9to5er',       label: '#The9to5er',       value: 0.5 },
-      { tag: 'TheLateShifter',  label: '#TheLateShifter',  value: 0.7 },
-      { tag: 'TrueNightOwl',    label: '#TrueNightOwl',    value: 0.9 },
+      { tag: 'StrictEarlyBird', label: 'Strict Early Bird', value: 0.1 },
+      { tag: 'AM_Routine',      label: 'AM Routine',        value: 0.3 },
+      { tag: 'The9to5er',       label: 'The 9 to 5er',      value: 0.5 },
+      { tag: 'TheLateShifter',  label: 'The Late Shifter',  value: 0.7 },
+      { tag: 'TrueNightOwl',    label: 'True Night Owl',    value: 0.9 },
     ],
   },
   {
@@ -96,11 +96,11 @@ const FCRM_DIMENSIONS: {
     description: 'How you treat shared spaces & items',
     Icon: Shield,
     options: [
-      { tag: 'StrictlyPrivate',    label: '#StrictlyPrivate',    value: 0.1 },
-      { tag: 'RespectfulDistance', label: '#RespectfulDistance', value: 0.3 },
-      { tag: 'Borrower',           label: '#Borrower',           value: 0.5 },
-      { tag: 'SharedHousehold',    label: '#SharedHousehold',    value: 0.7 },
-      { tag: 'CommunalLiving',     label: '#CommunalLiving',     value: 0.9 },
+      { tag: 'StrictlyPrivate',    label: 'Strictly Private',     value: 0.1 },
+      { tag: 'RespectfulDistance', label: 'Respectful Distance',  value: 0.3 },
+      { tag: 'Borrower',           label: 'Borrower',             value: 0.5 },
+      { tag: 'SharedHousehold',    label: 'Shared Household',     value: 0.7 },
+      { tag: 'CommunalLiving',     label: 'Communal Living',      value: 0.9 },
     ],
   },
 ];
@@ -235,14 +235,15 @@ function DualRangeSlider({
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionLabel({
-  Icon, label, optional,
+  Icon, label, optional, required,
 }: {
-  Icon: React.FC<any>; label: string; optional?: boolean;
+  Icon: React.FC<any>; label: string; optional?: boolean; required?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 mb-4">
       <Icon size={14} className="text-primary shrink-0" />
       <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
+      {required && <span className="text-red-500 text-xs font-bold">*</span>}
       {optional && (
         <span className="text-[10px] font-normal italic text-slate-400 normal-case tracking-normal">
           optional
@@ -252,10 +253,11 @@ function SectionLabel({
   );
 }
 
-function FieldLabel({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
+function FieldLabel({ children, optional, required }: { children: React.ReactNode; optional?: boolean; required?: boolean }) {
   return (
     <label className="block text-sm font-semibold text-slate-700 mb-1.5">
       {children}
+      {required && <span className="ml-0.5 text-red-500">*</span>}
       {optional && <span className="ml-1.5 text-[10px] font-normal italic text-slate-400">optional</span>}
     </label>
   );
@@ -269,6 +271,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [errors,  setErrors]  = useState<Record<string, string>>({});
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   
   const morePhotosInputRef = useRef<HTMLInputElement>(null);
@@ -314,6 +317,14 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     move_in_date:     initialData?.move_in_date     || '',
     bio:              '',
   });
+
+  // ── Binary preference tags ───────────────────────────────────────────────────
+  const BINARY_TAGS = ['Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly', 'Vegan Friendly'] as const;
+  const [binaryTags, setBinaryTags] = useState<string[]>(
+    (initialData?.lifestyle_tags || []).filter((t: string) => BINARY_TAGS.includes(t as any))
+  );
+  const toggleBinaryTag = (tag: string) =>
+    setBinaryTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
   // ── FCRM lifestyle tags ──────────────────────────────────────────────────────
   const [weekdayTags, setWeekdayTags] = useState<DimTags>(
@@ -387,37 +398,132 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const handleMorePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      const newPhotos = newFiles.map(file => ({
-        file,
-        url: URL.createObjectURL(file)
-      }));
-      setMorePhotos(prev => [...prev, ...newPhotos]);
+      setMorePhotoUrls(prev => {
+        const next = [...prev];
+        newFiles.forEach((file, i) => {
+          const slot = next.findIndex((v, idx) => v === null && idx >= i);
+          if (slot !== -1) next[slot] = URL.createObjectURL(file);
+        });
+        return next;
+      });
     }
   };
 
   const removeMorePhoto = (index: number) => {
-    setMorePhotos(prev => prev.filter((_, i) => i !== index));
+    setMorePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
   };
 
   const handleSpacePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      const newPhotos = newFiles.map(file => ({
-        file,
-        url: URL.createObjectURL(file)
-      }));
-      setSpacePhotos(prev => [...prev, ...newPhotos]);
+      setSpacePhotoUrls(prev => {
+        const next = [...prev];
+        newFiles.forEach((file, i) => {
+          const slot = next.findIndex((v, idx) => v === null && idx >= i);
+          if (slot !== -1) next[slot] = URL.createObjectURL(file);
+        });
+        return next;
+      });
     }
   };
 
   const removeSpacePhoto = (index: number) => {
-    setSpacePhotos(prev => prev.filter((_, i) => i !== index));
+    setSpacePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
   };
 
   const toggleSpaceVibe = (vibe: string) => {
     setSpaceVibes(prev =>
       prev.includes(vibe) ? prev.filter(v => v !== vibe) : [...prev, vibe]
     );
+  };
+
+  // ── Photo pickers ─────────────────────────────────────────────────────────────
+  const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfilePhotoUrl(URL.createObjectURL(file));
+  };
+
+  const pickMorePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMorePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = URL.createObjectURL(file);
+      return next;
+    });
+  };
+
+  const pickSpacePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSpacePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = URL.createObjectURL(file);
+      return next;
+    });
+  };
+
+  // ── Location suggestion selection ─────────────────────────────────────────────
+  const handleSelectSuggestion = (s: any) => {
+    setFormData(p => ({
+      ...p,
+      location:  s.display_name,
+      latitude:  parseFloat(s.lat),
+      longitude: parseFloat(s.lon),
+    }));
+    setLocationSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  // ── Validation ───────────────────────────────────────────────────────────────
+  const validateStep = (stepNum: number): Record<string, string> => {
+    const errs: Record<string, string> = {};
+
+    if (stepNum === 1) {
+      if (!formData.full_name.trim())
+        errs.full_name = 'Full name is required.';
+      if (!formData.location.trim())
+        errs.location = 'Please enter and select your location.';
+      else if (!formData.latitude)
+        errs.location = 'Please select a location from the suggestions.';
+      if (!formData.move_in_date)
+        errs.move_in_date = 'Move-in date is required.';
+    }
+
+    if (stepNum === 2) {
+      DIM_ORDER.forEach(dim => {
+        if (!weekdayTags[dim])
+          errs[`wd_${dim}`] = 'Please select an option.';
+        if (differentWeekend[dim] && !weekendTags[dim])
+          errs[`we_${dim}`] = 'Please select a weekend option.';
+      });
+    }
+
+    if (stepNum === 3) {
+      if (!profilePhotoUrl)
+        errs.profile_photo = 'A profile photo is required.';
+    }
+
+    return errs;
+  };
+
+  const handleNext = () => {
+    const errs = validateStep(step);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    setErrors({});
+    setStep(s => s + 1);
   };
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -430,15 +536,13 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
 
   // ── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    const errs = validateStep(3);
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setLoading(true);
     try {
       // Build FCRM prefixed lifestyle tags
       const wdTags = DIM_ORDER.filter(d => weekdayTags[d]).map(d => `wd:${d}:${weekdayTags[d]}`);
       const weTags = DIM_ORDER.filter(d => weekendTags[d]).map(d => `we:${d}:${weekendTags[d]}`);
-      // Preserve binary preference tags from existing profile (managed in Settings)
-      const binaryTags = (initialData?.lifestyle_tags || []).filter(
-        (t: string) => ['Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly'].includes(t)
-      );
       const lifestyle_tags = [...wdTags, ...weTags, ...binaryTags];
 
       // Build numeric feature vectors for the FCRM engine
@@ -533,14 +637,15 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
               <SectionLabel Icon={User} label="Personal Details" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <FieldLabel>Full Name</FieldLabel>
+                  <FieldLabel required>Full Name</FieldLabel>
                   <input
                     type="text"
                     value={formData.full_name}
-                    onChange={e => setFormData(p => ({ ...p, full_name: e.target.value }))}
+                    onChange={e => { setFormData(p => ({ ...p, full_name: e.target.value })); setErrors(p => ({ ...p, full_name: '' })); }}
                     placeholder="Your full name"
-                    className={inputCls}
+                    className={`${inputCls} ${errors.full_name ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                   />
+                  {errors.full_name && <p className="text-xs text-red-500 mt-1">{errors.full_name}</p>}
                 </div>
                 <div>
                   <FieldLabel>Age</FieldLabel>
@@ -570,17 +675,18 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
 
             {/* Location */}
             <section>
-              <SectionLabel Icon={MapPin} label="Location" />
+              <SectionLabel Icon={MapPin} label="Location" required />
               <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   value={formData.location}
-                  onChange={e => searchLocation(e.target.value)}
+                  onChange={e => { searchLocation(e.target.value); setErrors(p => ({ ...p, location: '' })); }}
                   onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
                   placeholder="Search city or neighborhood…"
-                  className={`${inputCls} pl-10`}
+                  className={`${inputCls} pl-10 ${errors.location ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                 />
+                {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
                 {showSuggestions && locationSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                     {locationSuggestions.map((s, i) => (
@@ -671,13 +777,14 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
 
             {/* Move-in date */}
             <section>
-              <SectionLabel Icon={Calendar} label="Estimated Move-in Date" />
+              <SectionLabel Icon={Calendar} label="Estimated Move-in Date" required />
               <input
                 type="date"
                 value={formData.move_in_date}
-                onChange={e => setFormData(p => ({ ...p, move_in_date: e.target.value }))}
-                className={inputCls}
+                onChange={e => { setFormData(p => ({ ...p, move_in_date: e.target.value })); setErrors(p => ({ ...p, move_in_date: '' })); }}
+                className={`${inputCls} ${errors.move_in_date ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
               />
+              {errors.move_in_date && <p className="text-xs text-red-500 mt-1">{errors.move_in_date}</p>}
             </section>
           </>
         )}
@@ -705,7 +812,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                             <dim.Icon size={14} className="text-primary" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-dark leading-none">{dim.label}</p>
+                            <p className="text-sm font-bold text-dark leading-none">{dim.label}<span className="ml-0.5 text-red-500">*</span></p>
                             <p className="text-[10px] text-slate-400 mt-0.5">{dim.description}</p>
                           </div>
                         </div>
@@ -733,7 +840,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                           <button
                             key={opt.tag}
                             type="button"
-                            onClick={() => handleWeekdayTag(dim.key, opt.tag)}
+                            onClick={() => { handleWeekdayTag(dim.key, opt.tag); setErrors(p => ({ ...p, [`wd_${dim.key}`]: '' })); }}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                               wdSelected === opt.tag
                                 ? 'bg-primary border-primary text-dark'
@@ -744,6 +851,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                           </button>
                         ))}
                       </div>
+                      {errors[`wd_${dim.key}`] && (
+                        <p className="text-xs text-red-500 mt-2">{errors[`wd_${dim.key}`]}</p>
+                      )}
 
                       {/* Weekend tags — only visible when toggle is on */}
                       {isDiff && (
@@ -754,12 +864,13 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                               <button
                                 key={opt.tag}
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
                                   setWeekendTags(prev => ({
                                     ...prev,
                                     [dim.key]: prev[dim.key] === opt.tag ? '' : opt.tag,
-                                  }))
-                                }
+                                  }));
+                                  setErrors(p => ({ ...p, [`we_${dim.key}`]: '' }));
+                                }}
                                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                                   weSelected === opt.tag
                                     ? 'bg-primary border-primary text-dark'
@@ -770,9 +881,41 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                               </button>
                             ))}
                           </div>
+                          {errors[`we_${dim.key}`] && (
+                            <p className="text-xs text-red-500 mt-2">{errors[`we_${dim.key}`]}</p>
+                          )}
                         </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section>
+              <SectionLabel Icon={Tag} label="Additional" optional />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { tag: 'Pet Friendly',    Icon: Heart, label: 'Pet Friendly'    },
+                  { tag: 'Non-Smoker',      Icon: Ban,   label: 'Non-Smoker'      },
+                  { tag: 'LGBTQ+ Friendly', Icon: Star,  label: 'LGBTQ+ Friendly' },
+                  { tag: 'Vegan Friendly',  Icon: Leaf,  label: 'Vegan Friendly'  },
+                ].map(({ tag, Icon, label }) => {
+                  const active = binaryTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleBinaryTag(tag)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
+                        active
+                          ? 'bg-primary border-primary text-dark'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-primary/50 hover:text-dark'
+                      }`}
+                    >
+                      <Icon size={13} />
+                      {label}
+                    </button>
                   );
                 })}
               </div>
@@ -798,20 +941,22 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
           <>
             {/* Profile photo */}
             <section>
-              <SectionLabel Icon={User} label="Profile Photo" />
-              <div className="flex justify-center">
+              <SectionLabel Icon={User} label="Profile Photo" required />
+              <div className="flex flex-col items-center gap-2">
                 <label className="relative group cursor-pointer">
                   <div className={`w-28 h-28 rounded-full border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all ${
                     profilePhotoUrl
                       ? 'border-primary'
-                      : 'border-slate-300 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
+                      : errors.profile_photo
+                        ? 'border-red-400 bg-red-50'
+                        : 'border-slate-300 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
                   }`}>
                     {profilePhotoUrl ? (
                       <img src={profilePhotoUrl} alt="Profile preview" className="w-full h-full object-cover" />
                     ) : (
                       <>
-                        <Camera size={24} className="text-slate-400 group-hover:text-primary transition-colors mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-primary">
+                        <Camera size={24} className={`${errors.profile_photo ? 'text-red-400' : 'text-slate-400 group-hover:text-primary'} transition-colors mb-1`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${errors.profile_photo ? 'text-red-400' : 'text-slate-400 group-hover:text-primary'}`}>
                           Add Photo
                         </span>
                       </>
@@ -820,8 +965,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                   <div className="absolute bottom-0.5 right-0.5 bg-primary size-7 rounded-full flex items-center justify-center shadow-md border-2 border-white">
                     <Plus size={12} className="text-dark" strokeWidth={3} />
                   </div>
-                  <input type="file" accept="image/*" className="sr-only" onChange={pickProfilePhoto} />
+                  <input type="file" accept="image/*" className="sr-only" onChange={e => { pickProfilePhoto(e); setErrors(p => ({ ...p, profile_photo: '' })); }} />
                 </label>
+                {errors.profile_photo && <p className="text-xs text-red-500">{errors.profile_photo}</p>}
               </div>
             </section>
 
@@ -1032,7 +1178,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
           {step < 3 ? (
             <button
               type="button"
-              onClick={() => setStep(s => s + 1)}
+              onClick={handleNext}
               className="flex-[2] py-3.5 rounded-full bg-primary text-dark font-bold text-sm shadow-md shadow-primary/20 hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               Continue
