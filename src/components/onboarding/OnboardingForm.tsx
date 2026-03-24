@@ -9,7 +9,7 @@ import usePlacesAutocomplete, {
   getLatLng,
 } from "use-places-autocomplete";
 import {
-  Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star,
+  Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star, Leaf,
   Camera, Plus, X, Home, UserSearch,
   Check, ChevronLeft, ChevronRight, Search,
   User, MapPin, Calendar, SlidersHorizontal, FileText,
@@ -315,6 +315,14 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     bio:              '',
   });
 
+  // ── Binary preference tags ───────────────────────────────────────────────────
+  const BINARY_TAGS = ['Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly', 'Vegan Friendly'] as const;
+  const [binaryTags, setBinaryTags] = useState<string[]>(
+    (initialData?.lifestyle_tags || []).filter((t: string) => BINARY_TAGS.includes(t as any))
+  );
+  const toggleBinaryTag = (tag: string) =>
+    setBinaryTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
   // ── FCRM lifestyle tags ──────────────────────────────────────────────────────
   const [weekdayTags, setWeekdayTags] = useState<DimTags>(
     parseFcrmTags(initialData?.lifestyle_tags, 'wd')
@@ -387,37 +395,90 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const handleMorePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      const newPhotos = newFiles.map(file => ({
-        file,
-        url: URL.createObjectURL(file)
-      }));
-      setMorePhotos(prev => [...prev, ...newPhotos]);
+      setMorePhotoUrls(prev => {
+        const next = [...prev];
+        newFiles.forEach((file, i) => {
+          const slot = next.findIndex((v, idx) => v === null && idx >= i);
+          if (slot !== -1) next[slot] = URL.createObjectURL(file);
+        });
+        return next;
+      });
     }
   };
 
   const removeMorePhoto = (index: number) => {
-    setMorePhotos(prev => prev.filter((_, i) => i !== index));
+    setMorePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
   };
 
   const handleSpacePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      const newPhotos = newFiles.map(file => ({
-        file,
-        url: URL.createObjectURL(file)
-      }));
-      setSpacePhotos(prev => [...prev, ...newPhotos]);
+      setSpacePhotoUrls(prev => {
+        const next = [...prev];
+        newFiles.forEach((file, i) => {
+          const slot = next.findIndex((v, idx) => v === null && idx >= i);
+          if (slot !== -1) next[slot] = URL.createObjectURL(file);
+        });
+        return next;
+      });
     }
   };
 
   const removeSpacePhoto = (index: number) => {
-    setSpacePhotos(prev => prev.filter((_, i) => i !== index));
+    setSpacePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
   };
 
   const toggleSpaceVibe = (vibe: string) => {
     setSpaceVibes(prev =>
       prev.includes(vibe) ? prev.filter(v => v !== vibe) : [...prev, vibe]
     );
+  };
+
+  // ── Photo pickers ─────────────────────────────────────────────────────────────
+  const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfilePhotoUrl(URL.createObjectURL(file));
+  };
+
+  const pickMorePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMorePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = URL.createObjectURL(file);
+      return next;
+    });
+  };
+
+  const pickSpacePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSpacePhotoUrls(prev => {
+      const next = [...prev];
+      next[index] = URL.createObjectURL(file);
+      return next;
+    });
+  };
+
+  // ── Location suggestion selection ─────────────────────────────────────────────
+  const handleSelectSuggestion = (s: any) => {
+    setFormData(p => ({
+      ...p,
+      location:  s.display_name,
+      latitude:  parseFloat(s.lat),
+      longitude: parseFloat(s.lon),
+    }));
+    setLocationSuggestions([]);
+    setShowSuggestions(false);
   };
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -435,10 +496,6 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       // Build FCRM prefixed lifestyle tags
       const wdTags = DIM_ORDER.filter(d => weekdayTags[d]).map(d => `wd:${d}:${weekdayTags[d]}`);
       const weTags = DIM_ORDER.filter(d => weekendTags[d]).map(d => `we:${d}:${weekendTags[d]}`);
-      // Preserve binary preference tags from existing profile (managed in Settings)
-      const binaryTags = (initialData?.lifestyle_tags || []).filter(
-        (t: string) => ['Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly'].includes(t)
-      );
       const lifestyle_tags = [...wdTags, ...weTags, ...binaryTags];
 
       // Build numeric feature vectors for the FCRM engine
@@ -773,6 +830,35 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                         </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section>
+              <SectionLabel Icon={Tag} label="Additional" optional />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { tag: 'Pet Friendly',    Icon: Heart, label: 'Pet Friendly'    },
+                  { tag: 'Non-Smoker',      Icon: Ban,   label: 'Non-Smoker'      },
+                  { tag: 'LGBTQ+ Friendly', Icon: Star,  label: 'LGBTQ+ Friendly' },
+                  { tag: 'Vegan Friendly',  Icon: Leaf,  label: 'Vegan Friendly'  },
+                ].map(({ tag, Icon, label }) => {
+                  const active = binaryTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleBinaryTag(tag)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
+                        active
+                          ? 'bg-primary border-primary text-dark'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-primary/50 hover:text-dark'
+                      }`}
+                    >
+                      <Icon size={13} />
+                      {label}
+                    </button>
                   );
                 })}
               </div>

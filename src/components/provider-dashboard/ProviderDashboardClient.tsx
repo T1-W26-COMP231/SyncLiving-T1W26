@@ -14,9 +14,11 @@ interface ProviderDashboardClientProps {
   initialProfile?: any;
   roomTypes?: { id: string; name: string }[];
   amenities?: { id: string; name: string; category: string | null }[];
+  initialAmenityIds?: string[];
+  initialRoomTypeIds?: string[];
 }
 
-export default function ProviderDashboardClient({ initialListings, inquiries, initialProfile, roomTypes = [], amenities = [] }: ProviderDashboardClientProps) {
+export default function ProviderDashboardClient({ initialListings, inquiries, userName, name, initialProfile, roomTypes = [], amenities = [], initialAmenityIds = [], initialRoomTypeIds = [] }: ProviderDashboardClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,6 +186,10 @@ export default function ProviderDashboardClient({ initialListings, inquiries, in
         <SettingsModal
           initialProfile={initialProfile}
           onClose={() => setShowSettingsModal(false)}
+          allAmenities={amenities}
+          allRoomTypes={roomTypes}
+          initialAmenityIds={initialAmenityIds}
+          initialRoomTypeIds={initialRoomTypeIds}
         />
       )}
     </>

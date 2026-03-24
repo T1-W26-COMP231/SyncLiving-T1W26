@@ -18,7 +18,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+    <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden font-sans">
       <div className="flex h-full grow flex-col">
         <LandingNavbar user={user} />
         <main className="flex-1">

@@ -21,10 +21,15 @@ export default async function ProviderDashboard() {
     .eq('id', user.id)
     .single();
 
-  // Fetch room types and amenities
-  const [roomTypesRes, amenitiesRes] = await Promise.all([
+  const userName = user.email?.split('@')[0] || 'User';
+  const name = profile?.full_name || user.email?.split('@')[0] || 'User';
+
+  // Fetch room types, amenities, and user's existing seeker preferences
+  const [roomTypesRes, amenitiesRes, amenityPrefsRes, roomTypePrefsRes] = await Promise.all([
     supabase.from('room_types').select('id, name').order('name'),
     supabase.from('amenities').select('id, name, category').order('name'),
+    supabase.from('seeker_amenity_preferences').select('amenity_id').eq('user_id', user.id),
+    supabase.from('seeker_room_type_preferences').select('room_type_id').eq('user_id', user.id),
   ]);
 
   // Fetch real listings for this provider
@@ -69,6 +74,8 @@ export default async function ProviderDashboard() {
       initialProfile={profile}
       roomTypes={roomTypesRes.data || []}
       amenities={amenitiesRes.data || []}
+      initialAmenityIds={amenityPrefsRes.data?.map(p => p.amenity_id) || []}
+      initialRoomTypeIds={roomTypePrefsRes.data?.map(p => p.room_type_id) || []}
     />
   );
 }

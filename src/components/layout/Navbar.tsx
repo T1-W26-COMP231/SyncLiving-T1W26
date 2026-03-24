@@ -53,10 +53,10 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings', onOpenSettings 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-3 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-        {/* Logo */}
-        <Link href="/" className="flex-shrink-0 hover:opacity-80 transition-opacity">
-          <SyncLivingLogo size="md" />
-        </Link>
+        {/* Logo — navigates to dashboard for authenticated users */}
+        <div className="flex-shrink-0">
+          <SyncLivingLogo size="md" href="/provider-dashboard" />
+        </div>
 
         {/* Main Navigation */}
         <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">

@@ -1,4 +1,4 @@
-# SyncLiving — FCRM Engine: Algorithm & Stack Specification
+# SyncLiving — matching Engine: Algorithm & Stack Specification
 
 ---
 
