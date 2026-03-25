@@ -110,6 +110,6 @@ export async function createListing(prevState: any, formData: FormData) {
     return { error: err.message || 'An unexpected database error occurred.' };
   }
 
-  revalidatePath('/provider-dashboard');
-  redirect('/provider-dashboard');
+  revalidatePath('/dashboard');
+  redirect('/dashboard');
 }

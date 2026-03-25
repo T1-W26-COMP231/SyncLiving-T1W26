@@ -39,7 +39,7 @@ const HeroSection = () => {
                 Find a Roommate
               </Link>
               <Link
-                href="/provider-dashboard"
+                href="/dashboard"
                 className="flex min-w-[180px] cursor-pointer items-center justify-center rounded-full h-14 px-8 bg-white border border-slate-200 text-slate-900 text-lg font-bold hover:bg-slate-50 transition-colors"
               >
                 List a Room
