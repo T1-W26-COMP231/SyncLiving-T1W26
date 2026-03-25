@@ -44,3 +44,47 @@ VALUES
   ('boundary', 'CommunalLiving',     'Communal Living',      0.9)
 ON CONFLICT (dimension_id, tag) DO UPDATE
 SET label = EXCLUDED.label, value = EXCLUDED.value;
+
+-- Seed Lifestyle Tags
+INSERT INTO public.lifestyle_tags (name, category) VALUES
+    ('#EarlyRiser', 'Daily Routine'),
+    ('#NightOwl', 'Daily Routine'),
+    ('#RemoteWork', 'Daily Routine'),
+    ('#StudentLife', 'Daily Routine'),
+    ('#Tidy', 'Cleanliness'),
+    ('#DeepCleaner', 'Cleanliness'),
+    ('#Minimalist', 'Cleanliness'),
+    ('#NonSmoker', 'Cleanliness'),
+    ('#Quiet', 'Social/Noise'),
+    ('#Social', 'Social/Noise'),
+    ('#IntrovertFriendly', 'Social/Noise'),
+    ('#OccasionalGuests', 'Social/Noise'),
+    ('#PetFriendly', 'Preferences'),
+    ('#LGBTQ+Friendly', 'Preferences'),
+    ('#VeganFriendly', 'Preferences'),
+    ('#AlcoholFree', 'Preferences')
+ON CONFLICT (name) DO NOTHING;
+
+-- Seed Amenities
+INSERT INTO public.amenities (name, category) VALUES
+    ('High-Speed WiFi', 'Utilities'),
+    ('In-suite Laundry', 'Essentials'),
+    ('Kitchen Access', 'Essentials'),
+    ('Utilities Included', 'Utilities'),
+    ('Air Conditioning', 'Comfort'),
+    ('Private Bathroom', 'Comfort'),
+    ('Furnished Room', 'Comfort'),
+    ('Gym Access', 'Building'),
+    ('Parking Spot', 'Exterior'),
+    ('Near Transit/Subway', 'Exterior'),
+    ('Bicycle Storage', 'Exterior'),
+    ('Balcony/Backyard', 'Exterior')
+ON CONFLICT (name) DO NOTHING;
+
+-- Seed Room Types
+INSERT INTO public.room_types (name) VALUES
+    ('Private Room'),
+    ('Shared Room'),
+    ('Entire Apartment'),
+    ('Studio')
+ON CONFLICT (name) DO NOTHING;

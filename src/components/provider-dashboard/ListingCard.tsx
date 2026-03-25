@@ -24,10 +24,11 @@ interface ListingCardProps {
 }
 
 export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
-  const displayImage = listing.imageUrl || 
-    (listing.photos && listing.photos.length > 0 
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${listing.photos[0]}`
-      : '/placeholder-property.jpg');
+  // Use the first photo from the array if available, as it's already a full public URL.
+  // Fallback to placeholder if no photos exist.
+  const displayImage = (listing.photos && listing.photos.length > 0)
+    ? listing.photos[0]
+    : listing.imageUrl || '/placeholder-property.jpg';
 
   return (
     <div className="flex flex-col md:flex-row bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">

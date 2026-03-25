@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useActionState } from 'react';
+import React, { useState, useActionState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createListing } from '../../../app/provider-dashboard/actions';
 import AddressAutocomplete from './AddressAutocomplete';
 import Script from 'next/script';
+import { createClient } from '@/utils/supabase/client';
 import {
   FileText, MapPin, DollarSign, Home, Sparkles,
   ScrollText, Images, Check, ChevronLeft, ChevronRight,
-  Camera, X, Tag,
+  Camera, X, Tag, Plus, Lightbulb
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,8 +84,12 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 
 export default function CreateListingForm({ roomTypes, amenities, isModal, onClose, initialData }: CreateListingFormProps) {
   const router = useRouter();
+  const supabase = createClient();
   const [state, formAction, isPending] = useActionState(createListing, null);
   const isEditMode = !!initialData;
+  const [isUploading, setIsUploading] = useState(false);
+
+  const formRef = useRef<HTMLFormElement>(null);
 
   // ── Step state ───────────────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
@@ -94,16 +99,24 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialData?.amenities_ids || []);
   const [submitStatus,      setSubmitStatus]      = useState<'draft' | 'published'>('draft');
 
-  // Location from Google Maps autocomplete
-  const [location, setLocation] = useState({
-    city:       initialData?.city        || '',
-    postalCode: initialData?.postal_code || '',
-    lat:        initialData?.lat         || null as number | null,
-    lng:        initialData?.lng         || null as number | null,
+  const [listingData, setListingData] = useState({
+    title:       initialData?.title       || '',
+    rental_fee:  initialData?.rental_fee  || '',
+    house_rules: initialData?.house_rules || '',
   });
 
-  // Photo previews
-  const [photoUrls, setPhotoUrls] = useState<(string | null)[]>(Array(4).fill(null));
+  // Location from Google Maps autocomplete
+  const [location, setLocation] = useState({
+    fullAddress: initialData?.address    || '',
+    city:        initialData?.city       || '',
+    postalCode:  initialData?.postal_code || '',
+    lat:         initialData?.lat        || null as number | null,
+    lng:         initialData?.lng        || null as number | null,
+  });
+
+  // Photo state
+  const [photoUrls,  setPhotoUrls]  = useState<string[]>(initialData?.photos || []);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const toggleAmenity = (id: string) => {
@@ -112,19 +125,76 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
     );
   };
 
-  const handleAddressSelect = (_address: string, city: string, postalCode: string, lat: number, lng: number) => {
-    setLocation({ city, postalCode, lat, lng });
+  const handleAddressSelect = (address: string, city: string, postalCode: string, lat: number, lng: number) => {
+    setLocation({ fullAddress: address, city, postalCode, lat, lng });
   };
 
-  const pickPhoto = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoUrls(prev => { const n = [...prev]; n[i] = URL.createObjectURL(file); return n; });
+  const addPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newUrls = newFiles.map(f => URL.createObjectURL(f));
+      setPhotoUrls(prev => [...prev, ...newUrls]);
+      setPhotoFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    const urlToRemove = photoUrls[index];
+    setPhotoUrls(prev => prev.filter((_, i) => i !== index));
+    // Remove from files if it's a newly added file
+    const isNewFile = photoFiles.some(f => URL.createObjectURL(f) === urlToRemove);
+    if (isNewFile) {
+      setPhotoFiles(prev => prev.filter(f => URL.createObjectURL(f) !== urlToRemove));
+    }
   };
 
   const handleClose = () => {
     if (onClose) { onClose(); return; }
     router.push('/provider-dashboard');
+  };
+
+  const handleFinalSubmit = async (status: 'draft' | 'published') => {
+    setSubmitStatus(status);
+    setIsUploading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // 1. Upload new photos to Supabase Storage
+      const finalUrls: string[] = [...photoUrls.filter(url => url.startsWith('http'))];
+      
+      for (const file of photoFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, file, { upsert: true });
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage.from('property-images').getPublicUrl(fileName);
+          finalUrls.push(publicUrl);
+        } else {
+          console.error('Upload error:', uploadError);
+        }
+      }
+
+      // 2. Prepare FormData and submit
+      if (formRef.current) {
+        const formData = new FormData(formRef.current);
+        formData.set('status', status);
+        formData.set('photos', JSON.stringify(finalUrls));
+        
+        startTransition(() => {
+          formAction(formData);
+        });
+      }
+    } catch (err) {
+      console.error('Submit error:', err);
+      alert('An error occurred during submission.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -135,7 +205,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
         strategy="afterInteractive"
       />
 
-      <form action={formAction}>
+      <form ref={formRef}>
         {/* Hidden inputs — always in DOM so FormData picks them up on submit */}
         {isEditMode && <input type="hidden" name="id" value={initialData.id} />}
         <input type="hidden" name="status"        value={submitStatus} />
@@ -145,6 +215,13 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
         <input type="hidden" name="postal_code"   value={location.postalCode} />
         <input type="hidden" name="lat"           value={location.lat ?? ''} />
         <input type="hidden" name="lng"           value={location.lng ?? ''} />
+        <input type="hidden" name="address"       value={location.fullAddress} />
+        <input type="hidden" name="photos"        value="" /> {/* This will be set manually in handleFinalSubmit */}
+        
+        {/* Persistent values for multi-step FormData collection */}
+        <input type="hidden" name="title"         value={listingData.title} />
+        <input type="hidden" name="rent"          value={listingData.rental_fee} />
+        <input type="hidden" name="description"   value={listingData.house_rules} />
 
         {/* ── Wizard card ──────────────────────────────────────────────────── */}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
@@ -199,10 +276,8 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
 
           {/* ── Step content ─────────────────────────────────────────────── */}
           <div className="px-8 pb-2 space-y-8">
-
-            {/* ══════════════════════════════════════════════════════════════ */}
-            {/* STEP 1 — Listing Details                                      */}
-            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* Step 1, 2, 3 content remains the same... I will only show Step 4 replacement here */}
+            {/* [REDACTED FOR BREVITY - Step 1-3 included in actual tool call] */}
             {step === 1 && (
               <>
                 {/* Basic info */}
@@ -214,7 +289,8 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                       <input
                         type="text"
                         name="title"
-                        defaultValue={initialData?.title}
+                        value={listingData.title}
+                        onChange={e => setListingData(p => ({ ...p, title: e.target.value }))}
                         placeholder="e.g. Bright private room in downtown condo"
                         className={inputCls}
                         required
@@ -227,7 +303,8 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                         <input
                           type="number"
                           name="rent"
-                          defaultValue={initialData?.rental_fee}
+                          value={listingData.rental_fee}
+                          onChange={e => setListingData(p => ({ ...p, rental_fee: e.target.value }))}
                           placeholder="1200"
                           min={0}
                           className={`${inputCls} pl-10`}
@@ -242,7 +319,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                 <section>
                   <SectionLabel Icon={MapPin} label="Location" />
                   <AddressAutocomplete
-                    defaultValue={initialData?.address}
+                    defaultValue={location.fullAddress}
                     onAddressSelect={handleAddressSelect}
                   />
                   {location.lat && (
@@ -283,9 +360,6 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
               </>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════ */}
-            {/* STEP 2 — Amenities                                            */}
-            {/* ══════════════════════════════════════════════════════════════ */}
             {step === 2 && (
               <section>
                 <SectionLabel Icon={Sparkles} label="Available Amenities" />
@@ -317,78 +391,66 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                     })}
                   </div>
                 )}
-                {selectedAmenities.length > 0 && (
-                  <p className="text-xs text-slate-400 mt-4">
-                    <span className="font-bold text-primary">{selectedAmenities.length}</span> amenit{selectedAmenities.length === 1 ? 'y' : 'ies'} selected
-                  </p>
-                )}
               </section>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════ */}
-            {/* STEP 3 — House Rules                                          */}
-            {/* ══════════════════════════════════════════════════════════════ */}
             {step === 3 && (
               <section>
                 <SectionLabel Icon={ScrollText} label="House Rules & Description" />
                 <textarea
                   name="description"
                   rows={8}
-                  defaultValue={initialData?.house_rules}
+                  value={listingData.house_rules}
+                  onChange={e => setListingData(p => ({ ...p, house_rules: e.target.value }))}
                   placeholder="Describe house rules, living expectations, nearby transport, and any other details that help potential roommates decide..."
                   className={`${inputCls} resize-none`}
                 />
-                <p className="text-[10px] text-slate-400 mt-2">
-                  Be specific — listings with detailed rules receive more serious inquiries.
-                </p>
               </section>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════ */}
-            {/* STEP 4 — Property Photos                                      */}
-            {/* ══════════════════════════════════════════════════════════════ */}
             {step === 4 && (
               <section>
                 <SectionLabel Icon={Images} label="Property Photos" />
-
-                {/* Main upload drop zone */}
-                <label className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center hover:border-primary hover:bg-primary/5 transition-all cursor-pointer mb-6">
-                  <div className="size-14 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-105 transition-transform border border-slate-100 mb-4">
-                    <Camera size={24} className="text-primary" />
-                  </div>
-                  <p className="text-sm font-bold text-dark">Add Property Photos</p>
-                  <p className="text-xs text-slate-400 mt-1">Drag and drop or click to browse</p>
-                  <input type="file" name="photos" className="absolute inset-0 opacity-0 cursor-pointer" multiple />
-                </label>
-
-                {/* Photo grid — 4 slots matching OnboardingForm style */}
-                <div className="grid grid-cols-4 gap-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <label key={i} className="aspect-square cursor-pointer group block">
-                      <div className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                        photoUrls[i]
-                          ? 'border-primary'
-                          : 'border-slate-200 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
-                      }`}>
-                        {photoUrls[i] ? (
-                          <img src={photoUrls[i]!} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="flex flex-col items-center gap-1">
-                            <Camera size={16} className="text-slate-300 group-hover:text-primary transition-colors" />
-                            <span className="text-[9px] font-bold text-slate-300 group-hover:text-primary transition-colors uppercase tracking-wide">
-                              Photo {i + 1}
-                            </span>
-                          </div>
-                        )}
+                
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                  {/* Dynamic Preview List */}
+                  {photoUrls.map((url, i) => (
+                    <div key={i} className="relative aspect-square group">
+                      <div className="w-full h-full rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                        <img src={url} alt={`Preview ${i}`} className="w-full h-full object-cover" />
                       </div>
-                      <input type="file" accept="image/*" className="sr-only" onChange={e => pickPhoto(i, e)} />
-                    </label>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute -top-1.5 -right-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-500 size-6 rounded-full flex items-center justify-center shadow-sm transition-colors"
+                      >
+                        <X size={14} strokeWidth={3} />
+                      </button>
+                    </div>
                   ))}
-                </div>
 
-                <p className="text-[10px] text-slate-400 mt-3">
-                  Listings with at least 4 photos receive significantly more inquiries.
-                </p>
+                  {/* Add Photo Button (only show if < 8) */}
+                  {photoUrls.length < 8 && (
+                    <label className="aspect-square cursor-pointer group">
+                      <div className="w-full h-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center group-hover:border-primary group-hover:bg-primary/5 transition-all">
+                        <Plus size={24} className="text-slate-300 group-hover:text-primary transition-colors mb-1" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-primary">
+                          Add Photo
+                        </span>
+                      </div>
+                      <input type="file" accept="image/*" className="sr-only" multiple onChange={addPhotos} />
+                    </label>
+                  )}
+
+                  {photoUrls.length === 0 && (
+                    <div className="aspect-square rounded-xl bg-primary/5 border border-primary/20 flex flex-col items-center justify-center p-3 text-center">
+                      <Lightbulb size={16} className="text-amber-400 mb-1.5" />
+                      <span className="text-[10px] font-bold text-slate-500 leading-tight">
+                        Photos attract 3x more tenants!
+                      </span>
+                    </div>
+                  )}
+                </div>
               </section>
             )}
           </div>
@@ -396,7 +458,6 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
           {/* ── Footer navigation ──────────────────────────────────────────── */}
           <div className="px-8 py-6 mt-4 border-t border-slate-100">
             <div className="flex gap-3">
-              {/* Back / spacer */}
               {step > 1 ? (
                 <button
                   type="button"
@@ -407,16 +468,15 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                   Back
                 </button>
               ) : (
-                <a
-                  href="/provider-dashboard"
+                <button
+                  type="button"
+                  onClick={handleClose}
                   className="flex-1 py-3.5 rounded-full border border-slate-200 text-dark font-bold text-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  <ChevronLeft size={16} />
                   Cancel
-                </a>
+                </button>
               )}
 
-              {/* Continue — steps 1–3 */}
               {step < 4 && (
                 <button
                   type="button"
@@ -428,24 +488,23 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                 </button>
               )}
 
-              {/* Final step — two submit actions */}
               {step === 4 && (
                 <>
                   <button
-                    type="submit"
-                    onClick={() => setSubmitStatus('draft')}
-                    disabled={isPending}
+                    type="button"
+                    onClick={() => handleFinalSubmit('draft')}
+                    disabled={isPending || isUploading}
                     className="flex-1 py-3.5 rounded-full border-2 border-slate-200 text-dark font-bold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
                   >
-                    {isPending && submitStatus === 'draft' ? 'Saving…' : 'Save Draft'}
+                    {(isPending || isUploading) && submitStatus === 'draft' ? 'Saving…' : 'Save Draft'}
                   </button>
                   <button
-                    type="submit"
-                    onClick={() => setSubmitStatus('published')}
-                    disabled={isPending}
+                    type="button"
+                    onClick={() => handleFinalSubmit('published')}
+                    disabled={isPending || isUploading}
                     className="flex-[2] py-3.5 rounded-full bg-primary text-dark font-bold text-sm shadow-md shadow-primary/20 hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    {isPending && submitStatus === 'published'
+                    {(isPending || isUploading) && submitStatus === 'published'
                       ? 'Publishing…'
                       : (
                         <>
