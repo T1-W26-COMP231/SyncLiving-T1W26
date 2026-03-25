@@ -1,5 +1,5 @@
 import React from 'react';
-import CreateListingForm from '@/components/provider-dashboard/CreateListingForm';
+import CreateListingForm from '@/components/dashboard/CreateListingForm';
 import { createClient } from '@/utils/supabase/server';
 import { notFound, redirect } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';

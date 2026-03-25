@@ -2,7 +2,7 @@
 
 import React, { useState, useActionState, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createListing } from '../../../app/provider-dashboard/actions';
+import { createListing } from '../../../app/dashboard/actions';
 import AddressAutocomplete from './AddressAutocomplete';
 import Script from 'next/script';
 import { createClient } from '@/utils/supabase/client';

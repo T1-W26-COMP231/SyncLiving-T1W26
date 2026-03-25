@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { updateProfile } from '../../../app/onboarding/actions';
 import { createClient } from '@/utils/supabase/client';
-import AddressAutocomplete from '../provider-dashboard/AddressAutocomplete';
+import AddressAutocomplete from '../dashboard/AddressAutocomplete';
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star, Leaf,
   Camera, Plus, X, Home, UserSearch,
@@ -429,7 +429,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     setVisible(false);
     if (onClose)  { onClose(); return; }
     if (isModal)  { router.back(); return; }
-    router.push('/provider-dashboard');
+    router.push('/dashboard');
   };
 
   // ── Submit ───────────────────────────────────────────────────────────────────

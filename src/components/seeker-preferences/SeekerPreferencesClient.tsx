@@ -3,10 +3,8 @@
 import React, { useState, useTransition, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { updateSeekerPreferences } from '../../../app/seeker-preferences/actions';
-import usePlacesAutocomplete, {
-  getGeocode,
-  getLatLng,
-} from "use-places-autocomplete";
+import Script from 'next/script';
+import AddressAutocomplete from '@/components/dashboard/AddressAutocomplete';
 import { 
   CheckCircle2, 
   PlusCircle, 
@@ -101,52 +99,13 @@ export default function SeekerPreferencesClient({
   
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Poll for google maps availability
-  useEffect(() => {
-    const checkGoogle = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        setIsGoogleLoaded(true);
-      } else {
-        setTimeout(checkGoogle, 100);
-      }
-    };
-    checkGoogle();
-  }, []);
-
-  // Google Places Autocomplete
-  const {
-    ready,
-    value: addressValue,
-    suggestions: { status: addressStatus, data: addressData },
-    setValue: setAddressValue,
-    clearSuggestions: clearAddressSuggestions,
-  } = usePlacesAutocomplete({
-    requestOptions: {
-      componentRestrictions: { country: "ca" },
-    },
-    debounce: 300,
-    defaultValue: initialData.reference_location,
-    initOnMount: isGoogleLoaded,
-  });
-
-  const handleAddressSelect = async (suggestion: any) => {
-    const address = suggestion.description;
-    setAddressValue(address, false);
-    clearAddressSuggestions();
-
-    try {
-      const results = await getGeocode({ address });
-      const { lat, lng } = await getLatLng(results[0]);
-      
-      setPrefData(prev => ({
-        ...prev,
-        location: address,
-        latitude: lat,
-        longitude: lng
-      }));
-    } catch (error) {
-      console.error("Error selecting address: ", error);
-    }
+  const handleAddressSelect = (address: string, _city: string, _zip: string, lat: number, lng: number) => {
+    setPrefData(prev => ({
+      ...prev,
+      location: address,
+      latitude: lat,
+      longitude: lng
+    }));
   };
 
   const toggleTag = (id: string) => {
@@ -229,38 +188,10 @@ export default function SeekerPreferencesClient({
               <CardContent className="space-y-8">
                 <div className="relative">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Reference Location</label>
-                  <div className="relative rounded-xl shadow-sm">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                    <input
-                      value={addressValue}
-                      onChange={(e) => setAddressValue(e.target.value)}
-                      disabled={!ready || !isGoogleLoaded}
-                      placeholder={isGoogleLoaded ? "Search city, campus, or workplace..." : "Loading maps..."}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
-                      autoComplete="off"
-                    />
-                  </div>
-
-                  {addressStatus === "OK" && (
-                    <div className="absolute z-[60] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                      {addressData.map((suggestion) => (
-                        <button
-                          key={suggestion.place_id}
-                          type="button"
-                          onClick={() => handleAddressSelect(suggestion)}
-                          className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
-                        >
-                          <div className="flex items-start gap-2">
-                            <MapPin size={14} className="mt-0.5 text-slate-400 shrink-0" />
-                            <div>
-                              <p className="font-medium text-dark">{suggestion.structured_formatting.main_text}</p>
-                              <p className="text-[10px] text-slate-500">{suggestion.structured_formatting.secondary_text}</p>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <AddressAutocomplete
+                    defaultValue={prefData.location}
+                    onAddressSelect={handleAddressSelect}
+                  />
                 </div>
 
                 <div className="space-y-4">
@@ -460,6 +391,11 @@ export default function SeekerPreferencesClient({
           onClose={() => setShowSettingsModal(false)} 
         />
       )}
+
+      <Script
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+        strategy="afterInteractive"
+      />
     </>
   );
 }

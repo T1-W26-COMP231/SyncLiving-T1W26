@@ -1,7 +1,7 @@
 import React from 'react';
 import { createClient } from '@/utils/supabase/server';
-import ProviderDashboardClient from '@/components/provider-dashboard/ProviderDashboardClient';
-import { ListingType } from '@/components/provider-dashboard/ListingCard';
+import ProviderDashboardClient from '@/components/dashboard/ProviderDashboardClient';
+import { ListingType } from '@/components/dashboard/ListingCard';
 import { redirect } from 'next/navigation';
 
 export default async function ProviderDashboard() {
