@@ -42,6 +42,13 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
     initOnMount: isLoaded, // Only init when script is actually there
   });
 
+  // Sync internal value when defaultValue changes (e.g., after DB fetch)
+  useEffect(() => {
+    if (defaultValue) {
+      setValue(defaultValue, false);
+    }
+  }, [defaultValue, setValue]);
+
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
   };

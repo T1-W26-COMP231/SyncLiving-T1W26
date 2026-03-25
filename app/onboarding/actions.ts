@@ -5,6 +5,9 @@ import { redirect } from 'next/navigation';
 
 export async function updateProfile(formData: {
   full_name: string;
+  avatar_url?: string;
+  bio?: string;
+  photos?: string[];
   age: number;
   location: string;
   longitude?: number;
@@ -38,11 +41,14 @@ export async function updateProfile(formData: {
     .upsert({
       id: user.id,
       full_name: formData.full_name,
+      avatar_url: formData.avatar_url,
+      bio: formData.bio,
       age: formData.age,
       location: formData.location,
       location_coords: location_coords, // Save as Geography for GIST indexing
       role: formData.role,
       lifestyle_tags: formData.lifestyle_tags,
+      photos: formData.photos,
       budget_min: formData.budget_min,
       budget_max: formData.budget_max,
       preferred_gender: formData.preferred_gender,

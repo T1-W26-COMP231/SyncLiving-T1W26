@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
 import { updateProfile } from '../../../app/onboarding/actions';
 import { createClient } from '@/utils/supabase/client';
-import usePlacesAutocomplete, {
-  getGeocode,
-  getLatLng,
-} from "use-places-autocomplete";
+import AddressAutocomplete from '../provider-dashboard/AddressAutocomplete';
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star, Leaf,
   Camera, Plus, X, Home, UserSearch,
@@ -16,6 +14,7 @@ import {
   DollarSign, MessageSquare, Tag, Images,
   Volume2, Clock, Shield, Lightbulb,
 } from 'lucide-react';
+import { Database } from '@/types/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,94 +26,28 @@ interface OnboardingFormProps {
 
 type HousingPurpose = 'find_roommate' | 'have_space';
 type DimKey = 'social' | 'acoustic' | 'sanitary' | 'rhythm' | 'boundary';
-type DimTags = Record<DimKey, string>;
+type DimTags = Record<string, string>;
 
-// ─── FCRM Dimension Constants (from matchingAlgorithm.md) ────────────────────
+type DbDimension = Database['public']['Tables']['lifestyle_dimensions']['Row'];
+type DbOption = Database['public']['Tables']['lifestyle_options']['Row'];
 
-const FCRM_DIMENSIONS: {
-  key: DimKey;
-  label: string;
-  description: string;
-  Icon: React.FC<any>;
-  options: { tag: string; label: string; value: number }[];
-}[] = [
-  {
-    key: 'social',
-    label: 'Social Density',
-    description: 'How often do you have guests over?',
-    Icon: Users,
-    options: [
-      { tag: 'TheHermit',      label: 'The Hermit',       value: 0.1 },
-      { tag: 'QuietLiving',    label: 'Quiet Living',     value: 0.3 },
-      { tag: 'BalancedSocial', label: 'Balanced Social',  value: 0.5 },
-      { tag: 'FrequentHost',   label: 'Frequent Host',    value: 0.7 },
-      { tag: 'OpenHouse',      label: 'Open House',       value: 0.9 },
-    ],
-  },
-  {
-    key: 'acoustic',
-    label: 'Acoustic Environment',
-    description: 'Typical noise level at home',
-    Icon: Volume2,
-    options: [
-      { tag: 'LibraryZone', label: 'Library Zone',  value: 0.1 },
-      { tag: 'QuietFocus',  label: 'Quiet Focus',   value: 0.3 },
-      { tag: 'AmbientLife', label: 'Ambient Life',  value: 0.5 },
-      { tag: 'VibrantHome', label: 'Vibrant Home',  value: 0.7 },
-      { tag: 'HighDecibel', label: 'High Decibel',  value: 0.9 },
-    ],
-  },
-  {
-    key: 'sanitary',
-    label: 'Sanitary Standards',
-    description: 'Cleanliness & tidiness level',
-    Icon: Sparkles,
-    options: [
-      { tag: 'ChaosLover',      label: 'Chaos Lover',       value: 0.1 },
-      { tag: 'LifeOverLaundry', label: 'Life Over Laundry', value: 0.3 },
-      { tag: 'AverageTidy',     label: 'Average Tidy',      value: 0.5 },
-      { tag: 'PubliclyTidy',    label: 'Publicly Tidy',     value: 0.7 },
-      { tag: 'Minimalist24_7',  label: 'Minimalist 24/7',   value: 0.9 },
-    ],
-  },
-  {
-    key: 'rhythm',
-    label: 'Circadian Rhythm',
-    description: 'Sleep & daily activity schedule',
-    Icon: Clock,
-    options: [
-      { tag: 'StrictEarlyBird', label: 'Strict Early Bird', value: 0.1 },
-      { tag: 'AM_Routine',      label: 'AM Routine',        value: 0.3 },
-      { tag: 'The9to5er',       label: 'The 9 to 5er',      value: 0.5 },
-      { tag: 'TheLateShifter',  label: 'The Late Shifter',  value: 0.7 },
-      { tag: 'TrueNightOwl',    label: 'True Night Owl',    value: 0.9 },
-    ],
-  },
-  {
-    key: 'boundary',
-    label: 'Boundary Philosophy',
-    description: 'How you treat shared spaces & items',
-    Icon: Shield,
-    options: [
-      { tag: 'StrictlyPrivate',    label: 'Strictly Private',     value: 0.1 },
-      { tag: 'RespectfulDistance', label: 'Respectful Distance',  value: 0.3 },
-      { tag: 'Borrower',           label: 'Borrower',             value: 0.5 },
-      { tag: 'SharedHousehold',    label: 'Shared Household',     value: 0.7 },
-      { tag: 'CommunalLiving',     label: 'Communal Living',      value: 0.9 },
-    ],
-  },
-];
+interface LifestyleDimension extends DbDimension {
+  options: DbOption[];
+}
 
-// Tag → numeric value lookup (order matches v_wd / v_we: [social, acoustic, sanitary, rhythm, boundary])
-const TAG_VALUES: Record<DimKey, Record<string, number>> = {
-  social:   { TheHermit: 0.1, QuietLiving: 0.3, BalancedSocial: 0.5, FrequentHost: 0.7, OpenHouse: 0.9 },
-  acoustic: { LibraryZone: 0.1, QuietFocus: 0.3, AmbientLife: 0.5, VibrantHome: 0.7, HighDecibel: 0.9 },
-  sanitary: { ChaosLover: 0.1, LifeOverLaundry: 0.3, AverageTidy: 0.5, PubliclyTidy: 0.7, Minimalist24_7: 0.9 },
-  rhythm:   { StrictEarlyBird: 0.1, AM_Routine: 0.3, The9to5er: 0.5, TheLateShifter: 0.7, TrueNightOwl: 0.9 },
-  boundary: { StrictlyPrivate: 0.1, RespectfulDistance: 0.3, Borrower: 0.5, SharedHousehold: 0.7, CommunalLiving: 0.9 },
+// ─── Icon Mapping ─────────────────────────────────────────────────────────────
+
+const ICON_MAP: Record<string, React.FC<any>> = {
+  Users,
+  Volume2,
+  Sparkles,
+  Clock,
+  Shield,
 };
 
-const DIM_ORDER: DimKey[] = ['social', 'acoustic', 'sanitary', 'rhythm', 'boundary'];
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const DIM_ORDER = ['social', 'acoustic', 'sanitary', 'rhythm', 'boundary'];
 
 const HOUSING_OPTIONS: { value: HousingPurpose; label: string; desc: string; Icon: React.FC<any> }[] = [
   {
@@ -165,8 +98,15 @@ const parseFcrmTags = (tags: string[], prefix: 'wd' | 'we'): DimTags => {
 };
 
 // Build numeric feature vector from selected tags (defaults to 0.5 if unset)
-const buildVector = (tags: DimTags): number[] =>
-  DIM_ORDER.map(dim => TAG_VALUES[dim][tags[dim]] ?? 0.5);
+const buildVector = (tags: DimTags, dimensions: LifestyleDimension[]): number[] => {
+  return DIM_ORDER.map(dimId => {
+    const tagName = tags[dimId];
+    if (!tagName) return 0.5;
+    const dim = dimensions.find(d => d.id === dimId);
+    const opt = dim?.options.find(o => o.tag === tagName);
+    return opt ? Number(opt.value) : 0.5;
+  });
+};
 
 const inputCls =
   'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-dark';
@@ -273,8 +213,29 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const [visible, setVisible] = useState(true);
   const [errors,  setErrors]  = useState<Record<string, string>>({});
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
+  const [lifestyleDimensions, setLifestyleDimensions] = useState<LifestyleDimension[]>([]);
   
   const morePhotosInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch lifestyle dimensions from DB
+  useEffect(() => {
+    const fetchDimensions = async () => {
+      const { data: dims, error } = await supabase
+        .from('lifestyle_dimensions')
+        .select(`
+          *,
+          options:lifestyle_options(*)
+        `)
+        .order('display_order');
+      
+      if (error) {
+        console.error('Error fetching lifestyle dimensions:', error);
+      } else if (dims) {
+        setLifestyleDimensions(dims as LifestyleDimension[]);
+      }
+    };
+    fetchDimensions();
+  }, [supabase]);
 
   // Poll for google maps availability
   useEffect(() => {
@@ -289,15 +250,26 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   }, []);
 
   // Parse initial PostGIS / GeoJSON coordinates
-  let initialLat: number | undefined;
-  let initialLng: number | undefined;
+  let initialLat: number | undefined = initialData?.latitude;
+  let initialLng: number | undefined = initialData?.longitude;
+
   if (initialData?.location_coords) {
-    if (typeof initialData.location_coords === 'string') {
-      const m = initialData.location_coords.match(/POINT\((.+) (.+)\)/);
-      if (m) { initialLng = parseFloat(m[1]); initialLat = parseFloat(m[2]); }
-    } else if (initialData.location_coords.coordinates) {
-      initialLng = initialData.location_coords.coordinates[0];
-      initialLat = initialData.location_coords.coordinates[1];
+    const coords = initialData.location_coords;
+    if (typeof coords === 'string') {
+      // Handle WKT format: POINT(lng lat)
+      const m = coords.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
+      if (m) { 
+        initialLng = parseFloat(m[1]); 
+        initialLat = parseFloat(m[2]); 
+      }
+    } else if (coords.coordinates && Array.isArray(coords.coordinates)) {
+      // Handle GeoJSON format: [lng, lat]
+      initialLng = coords.coordinates[0];
+      initialLat = coords.coordinates[1];
+    } else if (typeof coords.x === 'number' && typeof coords.y === 'number') {
+      // Handle flat object format if applicable
+      initialLng = coords.x;
+      initialLat = coords.y;
     }
   }
 
@@ -307,15 +279,15 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     age:              initialData?.age              || 25,
     gender:           initialData?.preferred_gender || 'Prefer not to say',
     location:         initialData?.location         || '',
-    latitude:         initialLat                    as number | undefined,
-    longitude:        initialLng                    as number | undefined,
+    latitude:         initialLat,
+    longitude:        initialLng,
     housingPurpose:  'find_roommate'                as HousingPurpose,
     budget_min:       initialData?.budget_min       || 800,
     budget_max:       initialData?.budget_max       || 2500,
     roommate_age_min: 18,
     roommate_age_max: 35,
     move_in_date:     initialData?.move_in_date     || '',
-    bio:              '',
+    bio:              initialData?.bio              || '',
   });
 
   // ── Binary preference tags ───────────────────────────────────────────────────
@@ -366,122 +338,50 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const [spaceRent,       setSpaceRent]       = useState('');
   const [spaceVibes,      setSpaceVibes]      = useState<string[]>([]);
   const [spaceNote,       setSpaceNote]       = useState('');
-  const [spacePhotoUrls,  setSpacePhotoUrls]  = useState<(string | null)[]>(Array(4).fill(null));
 
   useEffect(() => {
     setIncludeMySpace(hasSpacePurpose(formData.housingPurpose));
   }, [formData.housingPurpose]);
 
   // ── Photo state ─────────────────────────────────────────────────────────────
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
-  const [morePhotoUrls,   setMorePhotoUrls]   = useState<(string | null)[]>(Array(5).fill(null));
-
-  // ── Location autocomplete ────────────────────────────────────────────────────
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
-  const [showSuggestions,     setShowSuggestions]     = useState(false);
-
-  const searchLocation = async (query: string) => {
-    setFormData(p => ({ ...p, location: query }));
-    if (query.length < 3) { setLocationSuggestions([]); return; }
-    try {
-      const res  = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
-      );
-      const data = await res.json();
-      setLocationSuggestions(data);
-      setShowSuggestions(true);
-    } catch (err) {
-      console.error('Geocoding error:', err);
-    }
-  };
-
-  const handleMorePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setMorePhotoUrls(prev => {
-        const next = [...prev];
-        newFiles.forEach((file, i) => {
-          const slot = next.findIndex((v, idx) => v === null && idx >= i);
-          if (slot !== -1) next[slot] = URL.createObjectURL(file);
-        });
-        return next;
-      });
-    }
-  };
-
-  const removeMorePhoto = (index: number) => {
-    setMorePhotoUrls(prev => {
-      const next = [...prev];
-      next[index] = null;
-      return next;
-    });
-  };
-
-  const handleSpacePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setSpacePhotoUrls(prev => {
-        const next = [...prev];
-        newFiles.forEach((file, i) => {
-          const slot = next.findIndex((v, idx) => v === null && idx >= i);
-          if (slot !== -1) next[slot] = URL.createObjectURL(file);
-        });
-        return next;
-      });
-    }
-  };
-
-  const removeSpacePhoto = (index: number) => {
-    setSpacePhotoUrls(prev => {
-      const next = [...prev];
-      next[index] = null;
-      return next;
-    });
-  };
-
-  const toggleSpaceVibe = (vibe: string) => {
-    setSpaceVibes(prev =>
-      prev.includes(vibe) ? prev.filter(v => v !== vibe) : [...prev, vibe]
-    );
-  };
+  const [profilePhotoUrl,  setProfilePhotoUrl]  = useState<string | null>(initialData?.avatar_url || null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [morePhotoUrls,    setMorePhotoUrls]    = useState<string[]>(initialData?.photos || []);
+  const [morePhotoFiles,   setMorePhotoFiles]   = useState<File[]>([]);
+  const [spacePhotoUrls,   setSpacePhotoUrls]   = useState<(string | null)[]>(Array(4).fill(null));
+  const [spacePhotoFiles,  setSpacePhotoFiles]  = useState<(File | null)[]>(Array(4).fill(null));
 
   // ── Photo pickers ─────────────────────────────────────────────────────────────
   const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setProfilePhotoUrl(URL.createObjectURL(file));
+    setProfilePhotoFile(file);
   };
 
-  const pickMorePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMorePhotoUrls(prev => {
-      const next = [...prev];
-      next[index] = URL.createObjectURL(file);
-      return next;
-    });
+  const addMorePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newUrls = newFiles.map(f => URL.createObjectURL(f));
+      setMorePhotoUrls(prev => [...prev, ...newUrls]);
+      setMorePhotoFiles(prev => [...prev, ...newFiles]);
+    }
   };
 
-  const pickSpacePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setSpacePhotoUrls(prev => {
-      const next = [...prev];
-      next[index] = URL.createObjectURL(file);
-      return next;
-    });
+  const removeMorePhoto = (index: number) => {
+    setMorePhotoUrls(prev => prev.filter((_, i) => i !== index));
+    // Important: we need to handle both newly added files and existing DB URLs
+    // The number of files might be different from the number of URLs if some were pre-existing
+    const urlToRemove = morePhotoUrls[index];
+    const isNewFile = morePhotoFiles.some(f => URL.createObjectURL(f) === urlToRemove);
+    if (isNewFile) {
+      setMorePhotoFiles(prev => prev.filter(f => URL.createObjectURL(f) !== urlToRemove));
+    }
   };
 
-  // ── Location suggestion selection ─────────────────────────────────────────────
-  const handleSelectSuggestion = (s: any) => {
-    setFormData(p => ({
-      ...p,
-      location:  s.display_name,
-      latitude:  parseFloat(s.lat),
-      longitude: parseFloat(s.lon),
-    }));
-    setLocationSuggestions([]);
-    setShowSuggestions(false);
+  const removeSpacePhoto = (index: number) => {
+    setSpacePhotoUrls(prev => { const next = [...prev]; next[index] = null; return next; });
+    setSpacePhotoFiles(prev => { const next = [...prev]; next[index] = null; return next; });
   };
 
   // ── Validation ───────────────────────────────────────────────────────────────
@@ -493,8 +393,6 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
         errs.full_name = 'Full name is required.';
       if (!formData.location.trim())
         errs.location = 'Please enter and select your location.';
-      else if (!formData.latitude)
-        errs.location = 'Please select a location from the suggestions.';
       if (!formData.move_in_date)
         errs.move_in_date = 'Move-in date is required.';
     }
@@ -539,18 +437,56 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     const errs = validateStep(3);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setLoading(true);
+
     try {
-      // Build FCRM prefixed lifestyle tags
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // 1. Upload Profile Photo
+      let finalAvatarUrl = initialData?.avatar_url || '';
+      if (profilePhotoFile) {
+        const fileExt = profilePhotoFile.name.split('.').pop();
+        const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, profilePhotoFile, { upsert: true });
+
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        finalAvatarUrl = publicUrl;
+      }
+
+      // 2. Upload More Photos
+      const finalMorePhotoUrls: string[] = [...morePhotoUrls.filter(url => url.startsWith('http'))];
+      
+      for (let i = 0; i < morePhotoFiles.length; i++) {
+        const file = morePhotoFiles[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('profile-photos')
+          .upload(fileName, file, { upsert: true });
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage.from('profile-photos').getPublicUrl(fileName);
+          finalMorePhotoUrls.push(publicUrl);
+        }
+      }
+
+      // 3. Build FCRM prefixed lifestyle tags
       const wdTags = DIM_ORDER.filter(d => weekdayTags[d]).map(d => `wd:${d}:${weekdayTags[d]}`);
       const weTags = DIM_ORDER.filter(d => weekendTags[d]).map(d => `we:${d}:${weekendTags[d]}`);
       const lifestyle_tags = [...wdTags, ...weTags, ...binaryTags];
 
-      // Build numeric feature vectors for the FCRM engine
-      const v_wd = buildVector(weekdayTags);
-      const v_we = buildVector(weekendTags);
+      // Build numeric feature vectors
+      const v_wd = buildVector(weekdayTags, lifestyleDimensions);
+      const v_we = buildVector(weekendTags, lifestyleDimensions);
 
       const result = await updateProfile({
         full_name:        formData.full_name,
+        avatar_url:       finalAvatarUrl,
+        bio:              formData.bio,
+        photos:           finalMorePhotoUrls,
         age:              formData.age,
         location:         formData.location,
         longitude:        formData.longitude,
@@ -569,12 +505,11 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
         alert('Error: ' + result.error);
       } else {
         if (onClose) { onClose(); return; }
-        // Navigate to discovery page after profile completion
         router.push('/discovery');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Submit error:', err);
-      alert('An error occurred during submission.');
+      alert('An error occurred: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
@@ -676,37 +611,19 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
             {/* Location */}
             <section>
               <SectionLabel Icon={MapPin} label="Location" required />
-              <div className="relative">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={e => { searchLocation(e.target.value); setErrors(p => ({ ...p, location: '' })); }}
-                  onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                  placeholder="Search city or neighborhood…"
-                  className={`${inputCls} pl-10 ${errors.location ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
-                />
-                {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
-                {showSuggestions && locationSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                    {locationSuggestions.map((s, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => handleSelectSuggestion(s)}
-                        className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
-                      >
-                        <p className="font-medium text-dark truncate">{s.display_name}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {formData.latitude && (
-                  <p className="text-[10px] text-slate-400 mt-1.5 pl-1">
-                    Coordinates: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
-                  </p>
-                )}
-              </div>
+              <AddressAutocomplete
+                defaultValue={formData.location}
+                onAddressSelect={(address, _city, _zip, lat, lng) => {
+                  setFormData(p => ({ ...p, location: address, latitude: lat, longitude: lng }));
+                  setErrors(p => ({ ...p, location: '' }));
+                }}
+              />
+              {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
+              {formData.latitude && (
+                <p className="text-[10px] text-slate-400 mt-1.5 pl-1">
+                  Coordinates: {formData.latitude.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                </p>
+              )}
             </section>
 
             {/* Housing purpose */}
@@ -797,19 +714,21 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
             <section>
               {/* 5 dimension cards */}
               <div className="space-y-4">
-                {FCRM_DIMENSIONS.map(dim => {
-                  const wdSelected = weekdayTags[dim.key];
-                  const weSelected = weekendTags[dim.key];
-                  const isDiff     = differentWeekend[dim.key];
+                {lifestyleDimensions.map(dim => {
+                  const dimKey = dim.id as DimKey;
+                  const wdSelected = weekdayTags[dimKey];
+                  const weSelected = weekendTags[dimKey];
+                  const isDiff     = differentWeekend[dimKey];
+                  const IconComp   = ICON_MAP[dim.icon_name || 'Users'] || Users;
 
                   return (
-                    <div key={dim.key} className="border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
+                    <div key={dim.id} className="border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
 
                       {/* Dimension header + weekend toggle */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div className="size-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <dim.Icon size={14} className="text-primary" />
+                            <IconComp size={14} className="text-primary" />
                           </div>
                           <div>
                             <p className="text-sm font-bold text-dark leading-none">{dim.label}<span className="ml-0.5 text-red-500">*</span></p>
@@ -819,7 +738,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                         {/* "Differs on weekends?" toggle */}
                         <button
                           type="button"
-                          onClick={() => toggleDifferentWeekend(dim.key)}
+                          onClick={() => toggleDifferentWeekend(dimKey)}
                           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all ${
                             isDiff
                               ? 'border-primary bg-primary/10 text-dark'
@@ -840,7 +759,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                           <button
                             key={opt.tag}
                             type="button"
-                            onClick={() => { handleWeekdayTag(dim.key, opt.tag); setErrors(p => ({ ...p, [`wd_${dim.key}`]: '' })); }}
+                            onClick={() => { handleWeekdayTag(dimKey, opt.tag); setErrors(p => ({ ...p, [`wd_${dim.id}`]: '' })); }}
                             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                               wdSelected === opt.tag
                                 ? 'bg-primary border-primary text-dark'
@@ -851,8 +770,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                           </button>
                         ))}
                       </div>
-                      {errors[`wd_${dim.key}`] && (
-                        <p className="text-xs text-red-500 mt-2">{errors[`wd_${dim.key}`]}</p>
+                      {errors[`wd_${dim.id}`] && (
+                        <p className="text-xs text-red-500 mt-2">{errors[`wd_${dim.id}`]}</p>
                       )}
 
                       {/* Weekend tags — only visible when toggle is on */}
@@ -867,9 +786,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                                 onClick={() => {
                                   setWeekendTags(prev => ({
                                     ...prev,
-                                    [dim.key]: prev[dim.key] === opt.tag ? '' : opt.tag,
+                                    [dimKey]: prev[dimKey] === opt.tag ? '' : opt.tag,
                                   }));
-                                  setErrors(p => ({ ...p, [`we_${dim.key}`]: '' }));
+                                  setErrors(p => ({ ...p, [`we_${dim.id}`]: '' }));
                                 }}
                                 className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                                   weSelected === opt.tag
@@ -881,8 +800,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                               </button>
                             ))}
                           </div>
-                          {errors[`we_${dim.key}`] && (
-                            <p className="text-xs text-red-500 mt-2">{errors[`we_${dim.key}`]}</p>
+                          {errors[`we_${dim.id}`] && (
+                            <p className="text-xs text-red-500 mt-2">{errors[`we_${dim.id}`]}</p>
                           )}
                         </div>
                       )}
@@ -977,29 +896,45 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                 <SectionLabel Icon={Images} label="More Photos" />
                 <span className="text-[10px] font-medium text-slate-400 italic -mt-4">Add up to 5 more</span>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <label key={i} className="aspect-square cursor-pointer group block">
-                    <div className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${
-                      morePhotoUrls[i]
-                        ? 'border-primary'
-                        : 'border-slate-200 bg-slate-50 group-hover:border-primary group-hover:bg-primary/5'
-                    }`}>
-                      {morePhotoUrls[i] ? (
-                        <img src={morePhotoUrls[i]!} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                      ) : (
-                        <Camera size={20} className="text-slate-300 group-hover:text-primary transition-colors" />
-                      )}
+              
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {/* Dynamic Preview List */}
+                {morePhotoUrls.map((url, i) => (
+                  <div key={i} className="relative aspect-square group">
+                    <div className="w-full h-full rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                      <img src={url} alt={`Preview ${i}`} className="w-full h-full object-cover" />
                     </div>
-                    <input type="file" accept="image/*" className="sr-only" onChange={e => pickMorePhoto(i, e)} />
-                  </label>
+                    <button
+                      type="button"
+                      onClick={() => removeMorePhoto(i)}
+                      className="absolute -top-1.5 -right-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-500 size-6 rounded-full flex items-center justify-center shadow-sm transition-colors"
+                    >
+                      <X size={14} strokeWidth={3} />
+                    </button>
+                  </div>
                 ))}
-                <div className="aspect-square rounded-xl bg-primary/5 border border-primary/20 flex flex-col items-center justify-center p-3 text-center">
-                  <Lightbulb size={16} className="text-amber-400 mb-1.5" />
-                  <span className="text-[10px] font-bold text-slate-500 leading-tight">
-                    Show your pet's best side!
-                  </span>
-                </div>
+
+                {/* Add Photo Button (only show if < 5) */}
+                {morePhotoUrls.length < 5 && (
+                  <label className="aspect-square cursor-pointer group">
+                    <div className="w-full h-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center group-hover:border-primary group-hover:bg-primary/5 transition-all">
+                      <Plus size={24} className="text-slate-300 group-hover:text-primary transition-colors mb-1" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-primary">
+                        Add Photo
+                      </span>
+                    </div>
+                    <input type="file" accept="image/*" className="sr-only" multiple onChange={addMorePhotos} />
+                  </label>
+                )}
+
+                {morePhotoUrls.length === 0 && (
+                  <div className="aspect-square rounded-xl bg-primary/5 border border-primary/20 flex flex-col items-center justify-center p-3 text-center">
+                    <Lightbulb size={16} className="text-amber-400 mb-1.5" />
+                    <span className="text-[10px] font-bold text-slate-500 leading-tight">
+                      Photos help you stand out!
+                    </span>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1024,7 +959,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                     className="hidden" 
                     multiple 
                     accept="image/*"
-                    onChange={handleMorePhotosChange}
+                    onChange={addMorePhotos}
                   />
                 </div>
                 <button
@@ -1224,9 +1159,15 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   }
 
   return (
-    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-xl flex flex-col border border-slate-100">
-      {cardContent}
-    </div>
+    <>
+      <Script
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+        strategy="afterInteractive"
+      />
+      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-xl flex flex-col border border-slate-100">
+        {cardContent}
+      </div>
+    </>
   );
 };
 
