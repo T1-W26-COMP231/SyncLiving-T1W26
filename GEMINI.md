@@ -40,9 +40,10 @@ When developers or Gemini CLI want to **create or update a schema** (tables, pol
 2.  **Location:** Always add a new `.sql` file in the `supabase/migrations/` folder.
 3.  **Naming Convention:** Use a timestamped prefix followed by a descriptive name:
     *   `YYYYMMDDHHMMSS_description_of_change.sql` (e.g., `20260314120000_add_listings_table.sql`).
-4.  **Local Development:** Run `supabase db push` or use the SQL Editor to apply these migrations.
+4.  **Local Development:** Run `supabase db reset` to apply these migrations locally. 
 5.  **Types:** After modifying the schema, always regenerate TypeScript types using the Supabase CLI:
     *   `npx supabase gen types typescript --local > src/types/supabase.ts`
+6.  **Type Reference (CRITICAL):** All database-related TypeScript types (Tables, Enums, Views) MUST be imported and referenced from `src/types/supabase.ts`. NEVER define manual interfaces for database records if a generated type is available.
 
 ---
 
@@ -108,8 +109,10 @@ This is the primary table for storing user-specific data, lifestyle preferences,
 1.  **Comments:** All code comments within source files (`.ts`, `.tsx`, `.sql`) must be in **English**.
 2.  **Environment Variables:** Always use `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` for client/server initialization.
 3.  **Security:** Always enable **Row Level Security (RLS)** for any new table created in a migration.
-4.  **State Management:** Prefer **Server Actions** over client-side `fetch` for data mutations.
-5.  **Style:** Adhere strictly to the existing **Tailwind CSS** and **TypeScript** standards.
+4.  **Automatic Type Generation:** Whenever Gemini CLI creates or updates a migration file in `supabase/migrations/`, it MUST automatically execute the following command to keep the project's types in sync:
+    *   `npx supabase gen types typescript --local > src/types/supabase.ts`
+5.  **State Management:** Prefer **Server Actions** over client-side `fetch` for data mutations.
+6.  **Style:** Adhere strictly to the existing **Tailwind CSS** and **TypeScript** standards.
 
 ---
 

@@ -135,6 +135,59 @@ Once connected, you can ask your AI agent to:
 
 ---
 
-## 🤝 Contribution Rules
-Please refer to [GEMINI.md](./GEMINI.md) for naming conventions and database migration rules before making changes.
+## 🤝 Contribution & Git Workflow
+
+To maintain a stable codebase and minimize merge conflicts, all developers MUST follow this workflow:
+
+### 1. Feature Development
+Always create a new branch from the latest `main`:
+```powershell
+git checkout main
+git pull origin main
+git checkout -b your-name/feature
+```
+
+### 2. Local Commits
+Commit your changes with descriptive messages:
+```powershell
+git add .
+git commit -m "descriptive message"
+```
+
+### 3. Sync with Main & Conflict Check (CRITICAL)
+Before pushing your branch and creating a Pull Request, you **must** sync with the latest `main` and check for conflicts:
+```powershell
+# 1. Update your local main
+git checkout main
+git pull origin main
+
+# 2. Go back to your feature branch
+git checkout feature/your-feature-name
+
+# 3. Dry-run merge to check for conflicts without committing
+git merge main --no-commit
+```
+- **If there are conflicts:** Resolve them manually in your editor, then `git add` the resolved files and finish the commit.
+- **If no conflicts:** You can proceed to push.
+
+### 4. Verification
+Run the development server and verify your changes still work after the sync:
+```powershell
+npm run dev
+```
+
+### 5. Push and Pull Request
+Push your branch to GitHub and open a Pull Request:
+```powershell
+git push origin feature/your-feature-name
+```
+- Tag a teammate for review.
+- Ensure all CI checks (if any) pass before merging.
+
+---
+
+## 📝 General Rules
+- **Comments:** All code comments MUST be in **English**.
+- **Database:** Never modify DB structure via UI. Always use migrations (refer to [GEMINI.md](./GEMINI.md)).
+- **Types:** Always use generated types from `src/types/supabase.ts`.
 
