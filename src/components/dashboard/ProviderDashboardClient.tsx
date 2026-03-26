@@ -106,7 +106,7 @@ export default function ProviderDashboardClient({
                 </div>
               </div>
               <button
-                onClick={() => router.push('/provider-dashboard/create')}
+                onClick={() => router.push('/dashboard/create')}
                 className="w-fit bg-dark hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-full transition-all active:scale-95 shadow-lg shadow-dark/20"
               >
                 Add New Listing

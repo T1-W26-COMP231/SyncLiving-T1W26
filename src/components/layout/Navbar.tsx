@@ -126,15 +126,6 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
                     <span className="font-medium">Settings</span>
                   </button>
 
-                  <Link
-                    href="/seeker-preferences"
-                    onClick={() => setDropdownOpen(false)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-dark transition-colors"
-                  >
-                    <SlidersHorizontal size={15} className="text-slate-400" />
-                    <span className="font-medium">Seeker Preferences</span>
-                  </Link>
-
                   <div className="my-1 border-t border-slate-100" />
 
                   <button

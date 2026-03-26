@@ -150,7 +150,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
 
   const handleClose = () => {
     if (onClose) { onClose(); return; }
-    router.push('/provider-dashboard');
+    router.push('/dashboard');
   };
 
   const handleFinalSubmit = async (status: 'draft' | 'published') => {
