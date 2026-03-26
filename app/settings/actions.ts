@@ -27,7 +27,7 @@ export async function updatePreferences(data: {
   if (data.move_in_date !== undefined) updates.move_in_date   = data.move_in_date;
   if (data.lifestyle_tags !== undefined) updates.lifestyle_tags = data.lifestyle_tags;
 
-  const { error } = await supabase.from('profiles').upsert(updates);
+  const { error } = await supabase.from('profiles').upsert(updates as any);
 
   if (error) {
     console.error('Error updating preferences:', error);

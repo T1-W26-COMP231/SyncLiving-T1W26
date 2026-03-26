@@ -18,7 +18,7 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
   useEffect(() => {
     // Poll for google maps availability
     const checkGoogle = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
+      if ((window as any).google && (window as any).google.maps && (window as any).google.maps.places) {
         setIsLoaded(true);
       } else {
         setTimeout(checkGoogle, 100);
@@ -65,7 +65,7 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
       let city = "";
       let postalCode = "";
       
-      results[0].address_components.forEach((component) => {
+      results[0].address_components.forEach((component: any) => {
         const types = component.types;
         if (types.includes("locality")) {
           city = component.long_name;

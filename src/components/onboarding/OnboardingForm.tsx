@@ -240,7 +240,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   // Poll for google maps availability
   useEffect(() => {
     const checkGoogle = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
+      if ((window as any).google && (window as any).google.maps && (window as any).google.maps.places) {
         setIsGoogleLoaded(true);
       } else {
         setTimeout(checkGoogle, 100);
@@ -254,7 +254,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   let initialLng: number | undefined = initialData?.longitude;
 
   if (initialData?.location_coords) {
-    const coords = initialData.location_coords;
+    const coords = initialData.location_coords as any;
     if (typeof coords === 'string') {
       // Handle WKT format: POINT(lng lat)
       const m = coords.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
@@ -359,6 +359,17 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     setProfilePhotoFile(file);
   };
 
+  const pickSpacePhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSpacePhotoUrls(prev => { const next = [...prev]; next[index] = URL.createObjectURL(file); return next; });
+    setSpacePhotoFiles(prev => { const next = [...prev]; next[index] = file; return next; });
+  };
+
+  const toggleSpaceVibe = (label: string) => {
+    setSpaceVibes(prev => prev.includes(label) ? prev.filter(v => v !== label) : [...prev, label]);
+  };
+
   const addMorePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -398,7 +409,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     }
 
     if (stepNum === 2) {
-      DIM_ORDER.forEach(dim => {
+      DIM_ORDER.forEach(dimStr => {
+        const dim = dimStr as DimKey;
         if (!weekdayTags[dim])
           errs[`wd_${dim}`] = 'Please select an option.';
         if (differentWeekend[dim] && !weekendTags[dim])
