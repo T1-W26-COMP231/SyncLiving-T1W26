@@ -82,7 +82,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
           {/* Actions */}
           <div className="ml-auto flex gap-3">
             <Link 
-              href={`/provider-dashboard/edit/${listing.id}`}
+              href={`/dashboard/edit/${listing.id}`}
               className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
             >
               <Edit3 size={16} className="mr-2" />
