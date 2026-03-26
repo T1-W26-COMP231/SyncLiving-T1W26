@@ -47,34 +47,25 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <div className={`transition-all duration-300 ${showSettingsModal ? 'blur-md brightness-50' : ''}`}>
-        <div className="min-h-screen bg-slate-50 font-sans">
-          <Navbar onOpenSettings={() => setShowSettingsModal(true)} />
+      <div className="min-h-screen bg-slate-50 font-sans">
+        <Navbar />
 
-          <main className="max-w-2xl mx-auto px-4 py-10">
-            {/* Page title & subtitle */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-extrabold text-dark tracking-tight">
-                {isEditing ? 'Edit Your Profile' : 'Create Your Profile'}
-              </h1>
-              <p className="text-slate-500 font-medium mt-1">
-                {isEditing
-                  ? 'Update your details to improve your roommate matches.'
-                  : 'Tell us about yourself so we can find your perfect roommate match.'}
-              </p>
-            </div>
+        <main className="max-w-2xl mx-auto px-4 py-10">
+          {/* Page title & subtitle */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-extrabold text-dark tracking-tight">
+              {isEditing ? 'Edit Your Profile' : 'Create Your Profile'}
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">
+              {isEditing
+                ? 'Update your details to improve your roommate matches.'
+                : 'Tell us about yourself so we can find your perfect roommate match.'}
+            </p>
+          </div>
 
-            <OnboardingForm initialData={profile} />
-          </main>
-        </div>
+          <OnboardingForm initialData={profile} />
+        </main>
       </div>
-
-      {showSettingsModal && (
-        <SettingsModal 
-          initialProfile={profile} 
-          onClose={() => setShowSettingsModal(false)} 
-        />
-      )}
     </>
   );
 }

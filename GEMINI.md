@@ -112,7 +112,12 @@ This is the primary table for storing user-specific data, lifestyle preferences,
 4.  **Automatic Type Generation:** Whenever Gemini CLI creates or updates a migration file in `supabase/migrations/`, it MUST automatically execute the following command to keep the project's types in sync:
     *   `npx supabase gen types typescript --local > src/types/supabase.ts`
 5.  **State Management:** Prefer **Server Actions** over client-side `fetch` for data mutations.
-6.  **Style:** Adhere strictly to the existing **Tailwind CSS** and **TypeScript** standards.
+6.  **Vercel Build Compatibility (CRITICAL):** To prevent deployment failures, all generated code MUST pass strict TypeScript checks:
+    *   **Null Safety:** Always provide fallback values for database fields (e.g., `|| ''`, `|| []`, or `|| 0`) when passing data to components that expect non-null types.
+    *   **Prop Consistency:** Before passing props to a component, verify the component's `interface` or `type` definition to ensure exact matches.
+    *   **Implicit Any:** Avoid implicit `any` in callbacks (e.g., use `(item: any) => ...` if the specific type is unknown).
+    *   **Global Access:** When accessing `window.google` or other global objects, use type casting (e.g., `(window as any).google`) to avoid reference errors.
+    *   **Verification:** After making changes, always run `npx tsc --noEmit` to simulate the Vercel build check and ensure zero errors.
 
 ---
 

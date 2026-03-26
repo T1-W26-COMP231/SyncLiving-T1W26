@@ -138,7 +138,7 @@ export default function SeekerPreferencesClient({
         longitude: prefData.longitude,
         max_distance: prefData.maxDistance,
         budget_min: prefData.budgetMin,
-        budget_max: prefData.budget_max,
+        budget_max: prefData.budgetMax,
       });
 
       if (result.success) {
@@ -152,8 +152,8 @@ export default function SeekerPreferencesClient({
 
   return (
     <>
-      <div className={`transition-all duration-300 ${showSettingsModal ? 'blur-md brightness-50' : ''}`}>
-        <Navbar activeTab="Preferences" onOpenSettings={() => setShowSettingsModal(true)} />
+      <div className="min-h-screen bg-slate-50 font-sans">
+        <Navbar activeTab="Preferences" />
         
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="mb-10">
@@ -183,7 +183,6 @@ export default function SeekerPreferencesClient({
               <CardHeader 
                 title="Where do you want to live?" 
                 subtitle="Set a reference point and maximum commute distance" 
-                icon={<LocateFixed className="text-primary" size={24} />}
               />
               <CardContent className="space-y-8">
                 <div className="relative">
@@ -219,7 +218,6 @@ export default function SeekerPreferencesClient({
               <CardHeader 
                 title="Monthly Budget" 
                 subtitle="What is your comfortable rent range?" 
-                icon={<DollarSign className="text-primary" size={24} />}
               />
               <CardContent>
                 <div className="space-y-6">
@@ -267,7 +265,6 @@ export default function SeekerPreferencesClient({
               <CardHeader 
                 title="Preferred Room Type" 
                 subtitle="What kind of living arrangement are you looking for?" 
-                icon={<Building2 className="text-primary" size={24} />}
               />
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -300,7 +297,6 @@ export default function SeekerPreferencesClient({
               <CardHeader 
                 title="Ideal Roommate Habits" 
                 subtitle="Select the traits you're looking for in a roommate" 
-                icon={<Sparkles className="text-primary" size={24} />}
               />
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -333,7 +329,6 @@ export default function SeekerPreferencesClient({
               <CardHeader 
                 title="Must-have Amenities" 
                 subtitle="What equipment should your next home definitely have?" 
-                icon={<Home className="text-primary" size={24} />}
               />
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -384,13 +379,6 @@ export default function SeekerPreferencesClient({
           </div>
         </div>
       </div>
-
-      {showSettingsModal && (
-        <SettingsModal 
-          initialProfile={profile} 
-          onClose={() => setShowSettingsModal(false)} 
-        />
-      )}
 
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}

@@ -40,9 +40,9 @@ export default async function SeekerPreferencesPage() {
     if (typeof profile.pref_location_coords === 'string') {
       const m = profile.pref_location_coords.match(/POINT\((.+) (.+)\)/);
       if (m) { initialLng = parseFloat(m[1]); initialLat = parseFloat(m[2]); }
-    } else if (profile.pref_location_coords.coordinates) {
-      initialLng = profile.pref_location_coords.coordinates[0];
-      initialLat = profile.pref_location_coords.coordinates[1];
+    } else if (profile.pref_location_coords && (profile.pref_location_coords as any).coordinates) {
+      initialLng = (profile.pref_location_coords as any).coordinates[0];
+      initialLat = (profile.pref_location_coords as any).coordinates[1];
     }
   }
 

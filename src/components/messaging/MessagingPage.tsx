@@ -28,25 +28,26 @@ export default function MessagingPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedMatchId) return;
+    const currentId = selectedMatchId;
+    if (!currentId) return;
 
     // 1. Initial fetch of messages
     async function fetchMessages() {
-      const data = await getMessages(selectedMatchId);
+      const data = await getMessages(currentId!);
       setMessages(data);
     }
     fetchMessages();
 
     // 2. Real-time subscription for NEW messages
     const channel = supabase
-      .channel(`realtime:messages:${selectedMatchId}`)
+      .channel(`realtime:messages:${currentId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `conversation_id=eq.${selectedMatchId}`,
+          filter: `conversation_id=eq.${currentId}`,
         },
         (payload) => {
           const newMessage = payload.new as MessageData;
