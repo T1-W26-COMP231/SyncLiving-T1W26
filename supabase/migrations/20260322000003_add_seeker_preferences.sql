@@ -57,7 +57,7 @@ USING (true);
 -- 6. Add Search Preference Fields to profiles table
 ALTER TABLE public.profiles
 ADD COLUMN IF NOT EXISTS pref_reference_location TEXT,
-ADD COLUMN IF NOT EXISTS pref_location_coords geography(POINT, 4326),
+ADD COLUMN IF NOT EXISTS pref_location_coords extensions.geography(POINT, 4326),
 ADD COLUMN IF NOT EXISTS pref_max_distance INTEGER DEFAULT 10,
 ADD COLUMN IF NOT EXISTS pref_budget_min INTEGER DEFAULT 500,
 ADD COLUMN IF NOT EXISTS pref_budget_max INTEGER DEFAULT 3000;
