@@ -28,8 +28,7 @@
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-dark: var(--dark);
-  --font-sans: var(--font-jakarta);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Plus Jakarta Sans", sans-serif;
 }
 
 html {

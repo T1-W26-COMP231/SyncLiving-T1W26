@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Match } from '../../../app/messages/actions';
+import { MessageSquare, Gavel, History } from 'lucide-react';
 
 interface SidebarProps {
   matches: Match[];
@@ -22,15 +23,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2">Workspace</div>
         <nav className="flex flex-col gap-1">
           <a className="flex items-center gap-3 px-3 py-2 rounded-xl bg-primary/10 text-primary font-semibold" href="#">
-            <span className="material-symbols-outlined">forum</span>
+            <MessageSquare size={18} />
             <span>Chat & Activity</span>
           </a>
           <a className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400" href="#">
-            <span className="material-symbols-outlined">gavel</span>
+            <Gavel size={18} />
             <span>Active Rules</span>
           </a>
           <a className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400" href="#">
-            <span className="material-symbols-outlined">history</span>
+            <History size={18} />
             <span>Change Log</span>
           </a>
         </nav>

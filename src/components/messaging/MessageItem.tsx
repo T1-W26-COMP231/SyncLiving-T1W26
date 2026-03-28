@@ -1,6 +1,7 @@
 import React from 'react';
 import { User } from './types';
 import { Button } from '@/components/ui/Button';
+import { NotebookPen } from 'lucide-react';
 
 interface MessageItemProps {
   message: {
@@ -26,7 +27,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, sender, isMe 
     return (
       <div className="flex items-start gap-3 max-w-2xl">
         <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-primary">edit_note</span>
+          <NotebookPen size={18} className="text-primary" />
         </div>
         <div className="flex flex-1 flex-col gap-2">
           <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl">

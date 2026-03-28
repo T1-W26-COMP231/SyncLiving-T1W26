@@ -4,29 +4,16 @@ import usePlacesAutocomplete, {
   getGeocode,
   getLatLng,
 } from "use-places-autocomplete";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface AddressAutocompleteProps {
   defaultValue?: string;
   onAddressSelect: (address: string, city: string, postalCode: string, lat: number, lng: number) => void;
 }
 
+// This component must only be rendered after Google Maps is confirmed available
+// (the parent is responsible for that check). initOnMount: true is safe here.
 export default function AddressAutocomplete({ defaultValue, onAddressSelect }: AddressAutocompleteProps) {
-  // Add state to track if google is available
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    // Poll for google maps availability
-    const checkGoogle = () => {
-      if ((window as any).google && (window as any).google.maps && (window as any).google.maps.places) {
-        setIsLoaded(true);
-      } else {
-        setTimeout(checkGoogle, 100);
-      }
-    };
-    checkGoogle();
-  }, []);
-
   const {
     ready,
     value,
@@ -34,20 +21,22 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
     setValue,
     clearSuggestions,
   } = usePlacesAutocomplete({
-    requestOptions: {
-      componentRestrictions: { country: "ca" },
-    },
+    requestOptions: { componentRestrictions: { country: "ca" } },
     debounce: 300,
     defaultValue: defaultValue,
-    initOnMount: isLoaded, // Only init when script is actually there
+    initOnMount: true,
   });
 
-  // Sync internal value when defaultValue changes (e.g., after DB fetch)
+  // Sync defaultValue once on mount — omitting setValue from deps so that
+  // internal hook re-renders never overwrite what the user has typed.
+  const defaultValueSynced = useRef(false);
   useEffect(() => {
-    if (defaultValue) {
+    if (defaultValue && !defaultValueSynced.current) {
       setValue(defaultValue, false);
+      defaultValueSynced.current = true;
     }
-  }, [defaultValue, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
@@ -61,36 +50,29 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
     try {
       const results = await getGeocode({ address });
       const { lat, lng } = await getLatLng(results[0]);
-      
+
       let city = "";
       let postalCode = "";
-      
       results[0].address_components.forEach((component: any) => {
-        const types = component.types;
-        if (types.includes("locality")) {
-          city = component.long_name;
-        } else if (types.includes("postal_code")) {
-          postalCode = component.long_name;
-        }
+        if (component.types.includes("locality"))    city       = component.long_name;
+        if (component.types.includes("postal_code")) postalCode = component.long_name;
       });
 
       onAddressSelect(address, city, postalCode, lat, lng);
     } catch (error) {
-      console.error("Error Select: ", error);
+      console.error("Error selecting address:", error);
     }
   };
 
   return (
     <div className="relative w-full">
-      <label className="block text-sm font-semibold text-slate-700 mb-2">
-        Address
-      </label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
       <div className="relative rounded-xl shadow-sm">
         <input
           value={value}
           onChange={handleInput}
-          disabled={!ready || !isLoaded}
-          placeholder={isLoaded ? "Enter property address" : "Loading address service..."}
+          disabled={!ready}
+          placeholder="Enter property address"
           className="block w-full rounded-xl border-slate-200 bg-slate-50 pl-4 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:border-primary focus:ring-primary sm:text-sm transition-all"
           name="address"
           autoComplete="off"
@@ -100,7 +82,7 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
 
       {status === "OK" && (
         <ul className="absolute z-50 w-full bg-white border border-slate-200 mt-1 rounded-xl shadow-lg max-h-60 overflow-auto py-2">
-          {data.map((suggestion) => (
+          {data.map(suggestion => (
             <li
               key={suggestion.place_id}
               onClick={() => handleSelect(suggestion)}

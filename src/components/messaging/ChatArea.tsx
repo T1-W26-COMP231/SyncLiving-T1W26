@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { PlusCircle, Send } from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { MessageData, Match } from '../../../app/messages/actions';
 import { User } from './types';
@@ -72,7 +73,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               onSubmit={handleSubmit}
             >
               <button type="button" className="text-slate-400 hover:text-primary transition-colors flex shrink-0">
-                <span className="material-symbols-outlined">add_circle</span>
+                <PlusCircle size={20} />
               </button>
               <input
                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 placeholder-slate-500 text-slate-900 dark:text-slate-100"
@@ -82,7 +83,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
               />
               <button type="submit" className="text-primary flex shrink-0 disabled:opacity-50" disabled={!inputValue.trim()}>
-                <span className="material-symbols-outlined">send</span>
+                <Send size={18} />
               </button>
             </form>
           </div>

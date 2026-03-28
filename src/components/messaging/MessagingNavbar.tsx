@@ -3,6 +3,7 @@
 import React from 'react';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import Link from 'next/link';
+import { Search, Bell } from 'lucide-react';
 
 export const MessagingNavbar: React.FC = () => {
   return (
@@ -27,7 +28,7 @@ export const MessagingNavbar: React.FC = () => {
       <div className="flex items-center gap-4">
         <div className="hidden lg:block">
           <label className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl px-4 py-2 border border-transparent focus-within:border-primary transition-all">
-            <span className="material-symbols-outlined text-slate-500 text-xl">search</span>
+            <Search size={18} className="text-slate-500 shrink-0" />
             <input
               className="bg-transparent border-none focus:ring-0 text-sm w-64 placeholder:text-slate-500 text-slate-900 dark:text-slate-100"
               placeholder="Search messages or rules"
@@ -36,7 +37,7 @@ export const MessagingNavbar: React.FC = () => {
           </label>
         </div>
         <button className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-all">
-          <span className="material-symbols-outlined">notifications</span>
+          <Bell size={20} />
         </button>
         <div className="h-10 w-10 rounded-full bg-primary/20 border-2 border-primary overflow-hidden">
           <img

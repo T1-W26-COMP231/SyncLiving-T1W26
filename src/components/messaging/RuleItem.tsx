@@ -1,5 +1,6 @@
 import React from 'react';
 import { Rule } from './types';
+import { CheckCircle2, RefreshCw, Clock } from 'lucide-react';
 
 interface RuleItemProps {
   rule: Rule;
@@ -13,9 +14,9 @@ export const RuleItem: React.FC<RuleItemProps> = ({ rule }) => {
   };
 
   const statusIcons = {
-    accepted: <span className="material-symbols-outlined text-green-500 text-sm">check_circle</span>,
-    pending: <span className="material-symbols-outlined text-primary text-sm">sync</span>,
-    drafting: <span className="material-symbols-outlined text-slate-400 text-sm">pending</span>
+    accepted: <CheckCircle2 size={16} className="text-green-500" />,
+    pending:  <RefreshCw   size={16} className="text-primary"   />,
+    drafting: <Clock       size={16} className="text-slate-400" />
   };
 
   return (

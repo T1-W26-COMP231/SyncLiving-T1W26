@@ -59,6 +59,8 @@ export async function updateRoomPreferences(data: {
     .update({
       pref_reference_location: data.reference_location,
       pref_location_coords:    location_coords,
+      pref_lat:                data.latitude ?? null,
+      pref_lng:                data.longitude ?? null,
       pref_max_distance:       data.max_distance,
     })
     .eq('id', user.id);
