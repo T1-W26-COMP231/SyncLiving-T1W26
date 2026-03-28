@@ -65,13 +65,15 @@ export async function getMatches(): Promise<{
   prefMaxDistance: number | null;
   prefReferenceLocation: string | null;
   bufferKm: number | null;
+  userAmenityNames: string[];
+  userRoomTypeNames: string[];
   error: string | null;
 }> {
   const supabase = await createClient();
 
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Not authenticated' };
+  if (!user) return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Not authenticated', userAmenityNames: [], userRoomTypeNames: [] };
 
   // Fetch current user's profile + preference fields
   const { data: myProfile, error: myErr } = await supabase
@@ -81,7 +83,7 @@ export async function getMatches(): Promise<{
     .single();
 
   if (myErr || !myProfile) {
-    return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load your profile' };
+    return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load your profile', userAmenityNames: [], userRoomTypeNames: [] };
   }
 
   const myVWd = toVec(myProfile.v_wd);
@@ -137,7 +139,7 @@ export async function getMatches(): Promise<{
   const userPreferredGender: string | null = myProfile.preferred_gender ?? null;
 
   if (candErr) {
-    return { matches: [], userRole: myProfile.role, preferredTagNames, userBinaryPrefs, userPreferredGender, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load candidates' };
+    return { matches: [], userRole: myProfile.role, preferredTagNames, userBinaryPrefs, userPreferredGender, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load candidates', userAmenityNames: [], userRoomTypeNames: [] };
   }
 
   const prefNormalized = preferredTagNames.map(normalizeTag);
@@ -174,8 +176,22 @@ export async function getMatches(): Promise<{
         conflicts: result.conflicts,
       };
     })
-    .filter(p => p.score >= SURFACE_THRESHOLD)
     .sort((a, b) => b.score - a.score);
+
+  // Fetch the user's saved room preferences (amenity + room type names) for the Room view filter panel
+  const [{ data: amenityRows }, { data: roomTypeRows }] = await Promise.all([
+    supabase
+      .from('seeker_amenity_preferences')
+      .select('amenities(name)')
+      .eq('user_id', user.id),
+    supabase
+      .from('seeker_room_type_preferences')
+      .select('room_types(name)')
+      .eq('user_id', user.id),
+  ]);
+
+  const userAmenityNames  = (amenityRows  ?? []).map((r: any) => r.amenities?.name).filter(Boolean);
+  const userRoomTypeNames = (roomTypeRows ?? []).map((r: any) => r.room_types?.name).filter(Boolean);
 
   return {
     matches: scored,
@@ -192,6 +208,8 @@ export async function getMatches(): Promise<{
     prefMaxDistance: prefMaxDist,
     prefReferenceLocation: myProfile.pref_reference_location ?? null,
     bufferKm,
+    userAmenityNames,
+    userRoomTypeNames,
     error: null,
   };
 }

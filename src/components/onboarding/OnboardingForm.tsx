@@ -6,7 +6,6 @@ import Script from 'next/script';
 import { updateProfile } from '../../../app/onboarding/actions';
 import { createClient } from '@/utils/supabase/client';
 import AddressAutocomplete from '../dashboard/AddressAutocomplete';
-import { getGeocode, getLatLng } from 'use-places-autocomplete';
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star, Leaf,
   Camera, Plus, X, Home, UserSearch,
@@ -505,10 +504,13 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       let submitLng = formData.longitude;
       if ((!submitLat || !submitLng) && formData.location.trim()) {
         try {
-          const results = await getGeocode({ address: formData.location });
-          const { lat, lng } = await getLatLng(results[0]);
-          submitLat = lat;
-          submitLng = lng;
+          const geocoder = new (window as any).google.maps.Geocoder();
+          const result = await geocoder.geocode({ address: formData.location });
+          if (result.results[0]) {
+            const loc = result.results[0].geometry.location;
+            submitLat = loc.lat();
+            submitLng = loc.lng();
+          }
         } catch {
           // Geocoding failed — proceed without coordinates
         }
@@ -1207,7 +1209,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   return (
     <>
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
         strategy="afterInteractive"
       />
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-xl flex flex-col border border-slate-100">

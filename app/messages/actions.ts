@@ -95,6 +95,49 @@ export async function getMessages(conversationId: string) {
 }
 
 /**
+ * Finds or creates a direct conversation between the current user and a target user.
+ * Handles any role combination by checking both orientations (seeker↔provider).
+ */
+export async function startOrGetConversation(targetUserId: string): Promise<{ conversationId?: string; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  // Look for an existing conversation in either direction (no listing attached)
+  const { data: existing } = await supabase
+    .from('conversations')
+    .select('id')
+    .or(
+      `and(seeker_id.eq.${user.id},provider_id.eq.${targetUserId}),` +
+      `and(seeker_id.eq.${targetUserId},provider_id.eq.${user.id})`
+    )
+    .is('listing_id', null)
+    .maybeSingle();
+
+  if (existing) return { conversationId: existing.id };
+
+  // Determine seeker/provider assignment based on current user's role
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  const currentIsProvider = myProfile?.role === 'provider';
+  const seekerId  = currentIsProvider ? targetUserId : user.id;
+  const providerId = currentIsProvider ? user.id : targetUserId;
+
+  const { data: created, error } = await supabase
+    .from('conversations')
+    .insert({ seeker_id: seekerId, provider_id: providerId, listing_id: null })
+    .select('id')
+    .single();
+
+  if (error) return { error: error.message };
+  return { conversationId: created.id };
+}
+
+/**
  * Sends a new message in a conversation.
  */
 export async function sendMessage(conversationId: string, content: string) {

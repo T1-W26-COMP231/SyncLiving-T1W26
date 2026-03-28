@@ -5,12 +5,12 @@ import {
   X, DollarSign, Calendar, User, PawPrint, Cigarette,
   Heart, Save, MapPin, Search, LocateFixed, Building2, Home, CheckCircle2, PlusCircle, Leaf,
 } from 'lucide-react';
-import { getGeocode, getLatLng } from 'use-places-autocomplete';
 import { updatePreferences, updateRoomPreferences } from '../../../app/settings/actions';
 
 interface SettingsModalProps {
   initialProfile?: any;
   onClose: () => void;
+  onSaved?: (amenityIds: string[], roomTypeIds: string[]) => void;
   allAmenities?: { id: string; name: string; category: string | null }[];
   allRoomTypes?: { id: string; name: string }[];
   initialAmenityIds?: string[];
@@ -116,6 +116,7 @@ function SectionLabel({ Icon, label }: { Icon: React.FC<any>; label: string }) {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   initialProfile,
   onClose,
+  onSaved,
   allAmenities = [],
   allRoomTypes = [],
   initialAmenityIds = [],
@@ -127,8 +128,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const tags: string[] = initialProfile?.lifestyle_tags || [];
   const [ageMin,     setAgeMin]     = useState<number>(initialProfile?.age_min     || 18);
   const [ageMax,     setAgeMax]     = useState<number>(initialProfile?.age_max     || 45);
-  const [budgetMin,  setBudgetMin]  = useState<number>(initialProfile?.budget_min  || 800);
-  const [budgetMax,  setBudgetMax]  = useState<number>(initialProfile?.budget_max  || 2500);
+  const [budgetMin,  setBudgetMin]  = useState<number>(initialProfile?.pref_budget_min  || 800);
+  const [budgetMax,  setBudgetMax]  = useState<number>(initialProfile?.pref_budget_max  || 2500);
   const [moveInDate, setMoveInDate] = useState<string>(initialProfile?.move_in_date || '');
   const [pets,       setPets]       = useState<boolean>(tags.includes('Pet Allowed') || tags.includes('Pet Friendly'));
   const [smoking,    setSmoking]    = useState<boolean>(tags.includes('Non-Smoker'));
@@ -210,10 +211,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       let submitLng = longitude;
       if ((!submitLat || !submitLng) && location.trim()) {
         try {
-          const results = await getGeocode({ address: location });
-          const { lat, lng } = await getLatLng(results[0]);
-          submitLat = lat;
-          submitLng = lng;
+          const geocoder = new (window as any).google.maps.Geocoder();
+          const result = await geocoder.geocode({ address: location });
+          if (result.results[0]) {
+            const loc = result.results[0].geometry.location;
+            submitLat = loc.lat();
+            submitLng = loc.lng();
+          }
         } catch {
           // Geocoding failed — proceed without coordinates
         }
@@ -242,6 +246,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         alert('Error saving: ' + (roommateResult?.error || roomResult?.error));
       } else {
         setSaved(true);
+        onSaved?.(selectedAmenities, selectedRoomTypes);
         setTimeout(() => { setSaved(false); onClose(); }, 800);
       }
     } finally {

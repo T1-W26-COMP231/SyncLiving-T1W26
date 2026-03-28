@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { SlidersHorizontal, UserCircle, UserCircle2, ChevronDown, Check, Heart, UserSearch, Map, X } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import type { MatchedProfile } from '@/app/discovery/actions';
 import { toggleSavedProfile } from '../../../app/discovery/saved-actions';
+import { startOrGetConversation } from '../../../app/messages/actions';
 import { createClient } from '@/utils/supabase/client';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
 
@@ -50,6 +52,7 @@ function applyFilters(
   filterMaxDist: number | null,
   userLat: number | null,
   userLng: number | null,
+  showIncompatible: boolean,
 ): MatchedProfile[] {
   let result = active.includes('all')
     ? matches
@@ -105,6 +108,11 @@ function applyFilters(
     });
   }
 
+  // Hide incompatible tier unless user explicitly enables it
+  if (!showIncompatible) {
+    result = result.filter(p => p.tier !== 'incompatible');
+  }
+
   if (showSaved) return result.filter(p => savedIds.has(p.id));
   return result;
 }
@@ -117,9 +125,10 @@ function getBinaryTags(tags: string[]): string[] {
 
 function tierLabel(tier: MatchedProfile['tier']): string {
   switch (tier) {
-    case 'strong': return 'Strong Match';
-    case 'good':   return 'Good Match';
-    default:       return 'Match';
+    case 'strong':       return 'Strong Match';
+    case 'good':         return 'Good Match';
+    case 'borderline':   return 'Weak Match';
+    case 'incompatible': return 'Poor Match';
   }
 }
 
@@ -137,9 +146,12 @@ function conflictHint(type: string): string {
 }
 
 function tierBadgeClass(tier: MatchedProfile['tier']): string {
-  return tier === 'strong'
-    ? 'bg-primary text-dark'
-    : 'bg-emerald-100 text-emerald-800';
+  switch (tier) {
+    case 'strong':       return 'bg-primary text-dark';
+    case 'good':         return 'bg-emerald-100 text-emerald-800';
+    case 'borderline':   return 'bg-amber-100 text-amber-800';
+    case 'incompatible': return 'bg-red-100 text-red-700';
+  }
 }
 
 const QUICK_FILTER_TAGS = [
@@ -212,6 +224,8 @@ interface Props {
   prefMaxDistance: number | null;
   prefReferenceLocation: string | null;
   bufferKm: number | null;
+  userAmenityNames: string[];
+  userRoomTypeNames: string[];
   error: string | null;
 }
 
@@ -231,11 +245,16 @@ const RoommateDiscovery: React.FC<Props> = ({
   prefMaxDistance,
   prefReferenceLocation,
   bufferKm,
+  userAmenityNames,
+  userRoomTypeNames,
   error,
 }) => {
+  const router = useRouter();
+
   // ── Type / tag filters ──────────────────────────────────────────────────────
   const [activeFilters, setActiveFilters] = useState<FilterKey[]>(() => defaultFilters(userRole));
   const [showSaved, setShowSaved] = useState(false);
+  const [showIncompatible, setShowIncompatible] = useState(false);
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(
@@ -302,6 +321,22 @@ const RoommateDiscovery: React.FC<Props> = ({
     });
   }
 
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+
+  async function handleConnect(targetUserId: string) {
+    setConnectingId(targetUserId);
+    try {
+      const result = await startOrGetConversation(targetUserId);
+      if (result.error) {
+        alert('Could not start conversation: ' + result.error);
+        return;
+      }
+      router.push(`/messages?conversation=${result.conversationId}`);
+    } finally {
+      setConnectingId(null);
+    }
+  }
+
   function handleHeartClick(id: string) {
     setSavedIds(prev => {
       const next = new Set(prev);
@@ -349,7 +384,16 @@ const RoommateDiscovery: React.FC<Props> = ({
     distFilterOn   ? filterMaxDist   : null,
     prefLat,
     prefLng,
+    showIncompatible,
   );
+
+  // Detect when the user is viewing Room results only — age filter is irrelevant for rooms
+  const isRoomView = activeFilters.length === 1 && activeFilters[0] === 'room';
+
+  // Auto-disable age filter when switching to Room view
+  useEffect(() => {
+    if (isRoomView) setAgeFilterOn(false);
+  }, [isRoomView]);
 
   // Count how many advanced filters are active
   const activeAdvancedCount = [ageFilterOn, budgetFilterOn, distFilterOn].filter(Boolean).length;
@@ -456,35 +500,65 @@ const RoommateDiscovery: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Age range filter */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                    Age Range
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={ageFilterOn}
-                      onChange={e => setAgeFilterOn(e.target.checked)}
-                      className="w-3.5 h-3.5 accent-primary"
+              {/* Age range filter — hidden in Room view */}
+              {!isRoomView ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                      Age Range
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={ageFilterOn}
+                        onChange={e => setAgeFilterOn(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-primary"
+                      />
+                      Enable
+                    </label>
+                  </div>
+                  <div className={`transition-opacity ${ageFilterOn ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                    <DualRangeSlider
+                      min={18} max={80}
+                      valueMin={filterAgeMin} valueMax={filterAgeMax}
+                      onChangeMin={setFilterAgeMin} onChangeMax={setFilterAgeMax}
                     />
-                    Enable
-                  </label>
-                </div>
-                <div className={`transition-opacity ${ageFilterOn ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                  <DualRangeSlider
-                    min={18} max={80}
-                    valueMin={filterAgeMin} valueMax={filterAgeMax}
-                    onChangeMin={setFilterAgeMin} onChangeMax={setFilterAgeMax}
-                  />
-                  <div className="flex justify-between text-[11px] text-slate-400 mt-1">
-                    <span>18</span>
-                    <span className="font-semibold text-slate-600">{filterAgeMin} – {filterAgeMax} yrs</span>
-                    <span>80</span>
+                    <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+                      <span>18</span>
+                      <span className="font-semibold text-slate-600">{filterAgeMin} – {filterAgeMax} yrs</span>
+                      <span>80</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Room preferences summary shown instead of age filter */
+                <div>
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Your Room Preferences</p>
+                  {userRoomTypeNames.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-[11px] text-slate-400 mb-1">Room types</p>
+                      <div className="flex flex-wrap gap-1">
+                        {userRoomTypeNames.map(name => (
+                          <span key={name} className="px-2 py-0.5 rounded-full bg-primary/15 text-dark text-[11px] font-semibold border border-primary/30">{name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {userAmenityNames.length > 0 && (
+                    <div>
+                      <p className="text-[11px] text-slate-400 mb-1">Amenities</p>
+                      <div className="flex flex-wrap gap-1">
+                        {userAmenityNames.map(name => (
+                          <span key={name} className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">{name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {userRoomTypeNames.length === 0 && userAmenityNames.length === 0 && (
+                    <p className="text-[11px] text-slate-400">No room preferences saved — set them in Settings.</p>
+                  )}
+                </div>
+              )}
 
               {/* Budget range filter */}
               <div>
@@ -588,8 +662,23 @@ const RoommateDiscovery: React.FC<Props> = ({
             <Heart size={16} className={showSaved ? 'text-red-500 fill-red-500' : 'text-slate-400'} />
           </button>
 
-          {/* Quick-filter chips */}
-          {availableQuickFilters.length > 0 && (
+          {/* Incompatible toggle — hidden in Room view */}
+          {!isRoomView && (
+            <button
+              onClick={() => setShowIncompatible(s => !s)}
+              title={showIncompatible ? 'Hiding incompatible matches' : 'Show incompatible matches'}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-sm ${
+                showIncompatible
+                  ? 'bg-slate-200 border-slate-400 text-slate-700'
+                  : 'bg-white border-slate-200 text-slate-400 hover:border-slate-400'
+              }`}
+            >
+              {showIncompatible ? '✓ Incompatible' : 'Show Incompatible'}
+            </button>
+          )}
+
+          {/* Quick-filter chips — hidden in Room view */}
+          {!isRoomView && availableQuickFilters.length > 0 && (
             <>
               <div className="w-px h-6 bg-slate-200 mx-1" />
               {availableQuickFilters.map(({ tag, label }) => {
@@ -713,8 +802,12 @@ const RoommateDiscovery: React.FC<Props> = ({
 
                   <div className="flex items-center justify-between mt-4">
                     <button className="text-sm font-bold text-primary hover:underline">View Profile</button>
-                    <button className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold hover:bg-primary hover:text-dark transition-all">
-                      Connect
+                    <button
+                      onClick={() => handleConnect(person.id)}
+                      disabled={connectingId === person.id}
+                      className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold hover:bg-primary hover:text-dark transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {connectingId === person.id ? 'Connecting…' : 'Connect'}
                     </button>
                   </div>
                 </div>

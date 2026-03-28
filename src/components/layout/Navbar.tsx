@@ -147,6 +147,10 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
         <SettingsModal
           initialProfile={profile}
           onClose={() => setShowSettings(false)}
+          onSaved={(newAmenityIds, newRoomTypeIds) => {
+            setAmenityIds(newAmenityIds);
+            setRoomTypeIds(newRoomTypeIds);
+          }}
           allAmenities={amenities}
           allRoomTypes={roomTypes}
           initialAmenityIds={amenityIds}

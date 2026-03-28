@@ -71,7 +71,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, sender, isMe 
           {isMe && <span className="text-sm font-bold">You</span>}
         </div>
         <div
-          className={`p-4 rounded-xl shadow-sm border ${
+          className={`px-3 py-2 rounded-xl shadow-sm border ${
             isMe
               ? 'bg-primary text-white border-transparent rounded-tr-none'
               : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700 rounded-tl-none'

@@ -18,6 +18,8 @@ export default async function DiscoveryPage() {
     prefMaxDistance,
     prefReferenceLocation,
     bufferKm,
+    userAmenityNames,
+    userRoomTypeNames,
     error,
   } = await getMatches();
 
@@ -37,6 +39,8 @@ export default async function DiscoveryPage() {
       prefMaxDistance={prefMaxDistance}
       prefReferenceLocation={prefReferenceLocation}
       bufferKm={bufferKm}
+      userAmenityNames={userAmenityNames}
+      userRoomTypeNames={userRoomTypeNames}
       error={error}
     />
   );

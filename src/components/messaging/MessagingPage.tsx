@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
@@ -8,23 +8,37 @@ import { HouseRules } from './HouseRules';
 import { getMatches, getMessages, sendMessage, Match, MessageData } from '../../../app/messages/actions';
 import { createClient } from '@/utils/supabase/client';
 
-export default function MessagingPage() {
+interface MessagingPageProps {
+  initialConversationId?: string;
+}
+
+export default function MessagingPage({ initialConversationId }: MessagingPageProps) {
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+
+  // Stable client reference — createClient() must not be called on every render
+  // or it will create a new instance each time, causing the realtime subscription
+  // to be torn down and re-created on every render.
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   useEffect(() => {
     async function init() {
       const data = await getMatches();
       setMatches(data);
-      if (data.length > 0) {
+      // Pre-select from URL param if present, otherwise fall back to first conversation
+      if (initialConversationId && data.some(m => m.id === initialConversationId)) {
+        setSelectedMatchId(initialConversationId);
+      } else if (data.length > 0) {
         setSelectedMatchId(data[0].id);
       }
       setLoading(false);
     }
     init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -63,15 +77,15 @@ export default function MessagingPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedMatchId, supabase]);
+  }, [selectedMatchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSendMessage = async (content: string) => {
     if (!selectedMatchId) return;
     try {
-      // We don't manually update the state here anymore. 
-      // The Realtime subscription below will catch the 'INSERT' event 
-      // and update the 'messages' state for us automatically.
-      await sendMessage(selectedMatchId, content);
+      const newMessage = await sendMessage(selectedMatchId, content);
+      // Optimistically add the message immediately; realtime subscription
+      // will also fire but the dedup check prevents it from being added twice.
+      setMessages(prev => prev.find(m => m.id === newMessage.id) ? prev : [...prev, newMessage]);
     } catch (err) {
       console.error('Failed to send message:', err);
     }

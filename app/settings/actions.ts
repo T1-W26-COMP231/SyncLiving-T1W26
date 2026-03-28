@@ -22,8 +22,8 @@ export async function updatePreferences(data: {
 
   if (data.age_min !== undefined)      updates.age_min        = data.age_min;
   if (data.age_max !== undefined)      updates.age_max        = data.age_max;
-  if (data.budget_min !== undefined)   updates.budget_min     = data.budget_min;
-  if (data.budget_max !== undefined)   updates.budget_max     = data.budget_max;
+  if (data.budget_min !== undefined)   updates.pref_budget_min = data.budget_min;
+  if (data.budget_max !== undefined)   updates.pref_budget_max = data.budget_max;
   if (data.move_in_date !== undefined) updates.move_in_date   = data.move_in_date;
   if (data.lifestyle_tags !== undefined) updates.lifestyle_tags = data.lifestyle_tags;
 
@@ -68,19 +68,23 @@ export async function updateRoomPreferences(data: {
   if (profileError) return { error: profileError.message };
 
   // Replace amenity preferences
-  await supabase.from('seeker_amenity_preferences').delete().eq('user_id', user.id);
+  const { error: delAmenityErr } = await supabase.from('seeker_amenity_preferences').delete().eq('user_id', user.id);
+  if (delAmenityErr) return { error: delAmenityErr.message };
   if (data.amenity_ids.length > 0) {
-    await supabase.from('seeker_amenity_preferences').insert(
+    const { error: insAmenityErr } = await supabase.from('seeker_amenity_preferences').insert(
       data.amenity_ids.map(id => ({ user_id: user.id, amenity_id: id }))
     );
+    if (insAmenityErr) return { error: insAmenityErr.message };
   }
 
   // Replace room type preferences
-  await supabase.from('seeker_room_type_preferences').delete().eq('user_id', user.id);
+  const { error: delRoomTypeErr } = await supabase.from('seeker_room_type_preferences').delete().eq('user_id', user.id);
+  if (delRoomTypeErr) return { error: delRoomTypeErr.message };
   if (data.room_type_ids.length > 0) {
-    await supabase.from('seeker_room_type_preferences').insert(
+    const { error: insRoomTypeErr } = await supabase.from('seeker_room_type_preferences').insert(
       data.room_type_ids.map(id => ({ user_id: user.id, room_type_id: id }))
     );
+    if (insRoomTypeErr) return { error: insRoomTypeErr.message };
   }
 
   return { success: true };
