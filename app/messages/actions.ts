@@ -8,6 +8,14 @@ export interface MatchProfile {
   avatar_url: string | null;
 }
 
+export interface PendingRequest {
+  id: string;
+  sender_id: string;
+  sender: MatchProfile;
+  message: string | null;
+  status: 'pending' | 'accepted' | 'declined';
+}
+
 export interface Match {
   id: string;
   listing_id: string | null;
@@ -33,6 +41,96 @@ interface ConversationWithProfiles {
   provider_id: string;
   seeker: MatchProfile;
   provider: MatchProfile;
+}
+
+/**
+ * Fetches all pending match requests received by the current user.
+ */
+export async function getPendingRequests(): Promise<PendingRequest[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data: requests, error } = await supabase
+    .from('match_requests')
+    .select(`
+      id,
+      sender_id,
+      message,
+      status
+    `)
+    .eq('receiver_id', user.id)
+    .eq('status', 'pending');
+
+  if (error || !requests || requests.length === 0) {
+    if (error) console.error('Error fetching pending requests:', error);
+    return [];
+  }
+
+  // Fetch profiles for all senders
+  const senderIds = requests.map(r => r.sender_id);
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', senderIds);
+
+  if (profileError) {
+    console.error('Error fetching sender profiles:', profileError);
+    return [];
+  }
+
+  const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+  return requests
+    .map(item => {
+      const senderProfile = profileMap.get(item.sender_id);
+      if (!senderProfile) return null;
+      return {
+        id: item.id,
+        sender_id: item.sender_id,
+        message: item.message,
+        status: item.status as any,
+        sender: senderProfile as MatchProfile,
+      };
+    })
+    .filter((req): req is PendingRequest => req !== null);
+}
+
+/**
+ * Accepts or declines a match request.
+ * If accepted, it also ensures a conversation exists.
+ */
+export async function respondToMatchRequest(requestId: string, status: 'accepted' | 'declined') {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Unauthorized' };
+
+  // 1. Update the request status
+  const { data: request, error: updateError } = await supabase
+    .from('match_requests')
+    .update({ status })
+    .eq('id', requestId)
+    .select('sender_id, receiver_id')
+    .single();
+
+  if (updateError) {
+    console.error('Error updating match request:', updateError);
+    return { error: updateError.message };
+  }
+
+  // 2. If accepted, create a conversation
+  if (status === 'accepted' && request) {
+    const { error: convError } = await startOrGetConversation(request.sender_id);
+    if (convError) {
+      console.error('Error starting conversation after acceptance:', convError);
+      // We don't necessarily fail the whole action if the conversation fails, 
+      // but it's good to log.
+    }
+  }
+
+  return { success: true };
 }
 
 /**

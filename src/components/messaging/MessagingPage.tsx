@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
 import { HouseRules } from './HouseRules';
-import { getMatches, getMessages, sendMessage, Match, MessageData } from '../../../app/messages/actions';
+import { getMatches, getMessages, sendMessage, getPendingRequests, respondToMatchRequest, Match, MessageData, PendingRequest } from '../../../app/messages/actions';
 import { createClient } from '@/utils/supabase/client';
 
 interface MessagingPageProps {
@@ -15,6 +15,7 @@ interface MessagingPageProps {
 export default function MessagingPage({ initialConversationId }: MessagingPageProps) {
 
   const [matches, setMatches] = useState<Match[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +26,19 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
 
+  async function refreshData() {
+    const [matchesData, pendingData] = await Promise.all([
+      getMatches(),
+      getPendingRequests()
+    ]);
+    setMatches(matchesData);
+    setPendingRequests(pendingData);
+    return matchesData;
+  }
+
   useEffect(() => {
     async function init() {
-      const data = await getMatches();
-      setMatches(data);
+      const data = await refreshData();
       // Pre-select from URL param if present, otherwise fall back to first conversation
       if (initialConversationId && data.some(m => m.id === initialConversationId)) {
         setSelectedMatchId(initialConversationId);
@@ -40,6 +50,18 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
     init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleRespondToRequest = async (requestId: string, status: 'accepted' | 'declined') => {
+    const result = await respondToMatchRequest(requestId, status);
+    if (result.success) {
+      const updatedMatches = await refreshData();
+      if (status === 'accepted') {
+        // If we just accepted a match, we might want to select it
+        // However, we'd need to find which conversation was just created.
+        // For simplicity, just refreshing is fine for now.
+      }
+    }
+  };
 
   useEffect(() => {
     const currentId = selectedMatchId;
@@ -99,8 +121,11 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
       <main className="flex flex-1 overflow-hidden">
         <Sidebar 
           matches={matches} 
+          pendingRequests={pendingRequests}
           selectedMatchId={selectedMatchId} 
           onSelectMatch={setSelectedMatchId} 
+          onAcceptRequest={(id) => handleRespondToRequest(id, 'accepted')}
+          onDeclineRequest={(id) => handleRespondToRequest(id, 'declined')}
           loading={loading}
         />
         <ChatArea 
