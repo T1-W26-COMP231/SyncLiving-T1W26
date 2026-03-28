@@ -45,7 +45,7 @@ CREATE TABLE public.room_listings (
     city text NOT NULL,
     postal_code text NOT NULL,
     -- PostGIS point for matching logic
-    location_coords geography(POINT, 4326),
+    location_coords extensions.geography(POINT, 4326),
 
     -- Financials & Content
     rental_fee numeric(10, 2) NOT NULL CHECK (rental_fee >= 0),
