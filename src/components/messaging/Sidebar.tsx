@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Match, PendingRequest } from '../../../app/messages/actions';
-import { MessageSquare, Gavel, History, Check, X } from 'lucide-react';
+import { Match, PendingRequest, SentRequest } from '../../../app/messages/actions';
+import { MessageSquare, Gavel, History, Check, X, Clock } from 'lucide-react';
 
 interface SidebarProps {
   matches: Match[];
   pendingRequests?: PendingRequest[];
+  sentRequests?: SentRequest[];
   selectedMatchId: string | null;
   onSelectMatch: (id: string) => void;
   onAcceptRequest?: (id: string) => void;
@@ -17,6 +18,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ 
   matches, 
   pendingRequests = [],
+  sentRequests = [],
   selectedMatchId, 
   onSelectMatch, 
   onAcceptRequest,
@@ -73,6 +75,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <X size={12} />
                       Decline
                     </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {sentRequests.length > 0 && (
+          <div className="mt-6 flex flex-col gap-2">
+            <div className="text-xs font-bold text-blue-500 uppercase tracking-widest px-3 py-2">Sent Requests</div>
+            <div className="flex flex-col gap-2">
+              {sentRequests.map((req) => (
+                <div key={req.id} className="flex flex-col gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30">
+                  <div className="flex items-center gap-3">
+                    <img
+                      alt={req.receiver.full_name || 'User'}
+                      className="size-8 rounded-full object-cover"
+                      src={req.receiver.avatar_url || `https://ui-avatars.com/api/?name=${req.receiver.full_name || 'U'}`}
+                    />
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                        {req.receiver.full_name}
+                      </span>
+                      <div className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                        <Clock size={10} />
+                        <span>Waiting for response</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -16,6 +16,14 @@ export interface PendingRequest {
   status: 'pending' | 'accepted' | 'declined';
 }
 
+export interface SentRequest {
+  id: string;
+  receiver_id: string;
+  receiver: MatchProfile;
+  message: string | null;
+  status: 'pending' | 'accepted' | 'declined';
+}
+
 export interface Match {
   id: string;
   listing_id: string | null;
@@ -95,6 +103,60 @@ export async function getPendingRequests(): Promise<PendingRequest[]> {
       };
     })
     .filter((req): req is PendingRequest => req !== null);
+}
+
+/**
+ * Fetches all pending match requests sent BY the current user.
+ */
+export async function getSentRequests(): Promise<SentRequest[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data: requests, error } = await supabase
+    .from('match_requests')
+    .select(`
+      id,
+      receiver_id,
+      message,
+      status
+    `)
+    .eq('sender_id', user.id)
+    .eq('status', 'pending');
+
+  if (error || !requests || requests.length === 0) {
+    if (error) console.error('Error fetching sent requests:', error);
+    return [];
+  }
+
+  // Fetch profiles for all receivers
+  const receiverIds = requests.map(r => r.receiver_id);
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', receiverIds);
+
+  if (profileError) {
+    console.error('Error fetching receiver profiles:', profileError);
+    return [];
+  }
+
+  const profileMap = new Map(profiles.map(p => [p.id, p]));
+
+  return requests
+    .map(item => {
+      const receiverProfile = profileMap.get(item.receiver_id);
+      if (!receiverProfile) return null;
+      return {
+        id: item.id,
+        receiver_id: item.receiver_id,
+        message: item.message,
+        status: item.status as any,
+        receiver: receiverProfile as MatchProfile,
+      };
+    })
+    .filter((req): req is SentRequest => req !== null);
 }
 
 /**
