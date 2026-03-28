@@ -3,15 +3,15 @@
 
 UPDATE public.profiles
 SET
-  lat = ST_Y(location_coords::geometry),
-  lng = ST_X(location_coords::geometry)
+  lat = extensions.ST_Y(location_coords::extensions.geometry),
+  lng = extensions.ST_X(location_coords::extensions.geometry)
 WHERE location_coords IS NOT NULL
   AND (lat IS NULL OR lng IS NULL);
 
 UPDATE public.profiles
 SET
-  pref_lat = ST_Y(pref_location_coords::geometry),
-  pref_lng = ST_X(pref_location_coords::geometry)
+  pref_lat = extensions.ST_Y(pref_location_coords::extensions.geometry),
+  pref_lng = extensions.ST_X(pref_location_coords::extensions.geometry)
 WHERE pref_location_coords IS NOT NULL
   AND (pref_lat IS NULL OR pref_lng IS NULL);
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { SlidersHorizontal, UserCircle, UserCircle2, ChevronDown, Check, Heart, UserSearch, Map, X } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
-import type { MatchedProfile } from '@/app/discovery/actions';
+import type { MatchedProfile } from '../../../app/discovery/actions';
 import { toggleSavedProfile } from '../../../app/discovery/saved-actions';
 import { startOrGetConversation } from '../../../app/messages/actions';
 import { createClient } from '@/utils/supabase/client';
@@ -129,6 +129,7 @@ function tierLabel(tier: MatchedProfile['tier']): string {
     case 'good':         return 'Good Match';
     case 'borderline':   return 'Weak Match';
     case 'incompatible': return 'Poor Match';
+    default:             return 'Neutral Match';
   }
 }
 
@@ -151,6 +152,7 @@ function tierBadgeClass(tier: MatchedProfile['tier']): string {
     case 'good':         return 'bg-emerald-100 text-emerald-800';
     case 'borderline':   return 'bg-amber-100 text-amber-800';
     case 'incompatible': return 'bg-red-100 text-red-700';
+    default:             return 'bg-slate-100 text-slate-700';
   }
 }
 
@@ -791,7 +793,7 @@ const RoommateDiscovery: React.FC<Props> = ({
                   {/* Conflict triggers */}
                   {person.conflicts.length > 0 && (
                     <div className="mt-2 mb-1 flex flex-wrap gap-1">
-                      {person.conflicts.map(c => (
+                      {person.conflicts.map((c: any) => (
                         <span key={c.type} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[11px] text-amber-700 font-medium">
                           <span className="text-amber-400">⚠</span>
                           {conflictHint(c.type)}
