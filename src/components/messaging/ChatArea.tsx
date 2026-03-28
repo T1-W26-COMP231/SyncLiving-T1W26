@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { PlusCircle, Send } from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { MessageData, Match } from '../../../app/messages/actions';
 import { User } from './types';
@@ -48,7 +49,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       ) : (
         <>
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             <div className="flex justify-center">
               <span className="px-3 py-1 bg-slate-200 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-500 uppercase">
                 Conversation started
@@ -72,17 +73,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               onSubmit={handleSubmit}
             >
               <button type="button" className="text-slate-400 hover:text-primary transition-colors flex shrink-0">
-                <span className="material-symbols-outlined">add_circle</span>
+                <PlusCircle size={20} />
               </button>
               <input
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 placeholder-slate-500 text-slate-900 dark:text-slate-100"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-3 placeholder-slate-500 text-slate-900 dark:text-slate-100"
                 placeholder="Type your message..."
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
               />
               <button type="submit" className="text-primary flex shrink-0 disabled:opacity-50" disabled={!inputValue.trim()}>
-                <span className="material-symbols-outlined">send</span>
+                <Send size={18} />
               </button>
             </form>
           </div>

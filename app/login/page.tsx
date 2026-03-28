@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { login } from '../auth/actions';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
+import PasswordInput from '@/components/ui/PasswordInput';
 
 // Image URLs from Stitch design
 const RIGHT_PANEL_BG = 'https://lh3.googleusercontent.com/aida-public/AB6AXuANxTu1f2OWe9cYJlXVnbdn0khNksqJI0nFyoOabFIGCGQhnCGbZAa34HlWmQ7qPnBwcw0Up_CTp9XzFS9_ZZrd6B2Z-Ed3pCEj7K2kHwF1p46tdmp-grwu9p3cswCK-SDKJ4YhZ-k2yyRrKwlY_vLnAMWiwD8J4NMV1jfGkSAgxOEUqWZgX05LRQOhl5-TNGfdHpvBQbFOAjiUb5ThHmOVMAwdQEdNMY0NhELketqR8qoW2lp5pvLRAE33WoyTPTUiVhiDL8ZTlvQ';
@@ -53,22 +54,14 @@ export default function LoginPage({
                   Forgot password?
                 </a>
               </div>
-              <div className="relative">
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-slate-400"
-                />
-                <button
-                  type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                >
-                  <span className="material-symbols-outlined text-[20px]">visibility</span>
-                </button>
-              </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                required
+                className="w-full px-4 py-3.5 pr-11 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-slate-400"
+              />
             </div>
 
             <div className="flex items-center">

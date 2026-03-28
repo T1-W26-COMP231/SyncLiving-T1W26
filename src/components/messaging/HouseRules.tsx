@@ -4,6 +4,7 @@ import React from 'react';
 import { RuleItem } from './RuleItem';
 import { Rule } from './types';
 import { Button } from '@/components/ui/Button';
+import { Plus, Handshake } from 'lucide-react';
 
 const mockRules: Rule[] = [
   {
@@ -42,7 +43,7 @@ export const HouseRules: React.FC = () => {
         ))}
         
         <button className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 hover:text-primary hover:border-primary/40 transition-all">
-          <span className="material-symbols-outlined">add</span>
+          <Plus size={16} />
           <span className="text-xs font-bold uppercase tracking-wider">Propose New Rule</span>
         </button>
       </div>
@@ -50,7 +51,7 @@ export const HouseRules: React.FC = () => {
       <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-primary/10">
         <Button className="w-full flex-col gap-1 py-4 h-auto">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined">handshake</span>
+            <Handshake size={18} />
             <span className="font-bold">Digital Handshake</span>
           </div>
           <span className="text-[10px] opacity-80 font-medium normal-case">

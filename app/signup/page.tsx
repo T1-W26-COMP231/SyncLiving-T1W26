@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { signup, signInWithGoogle, signInWithApple } from '../auth/actions';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import SocialLoginButtons from '@/components/ui/SocialLoginButtons';
+import { User, Mail, Lock } from 'lucide-react';
+import PasswordInput from '@/components/ui/PasswordInput';
 
 export default function SignUpPage({
   searchParams,
@@ -39,9 +41,7 @@ export default function SignUpPage({
                 Full Name
               </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">
-                  person
-                </span>
+                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   id="full_name"
                   name="full_name"
@@ -59,9 +59,7 @@ export default function SignUpPage({
                 Email Address
               </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">
-                  mail
-                </span>
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   id="email"
                   name="email"
@@ -80,21 +78,15 @@ export default function SignUpPage({
                 Password
               </label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">
-                  lock
-                </span>
-                <input
+                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10 pointer-events-none" />
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   autoComplete="new-password"
-                  required
                   placeholder="••••••••"
+                  required
                   className="w-full pl-9 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:border-primary transition-colors placeholder-gray-400"
                 />
-                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-base cursor-pointer select-none">
-                  visibility_off
-                </span>
               </div>
             </div>
 

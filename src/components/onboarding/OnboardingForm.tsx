@@ -79,7 +79,7 @@ const STEP_NAMES    = ['About You', 'Lifestyle', 'Photos'];
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const hasSpacePurpose = (p: HousingPurpose) => p === 'have_space';
-const purposeToRole = (_p: HousingPurpose): 'seeker' | 'provider' => 'seeker';
+const purposeToRole = (p: HousingPurpose): 'seeker' | 'provider' => p === 'have_space' ? 'provider' : 'seeker';
 
 // Parse existing FCRM prefixed tags (e.g. "wd:social:BalancedSocial")
 const parseFcrmTags = (tags: string[], prefix: 'wd' | 'we'): DimTags => {
@@ -113,12 +113,14 @@ const inputCls =
 
 // ─── Dual-range slider ────────────────────────────────────────────────────────
 
+// pointer-events-none on the track, pointer-events-auto only on the thumb
+// — this prevents the top input from blocking the bottom input's thumb
 const thumbCls =
-  'absolute w-full h-full appearance-none bg-transparent cursor-pointer ' +
+  'absolute w-full h-full appearance-none bg-transparent pointer-events-none ' +
   '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 ' +
   '[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white ' +
   '[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-md ' +
-  '[&::-webkit-slider-thumb]:cursor-pointer ' +
+  '[&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto ' +
   '[&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 ' +
   '[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white ' +
   '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:shadow-md ' +
@@ -155,13 +157,11 @@ function DualRangeSlider({
           type="range" min={min} max={max} step={step} value={valueMin}
           onChange={e => onChangeMin(Math.min(Number(e.target.value), valueMax - step))}
           className={thumbCls}
-          style={{ zIndex: valueMin >= valueMax - step ? 5 : 3 }}
         />
         <input
           type="range" min={min} max={max} step={step} value={valueMax}
           onChange={e => onChangeMax(Math.max(Number(e.target.value), valueMin + step))}
           className={thumbCls}
-          style={{ zIndex: 4 }}
         />
       </div>
       <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
@@ -276,22 +276,22 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   // ── Form state ──────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     full_name:        initialData?.full_name        || '',
-    age:              initialData?.age              || 25,
-    gender:           initialData?.preferred_gender || 'Prefer not to say',
+    age:              initialData?.age              || '',
+    gender:           initialData?.preferred_gender || '',
     location:         initialData?.location         || '',
     latitude:         initialLat,
     longitude:        initialLng,
-    housingPurpose:  'find_roommate'                as HousingPurpose,
+    housingPurpose:  (initialData?.role === 'provider' ? 'have_space' : 'find_roommate') as HousingPurpose,
     budget_min:       initialData?.budget_min       || 800,
     budget_max:       initialData?.budget_max       || 2500,
-    roommate_age_min: 18,
-    roommate_age_max: 35,
+    roommate_age_min: initialData?.age_min ?? 18,
+    roommate_age_max: initialData?.age_max ?? 35,
     move_in_date:     initialData?.move_in_date     || '',
     bio:              initialData?.bio              || '',
   });
 
   // ── Binary preference tags ───────────────────────────────────────────────────
-  const BINARY_TAGS = ['Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly', 'Vegan Friendly'] as const;
+  const BINARY_TAGS = ['Pet Allowed', 'Non-Smoker', 'LGBTQ+ Friendly', 'Vegan Friendly'] as const;
   const [binaryTags, setBinaryTags] = useState<string[]>(
     (initialData?.lifestyle_tags || []).filter((t: string) => BINARY_TAGS.includes(t as any))
   );
@@ -402,6 +402,10 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     if (stepNum === 1) {
       if (!formData.full_name.trim())
         errs.full_name = 'Full name is required.';
+      if (!formData.age || Number(formData.age) < 18 || Number(formData.age) > 99)
+        errs.age = 'Please enter a valid age (18–99).';
+      if (!formData.gender)
+        errs.gender = 'Please select your gender.';
       if (!formData.location.trim())
         errs.location = 'Please enter and select your location.';
       if (!formData.move_in_date)
@@ -494,21 +498,41 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       const v_wd = buildVector(weekdayTags, lifestyleDimensions);
       const v_we = buildVector(weekendTags, lifestyleDimensions);
 
+      // Fallback geocoding: if the autocomplete didn't fire but location text exists,
+      // resolve coordinates from the text so lat/lng are never saved as null.
+      let submitLat = formData.latitude;
+      let submitLng = formData.longitude;
+      if ((!submitLat || !submitLng) && formData.location.trim()) {
+        try {
+          const geocoder = new (window as any).google.maps.Geocoder();
+          const result = await geocoder.geocode({ address: formData.location });
+          if (result.results[0]) {
+            const loc = result.results[0].geometry.location;
+            submitLat = loc.lat();
+            submitLng = loc.lng();
+          }
+        } catch {
+          // Geocoding failed — proceed without coordinates
+        }
+      }
+
       const result = await updateProfile({
         full_name:        formData.full_name,
         avatar_url:       finalAvatarUrl,
         bio:              formData.bio,
         photos:           finalMorePhotoUrls,
-        age:              formData.age,
+        age:              parseInt(String(formData.age)) || 0,
         location:         formData.location,
-        longitude:        formData.longitude,
-        latitude:         formData.latitude,
+        longitude:        submitLng,
+        latitude:         submitLat,
         role:             purposeToRole(formData.housingPurpose),
         lifestyle_tags,
         budget_min:       formData.budget_min,
         budget_max:       formData.budget_max,
-        preferred_gender: formData.gender,
-        move_in_date:     formData.move_in_date,
+        preferred_gender:  formData.gender,
+        move_in_date:      formData.move_in_date,
+        roommate_age_min:  formData.roommate_age_min,
+        roommate_age_max:  formData.roommate_age_max,
         v_wd,
         v_we,
       });
@@ -600,22 +624,26 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
                     type="number"
                     min={18} max={99}
                     value={formData.age}
-                    onChange={e => setFormData(p => ({ ...p, age: parseInt(e.target.value) || 18 }))}
-                    className={inputCls}
+                    placeholder="e.g. 25"
+                    onChange={e => { setFormData(p => ({ ...p, age: e.target.value as any })); setErrors(p => ({ ...p, age: '' })); }}
+                    className={`${inputCls} ${errors.age ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                   />
+                  {errors.age && <p className="text-xs text-red-500 mt-1">{errors.age}</p>}
                 </div>
                 <div>
                   <FieldLabel>Your Gender</FieldLabel>
                   <select
                     value={formData.gender}
-                    onChange={e => setFormData(p => ({ ...p, gender: e.target.value }))}
-                    className={inputCls}
+                    onChange={e => { setFormData(p => ({ ...p, gender: e.target.value })); setErrors(p => ({ ...p, gender: '' })); }}
+                    className={`${inputCls} ${errors.gender ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''}`}
                   >
+                    <option value="">Select gender…</option>
                     <option>Male</option>
                     <option>Female</option>
                     <option>Non-binary</option>
                     <option>Prefer not to say</option>
                   </select>
+                  {errors.gender && <p className="text-xs text-red-500 mt-1">{errors.gender}</p>}
                 </div>
               </div>
             </section>
@@ -623,13 +651,21 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
             {/* Location */}
             <section>
               <SectionLabel Icon={MapPin} label="Location" required />
-              <AddressAutocomplete
+              {/* Only mount AddressAutocomplete once Google Maps is ready so initOnMount: true always works */}
+              {!isGoogleLoaded && (
+                <input
+                  disabled
+                  placeholder="Loading address service..."
+                  className={inputCls + ' opacity-60'}
+                />
+              )}
+              {isGoogleLoaded && <AddressAutocomplete
                 defaultValue={formData.location}
                 onAddressSelect={(address, _city, _zip, lat, lng) => {
                   setFormData(p => ({ ...p, location: address, latitude: lat, longitude: lng }));
                   setErrors(p => ({ ...p, location: '' }));
                 }}
-              />
+              />}
               {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
               {formData.latitude && (
                 <p className="text-[10px] text-slate-400 mt-1.5 pl-1">
@@ -827,7 +863,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
               <SectionLabel Icon={Tag} label="Additional" optional />
               <div className="flex flex-wrap gap-2">
                 {[
-                  { tag: 'Pet Friendly',    Icon: Heart, label: 'Pet Friendly'    },
+                  { tag: 'Pet Allowed',     Icon: Heart, label: 'Pet Allowed'     },
                   { tag: 'Non-Smoker',      Icon: Ban,   label: 'Non-Smoker'      },
                   { tag: 'LGBTQ+ Friendly', Icon: Star,  label: 'LGBTQ+ Friendly' },
                   { tag: 'Vegan Friendly',  Icon: Leaf,  label: 'Vegan Friendly'  },
@@ -1173,7 +1209,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   return (
     <>
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
         strategy="afterInteractive"
       />
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-xl flex flex-col border border-slate-100">

@@ -10,6 +10,7 @@ import { updatePreferences, updateRoomPreferences } from '../../../app/settings/
 interface SettingsModalProps {
   initialProfile?: any;
   onClose: () => void;
+  onSaved?: (amenityIds: string[], roomTypeIds: string[]) => void;
   allAmenities?: { id: string; name: string; category: string | null }[];
   allRoomTypes?: { id: string; name: string }[];
   initialAmenityIds?: string[];
@@ -18,12 +19,14 @@ interface SettingsModalProps {
 
 // ─── Dual-range slider ────────────────────────────────────────────────────────
 
+// pointer-events-none on the track, pointer-events-auto only on the thumb
+// — this prevents the top input from blocking the bottom input's thumb
 const thumbCls =
-  'absolute w-full h-full appearance-none bg-transparent cursor-pointer ' +
+  'absolute w-full h-full appearance-none bg-transparent pointer-events-none ' +
   '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 ' +
   '[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white ' +
   '[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-md ' +
-  '[&::-webkit-slider-thumb]:cursor-pointer ' +
+  '[&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto ' +
   '[&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 ' +
   '[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white ' +
   '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:shadow-md ' +
@@ -60,13 +63,11 @@ function DualRangeSlider({
           type="range" min={min} max={max} step={step} value={valueMin}
           onChange={e => onChangeMin(Math.min(Number(e.target.value), valueMax - step))}
           className={thumbCls}
-          style={{ zIndex: valueMin >= valueMax - step ? 5 : 3 }}
         />
         <input
           type="range" min={min} max={max} step={step} value={valueMax}
           onChange={e => onChangeMax(Math.max(Number(e.target.value), valueMin + step))}
           className={thumbCls}
-          style={{ zIndex: 4 }}
         />
       </div>
       <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
@@ -115,6 +116,7 @@ function SectionLabel({ Icon, label }: { Icon: React.FC<any>; label: string }) {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   initialProfile,
   onClose,
+  onSaved,
   allAmenities = [],
   allRoomTypes = [],
   initialAmenityIds = [],
@@ -126,10 +128,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const tags: string[] = initialProfile?.lifestyle_tags || [];
   const [ageMin,     setAgeMin]     = useState<number>(initialProfile?.age_min     || 18);
   const [ageMax,     setAgeMax]     = useState<number>(initialProfile?.age_max     || 45);
-  const [budgetMin,  setBudgetMin]  = useState<number>(initialProfile?.budget_min  || 800);
-  const [budgetMax,  setBudgetMax]  = useState<number>(initialProfile?.budget_max  || 2500);
+  const [budgetMin,  setBudgetMin]  = useState<number>(initialProfile?.pref_budget_min  || 800);
+  const [budgetMax,  setBudgetMax]  = useState<number>(initialProfile?.pref_budget_max  || 2500);
   const [moveInDate, setMoveInDate] = useState<string>(initialProfile?.move_in_date || '');
-  const [pets,       setPets]       = useState<boolean>(tags.includes('Pet Friendly'));
+  const [pets,       setPets]       = useState<boolean>(tags.includes('Pet Allowed') || tags.includes('Pet Friendly'));
   const [smoking,    setSmoking]    = useState<boolean>(tags.includes('Non-Smoker'));
   const [lgbt,       setLgbt]       = useState<boolean>(tags.includes('LGBTQ+ Friendly'));
   const [sameGender, setSameGender] = useState<boolean>(tags.includes('Same Gender Only'));
@@ -149,7 +151,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
-  const [location,            setLocation]            = useState<string>(initialProfile?.pref_reference_location || '');
+  const [location,            setLocation]            = useState<string>(initialProfile?.pref_reference_location || initialProfile?.location || '');
   const [latitude,            setLatitude]            = useState<number | undefined>(initialLat);
   const [longitude,           setLongitude]           = useState<number | undefined>(initialLng);
   const [maxDistance,         setMaxDistance]         = useState<number>(initialProfile?.pref_max_distance || 10);
@@ -192,16 +194,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setLoading(true);
     try {
       const otherTags = tags.filter(
-        t => !['Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly', 'Same Gender Only', 'Vegan Friendly'].includes(t)
+        t => !['Pet Allowed', 'Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly', 'Same Gender Only', 'Vegan Friendly'].includes(t)
       );
       const newTags = [
         ...otherTags,
-        ...(pets       ? ['Pet Friendly']    : []),
+        ...(pets       ? ['Pet Allowed']     : []),
         ...(smoking    ? ['Non-Smoker']      : []),
         ...(lgbt       ? ['LGBTQ+ Friendly'] : []),
         ...(sameGender ? ['Same Gender Only'] : []),
         ...(vegan      ? ['Vegan Friendly']  : []),
       ];
+
+      // Fallback geocoding: if the autocomplete didn't fire but location text exists,
+      // resolve coordinates from the text so lat/lng are never saved as null.
+      let submitLat = latitude;
+      let submitLng = longitude;
+      if ((!submitLat || !submitLng) && location.trim()) {
+        try {
+          const geocoder = new (window as any).google.maps.Geocoder();
+          const result = await geocoder.geocode({ address: location });
+          if (result.results[0]) {
+            const loc = result.results[0].geometry.location;
+            submitLat = loc.lat();
+            submitLng = loc.lng();
+          }
+        } catch {
+          // Geocoding failed — proceed without coordinates
+        }
+      }
 
       const [roommateResult, roomResult] = await Promise.all([
         updatePreferences({
@@ -216,8 +236,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           amenity_ids:        selectedAmenities,
           room_type_ids:      selectedRoomTypes,
           reference_location: location,
-          latitude,
-          longitude,
+          latitude:           submitLat,
+          longitude:          submitLng,
           max_distance:       maxDistance,
         }),
       ]);
@@ -226,6 +246,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         alert('Error saving: ' + (roommateResult?.error || roomResult?.error));
       } else {
         setSaved(true);
+        onSaved?.(selectedAmenities, selectedRoomTypes);
         setTimeout(() => { setSaved(false); onClose(); }, 800);
       }
     } finally {
