@@ -18,7 +18,7 @@ export default function ProviderDashboardClient({
   initialProfile,
 }: ProviderDashboardClientProps) {
   const router = useRouter();
-  const [activeTab,   setActiveTab]   = useState<'All' | 'Published' | 'Drafts' | 'Archived'>('All');
+  const [activeTab,   setActiveTab]   = useState<'All' | 'Published' | 'Paused' | 'Drafts'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [displayName, setDisplayName] = useState<string>('');
 
@@ -42,8 +42,8 @@ export default function ProviderDashboardClient({
     const statusMatch =
       activeTab === 'All' ||
       (activeTab === 'Published' && listing.status === 'published') ||
-      (activeTab === 'Drafts'    && listing.status === 'draft')      ||
-      (activeTab === 'Archived'  && listing.status === 'archived');
+      (activeTab === 'Paused'    && listing.status === 'paused')    ||
+      (activeTab === 'Drafts'    && listing.status === 'draft');
     return statusMatch && listing.title.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -127,12 +127,12 @@ export default function ProviderDashboardClient({
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-              {(['All', 'Published', 'Drafts', 'Archived'] as const).map(tab => (
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-full">
+              {(['All', 'Published', 'Paused', 'Drafts'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
+                  className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
                     activeTab === tab ? 'bg-white text-dark shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >

@@ -290,7 +290,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              {tab === 'roommate' ? 'Roommate' : 'Room'}
+              {tab === 'roommate' ? 'Roommate' : 'Room-Specific'}
             </button>
           ))}
         </div>
@@ -301,6 +301,55 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* ── ROOMMATE TAB ─────────────────────────────────────────────── */}
           {activeTab === 'roommate' && (
             <>
+              {/* Location & Distance */}
+              <div>
+                <SectionLabel Icon={LocateFixed} label="Location & Distance" />
+                <div className="relative mb-4">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={e => searchLocation(e.target.value)}
+                    onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
+                    placeholder="Search city or neighborhood…"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-dark focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  />
+                  {showSuggestions && locationSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                      {locationSuggestions.map((s, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleSelectSuggestion(s)}
+                          className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors flex items-start gap-2"
+                        >
+                          <MapPin size={13} className="mt-0.5 text-slate-400 shrink-0" />
+                          <span className="font-medium text-dark truncate">{s.display_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-semibold text-slate-600">Maximum Distance</span>
+                    <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-bold">
+                      within {maxDistance} km
+                    </span>
+                  </div>
+                  <input
+                    type="range" min={1} max={100} step={1}
+                    value={maxDistance}
+                    onChange={e => setMaxDistance(parseInt(e.target.value))}
+                    className="w-full accent-primary h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-100"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
+                    <span>1 km</span><span>50 km</span><span>100 km</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Age Range */}
               <div>
                 <SectionLabel Icon={User} label="Age Range" />
@@ -407,61 +456,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
               </div>
+
             </>
           )}
 
-          {/* ── ROOM TAB ─────────────────────────────────────────────────── */}
+          {/* ── ROOM-SPECIFIC TAB ────────────────────────────────────────── */}
           {activeTab === 'room' && (
             <>
-              {/* Location & Distance */}
-              <div>
-                <SectionLabel Icon={LocateFixed} label="Location & Distance" />
-                <div className="relative mb-4">
-                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={e => searchLocation(e.target.value)}
-                    onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
-                    placeholder="Search city or neighborhood…"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-dark focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                  />
-                  {showSuggestions && locationSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                      {locationSuggestions.map((s, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => handleSelectSuggestion(s)}
-                          className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors flex items-start gap-2"
-                        >
-                          <MapPin size={13} className="mt-0.5 text-slate-400 shrink-0" />
-                          <span className="font-medium text-dark truncate">{s.display_name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-semibold text-slate-600">Maximum Distance</span>
-                    <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-bold">
-                      within {maxDistance} km
-                    </span>
-                  </div>
-                  <input
-                    type="range" min={1} max={100} step={1}
-                    value={maxDistance}
-                    onChange={e => setMaxDistance(parseInt(e.target.value))}
-                    className="w-full accent-primary h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-100"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
-                    <span>1 km</span><span>50 km</span><span>100 km</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Room Type */}
               <div>
                 <SectionLabel Icon={Building2} label="Preferred Room Type" />

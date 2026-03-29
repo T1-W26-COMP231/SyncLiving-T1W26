@@ -46,10 +46,10 @@ export default async function ProviderDashboard() {
     return {
       id: item.id,
       title: item.title,
-      price: item.rental_fee,
+      price: Number(item.rental_fee),
       location: item.address,
-      distance: 'Calculating...',
-      status: item.status as 'published' | 'draft' | 'archived',
+      distance: '',
+      status: item.status as 'published' | 'draft' | 'paused',
       imageUrl: imageUrl,
       photos: item.photos || [],
       stats: {
