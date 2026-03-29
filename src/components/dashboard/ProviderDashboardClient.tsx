@@ -18,7 +18,7 @@ export default function ProviderDashboardClient({
   initialProfile,
 }: ProviderDashboardClientProps) {
   const router = useRouter();
-  const [activeTab,   setActiveTab]   = useState<'All' | 'Published' | 'Paused' | 'Drafts'>('All');
+  const [activeTab,   setActiveTab]   = useState<'All' | 'Published' | 'Archived' | 'Drafts'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [displayName, setDisplayName] = useState<string>('');
 
@@ -42,7 +42,7 @@ export default function ProviderDashboardClient({
     const statusMatch =
       activeTab === 'All' ||
       (activeTab === 'Published' && listing.status === 'published') ||
-      (activeTab === 'Paused'    && listing.status === 'paused')    ||
+      (activeTab === 'Archived'   && listing.status === 'archived')  ||
       (activeTab === 'Drafts'    && listing.status === 'draft');
     return statusMatch && listing.title.toLowerCase().includes(searchQuery.toLowerCase());
   });
@@ -128,7 +128,7 @@ export default function ProviderDashboardClient({
 
             {/* Filter Tabs */}
             <div className="flex gap-1 bg-slate-100 p-1 rounded-full">
-              {(['All', 'Published', 'Paused', 'Drafts'] as const).map(tab => (
+              {(['All', 'Published', 'Archived', 'Drafts'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -177,3 +177,4 @@ export default function ProviderDashboardClient({
     </div>
   );
 }
+

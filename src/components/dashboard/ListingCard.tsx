@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { updateListingStatus, deleteListing } from '../../../app/dashboard/actions';
 
-export type ListingStatus = 'published' | 'draft' | 'paused';
+export type ListingStatus = 'published' | 'draft' | 'archived';
 
 export interface ListingType {
   id: string;
@@ -70,9 +70,9 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
   // Contextual menu items per current status
   const menuItems =
     currentStatus === 'published' ? [
-      { label: 'Pause',  Icon: PauseCircle, action: () => handleStatusChange('paused'), cls: 'text-amber-600' },
+      { label: 'Archive',  Icon: PauseCircle, action: () => handleStatusChange('archived'), cls: 'text-amber-600' },
       { label: 'Delete', Icon: Trash2,      action: handleDelete,                       cls: 'text-red-500'   },
-    ] : currentStatus === 'paused' ? [
+    ] : currentStatus === 'archived' ? [
       { label: 'Resume', Icon: PlayCircle, action: () => handleStatusChange('published'), cls: 'text-green-600' },
       { label: 'Delete', Icon: Trash2,     action: handleDelete,                          cls: 'text-red-500'   },
     ] : []; // draft

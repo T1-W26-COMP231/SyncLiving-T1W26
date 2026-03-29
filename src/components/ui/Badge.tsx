@@ -2,7 +2,7 @@ import React from 'react';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'published' | 'draft' | 'paused' | 'default';
+  variant?: 'published' | 'draft' | 'archived' | 'default';
   className?: string;
 }
 
@@ -12,7 +12,7 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', cla
   const variants = {
     published: "bg-[#e5fcf9] text-[#00a396]",
     draft:     "bg-gray-200 text-gray-700",
-    paused:    "bg-amber-100 text-amber-700",
+    archived:    "bg-amber-100 text-amber-700",
     default:   "bg-gray-100 text-gray-800",
   };
 

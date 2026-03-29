@@ -114,7 +114,7 @@ export async function createListing(prevState: any, formData: FormData) {
   redirect('/dashboard');
 }
 
-export async function updateListingStatus(id: string, status: 'published' | 'paused' | 'draft') {
+export async function updateListingStatus(id: string, status: 'published' | 'archived' | 'draft') {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };

@@ -49,7 +49,7 @@ export default async function ProviderDashboard() {
       price: Number(item.rental_fee),
       location: item.address,
       distance: '',
-      status: item.status as 'published' | 'draft' | 'paused',
+      status: item.status as 'published' | 'draft' | 'archived',
       imageUrl: imageUrl,
       photos: item.photos || [],
       stats: {
