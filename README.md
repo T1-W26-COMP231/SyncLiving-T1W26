@@ -77,6 +77,14 @@ npx supabase db reset
 ```
 *This will execute all scripts in `supabase/migrations/`.*
 
+#### 🛠 Promote User to Admin
+To grant administrator privileges to a user, run the following command in the **Supabase SQL Editor**:
+
+```sql
+UPDATE public.profiles SET is_admin = true WHERE id = 'USER-UUID';
+```
+*(Replace `'USER-UUID'` with the actual user ID found in the Auth > Users section of your dashboard).*
+
 ### 5. Run Next.js
 Install dependencies and start the development server:
 
