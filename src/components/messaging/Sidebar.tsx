@@ -1,24 +1,32 @@
 'use client';
 
 import React from 'react';
-import { Match } from '../../../app/messages/actions';
-import { MessageSquare, Gavel, History } from 'lucide-react';
+import { Match, PendingRequest, SentRequest } from '../../../app/messages/actions';
+import { MessageSquare, Gavel, History, Check, X, Clock } from 'lucide-react';
 
 interface SidebarProps {
   matches: Match[];
+  pendingRequests?: PendingRequest[];
+  sentRequests?: SentRequest[];
   selectedMatchId: string | null;
   onSelectMatch: (id: string) => void;
+  onAcceptRequest?: (id: string) => void;
+  onDeclineRequest?: (id: string) => void;
   loading: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   matches, 
+  pendingRequests = [],
+  sentRequests = [],
   selectedMatchId, 
   onSelectMatch, 
+  onAcceptRequest,
+  onDeclineRequest,
   loading 
 }) => {
   return (
-    <aside className="w-64 border-r border-primary/10 bg-white dark:bg-slate-900 flex-col hidden lg:flex">
+    <aside className="w-64 border-r border-primary/10 bg-white dark:bg-slate-900 flex-col hidden lg:flex overflow-y-auto">
       <div className="p-4 flex flex-col gap-2">
         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2">Workspace</div>
         <nav className="flex flex-col gap-1">
@@ -35,6 +43,72 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span>Change Log</span>
           </a>
         </nav>
+
+        {pendingRequests.length > 0 && (
+          <div className="mt-6 flex flex-col gap-2">
+            <div className="text-xs font-bold text-amber-500 uppercase tracking-widest px-3 py-2">Pending Requests</div>
+            <div className="flex flex-col gap-2">
+              {pendingRequests.map((req) => (
+                <div key={req.id} className="flex flex-col gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30">
+                  <div className="flex items-center gap-3">
+                    <img
+                      alt={req.sender.full_name || 'User'}
+                      className="size-8 rounded-full object-cover"
+                      src={req.sender.avatar_url || `https://ui-avatars.com/api/?name=${req.sender.full_name || 'U'}`}
+                    />
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {req.sender.full_name}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onAcceptRequest?.(req.id)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition-colors"
+                    >
+                      <Check size={12} />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => onDeclineRequest?.(req.id)}
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      <X size={12} />
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {sentRequests.length > 0 && (
+          <div className="mt-6 flex flex-col gap-2">
+            <div className="text-xs font-bold text-blue-500 uppercase tracking-widest px-3 py-2">Sent Requests</div>
+            <div className="flex flex-col gap-2">
+              {sentRequests.map((req) => (
+                <div key={req.id} className="flex flex-col gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30">
+                  <div className="flex items-center gap-3">
+                    <img
+                      alt={req.receiver.full_name || 'User'}
+                      className="size-8 rounded-full object-cover"
+                      src={req.receiver.avatar_url || `https://ui-avatars.com/api/?name=${req.receiver.full_name || 'U'}`}
+                    />
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                        {req.receiver.full_name}
+                      </span>
+                      <div className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                        <Clock size={10} />
+                        <span>Waiting for response</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-2">
           <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2">Matches</div>

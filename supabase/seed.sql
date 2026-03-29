@@ -88,3 +88,31 @@ INSERT INTO public.room_types (name) VALUES
     ('Entire Apartment'),
     ('Studio')
 ON CONFLICT (name) DO NOTHING;
+
+-- Seed Review Criteria
+INSERT INTO public.review_criteria (label, category, display_order) VALUES
+    -- Lifestyle
+    ('Common Area Cleanliness', 'Lifestyle', 1),
+    ('Kitchen Hygiene', 'Lifestyle', 2),
+    ('Bathroom Etiquette', 'Lifestyle', 3),
+    ('Garbage Disposal', 'Lifestyle', 4),
+    ('Odor Control', 'Lifestyle', 5),
+    ('Daytime Noise Level', 'Lifestyle', 6),
+    ('Nighttime Quietness', 'Lifestyle', 7),
+    ('Energy/Water Saving', 'Lifestyle', 8),
+    -- Communication & Social
+    ('Friendliness', 'Social', 9),
+    ('Respect for Privacy', 'Social', 10),
+    ('Communication Efficiency', 'Social', 11),
+    ('Conflict Resolution', 'Social', 12),
+    ('Guest Policy Compliance', 'Social', 13),
+    ('Borrowing Etiquette', 'Social', 14),
+    -- Financials & Responsibility
+    ('Rent Punctuality', 'Financial', 15),
+    ('Utility Bill Payment', 'Financial', 16),
+    ('Shared Supplies Contribution', 'Financial', 17),
+    ('Security Awareness', 'Responsibility', 18),
+    -- General
+    ('Honesty & Reliability', 'General', 19),
+    ('Overall Compatibility', 'General', 20)
+ON CONFLICT DO NOTHING;

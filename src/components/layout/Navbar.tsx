@@ -74,6 +74,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
             <NavLink label="Discovery"  href="/discovery"          active={activeTab === 'Discovery'} />
             <NavLink label="Matches"    href="#"    badge="12"     active={activeTab === 'Matches'} />
             <NavLink label="Messages"   href="/messages" badge="3" active={activeTab === 'Messages'} />
+            <NavLink label="Reviews"    href="/reviews"            active={activeTab === 'Reviews'} />
           </nav>
 
           {/* Right Actions */}
