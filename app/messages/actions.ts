@@ -174,7 +174,7 @@ export async function respondToMatchRequest(requestId: string, status: 'accepted
     .from('match_requests')
     .update({ status })
     .eq('id', requestId)
-    .select('sender_id, receiver_id')
+    .select('sender_id, receiver_id, status')
     .single();
 
   if (updateError) {
@@ -182,13 +182,34 @@ export async function respondToMatchRequest(requestId: string, status: 'accepted
     return { error: updateError.message };
   }
 
-  // 2. If accepted, create a conversation
+  console.log('Match request updated successfully:', request);
+
+  // 2. If accepted, create a conversation and a user connection for testing
   if (status === 'accepted' && request) {
+    console.log('Attempting to create conversation and connection...');
+    // Start the conversation
     const { error: convError } = await startOrGetConversation(request.sender_id);
     if (convError) {
       console.error('Error starting conversation after acceptance:', convError);
-      // We don't necessarily fail the whole action if the conversation fails, 
-      // but it's good to log.
+    }
+
+    // CREATE USER CONNECTION FOR TESTING REVIEWS
+    const [u1, u2] = [request.sender_id, request.receiver_id].sort();
+    console.log(`Upserting connection for users ${u1} and ${u2}`);
+    const { error: connError } = await supabase
+      .from('user_connections')
+      .upsert({
+        user_1_id: u1,
+        user_2_id: u2,
+        status: 'active',
+        connection_type: 'roommate',
+        can_review: true
+      }, { onConflict: 'user_1_id, user_2_id, status' });
+
+    if (connError) {
+      console.error('Error creating user connection:', connError);
+    } else {
+      console.log('User connection created/updated successfully');
     }
   }
 

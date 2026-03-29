@@ -1,197 +1,168 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { ReviewTarget, HighlightTag } from './types';
-
-export const MOCK_REVIEW_TARGET: ReviewTarget = {
-  id: 'user_123',
-  name: 'Alex Johnson',
-  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBTxODj-YIjr-mN8PBjuRjpMMi8gvg0K5ifbNoiJAK85Xs9MswY7478O8Xiv2zeoXlh5FMtORXCqt14pWd7i-FQlQxHCtrs7oOzPnelf6Zylo8FrSffhCZZtAtyZMxuYJQ4HMJ1_erQ_VoZ_iaFVuz31dLHLowSiJqkDzzxqSGNJW3jUERwbUhdwSVUtj01CXiBWxmbSRBPi5p5wETIlGV--DGG6xN-oHYzvSfQAnNNnXOqfrcI9lHegW36IDaXGaMLvTIkg88J6ZI',
-  matchedTime: '3 months ago',
-  location: 'New York, NY',
-  isVerified: true,
-};
-
-const HIGHLIGHT_TAGS: HighlightTag[] = [
-  { id: 'cleanliness', label: 'Cleanliness', icon: 'clean_hands' },
-  { id: 'noise_level', label: 'Noise Level', icon: 'volume_off' },
-  { id: 'communication', label: 'Communication', icon: 'chat' },
-  { id: 'bill_payment', label: 'Bill Payment', icon: 'payments' },
-  { id: 'guests', label: 'Guests', icon: 'group' },
-  { id: 'pet_friendly', label: 'Pet Friendly', icon: 'pets' },
-];
+import { ReviewCriterion, UserToReview, submitReview, ExistingReview } from '../../../app/reviews/actions';
+import { useRouter } from 'next/navigation';
 
 interface WriteReviewFormProps {
-  target?: ReviewTarget;
+  targetUser: UserToReview;
+  criteria: ReviewCriterion[];
+  initialData?: ExistingReview | null;
+  onSuccess?: () => void;
 }
 
-export default function WriteReviewForm({ target = MOCK_REVIEW_TARGET }: WriteReviewFormProps) {
-  const [rating, setRating] = useState<number>(0);
-  const [hoveredRating, setHoveredRating] = useState<number>(0);
-  const [selectedHighlights, setSelectedHighlights] = useState<Set<string>>(new Set());
-  const [feedback, setFeedback] = useState('');
+export default function WriteReviewForm({ targetUser, criteria, initialData, onSuccess }: WriteReviewFormProps) {
+  const [scores, setScores] = useState<Record<string, number>>(initialData?.scores || {});
+  const [overallComment, setOverallComment] = useState(initialData?.overall_comment || '');
+  const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
 
-  const toggleHighlight = (id: string) => {
-    const newSelection = new Set(selectedHighlights);
-    if (newSelection.has(id)) {
-      newSelection.delete(id);
-    } else {
-      newSelection.add(id);
-    }
-    setSelectedHighlights(newSelection);
+  // Update form when initialData changes (new user selected)
+  useEffect(() => {
+    setScores(initialData?.scores || {});
+    setOverallComment(initialData?.overall_comment || '');
+  }, [initialData, targetUser.id]);
+
+  const handleScoreChange = (criteriaId: string, score: number) => {
+    setScores(prev => ({ ...prev, [criteriaId]: score }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting review:', { rating, highlights: Array.from(selectedHighlights), feedback });
-    // Handle submission logic here
+    
+    // Validate all criteria are scored
+    if (Object.keys(scores).length < criteria.length) {
+      alert('Please score all items before submitting.');
+      return;
+    }
+
+    setSubmitting(true);
+    const scoreArray = Object.entries(scores).map(([id, score]) => ({
+      criteriaId: id,
+      score
+    }));
+
+    const result = await submitReview(targetUser.id, overallComment, scoreArray);
+    
+    if (result.success) {
+      alert('Review saved successfully!');
+      if (onSuccess) onSuccess();
+      router.refresh();
+    } else {
+      alert('Error saving review: ' + result.error);
+    }
+    setSubmitting(false);
   };
+
+  const categories = Array.from(new Set(criteria.map(c => c.category)));
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[800px]">
+    <div className="flex flex-col gap-8 w-full max-w-[800px] p-6 lg:p-10 overflow-y-auto max-h-screen">
       
       {/* Header Section */}
       <div className="flex flex-col gap-2">
         <h1 className="text-slate-900 dark:text-slate-100 text-3xl font-extrabold leading-tight">
-          Write a Review
+          Review for {targetUser.full_name}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-base">
-          Your feedback helps the SyncLiving community find better matches.
+          {initialData ? 'You have already reviewed this roommate. You can update your feedback here.' : 'Be honest and objective. Your feedback helps the SyncLiving community.'}
         </p>
       </div>
 
-      {/* Roommate Snippet */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex items-center gap-6">
-        <div className="relative">
-          <div 
-            className="size-24 rounded-full bg-cover bg-center border-4 border-primary/20"
-            style={{ backgroundImage: `url("${target.avatarUrl}")` }}
-            role="img"
-            aria-label={`Professional headshot of ${target.name} for review`}
+      {/* Target User Info */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-6">
+          <img
+            alt={targetUser.full_name}
+            className="size-20 rounded-full object-cover border-4 border-primary/20"
+            src={targetUser.avatar_url || `https://ui-avatars.com/api/?name=${targetUser.full_name}`}
           />
+          <div className="flex flex-col">
+            <h3 className="text-slate-900 dark:text-slate-100 text-xl font-bold">{targetUser.full_name}</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Verified Connection</p>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <h3 className="text-slate-900 dark:text-slate-100 text-xl font-bold">{target.name}</h3>
-          <p className="text-slate-500 dark:text-slate-400">
-            Matched {target.matchedTime} • {target.location}
-          </p>
-          {target.isVerified && (
-            <div className="flex items-center gap-1 mt-1 text-primary">
-              <span className="material-symbols-outlined text-sm">verified</span>
-              <span className="text-xs font-semibold uppercase tracking-wider">Verified Roommate</span>
+        
+        {targetUser.average_score && targetUser.average_score > 0 ? (
+          <div className="flex flex-col items-center gap-1 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+            <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-black text-2xl">
+              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+              {targetUser.average_score.toFixed(1)}
             </div>
-          )}
-        </div>
+            <span className="text-[10px] text-amber-500 dark:text-amber-500 font-bold uppercase tracking-widest">Your Previous Rating</span>
+          </div>
+        ) : null}
       </div>
 
       {/* Review Form */}
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-xl flex flex-col gap-8 shadow-sm">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-8">
         
-        {/* Rating */}
-        <div className="flex flex-col gap-3">
-          <label className="text-slate-900 dark:text-slate-100 font-bold text-lg">Overall Rating</label>
-          <div className="flex gap-2" onMouseLeave={() => setHoveredRating(0)}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                className={`transition-colors ${(hoveredRating || rating) >= star ? 'text-primary' : 'text-slate-300 hover:text-primary'}`}
-                onMouseEnter={() => setHoveredRating(star)}
-                onClick={() => setRating(star)}
-              >
-                <span 
-                  className="material-symbols-outlined text-4xl" 
-                  style={{ fontVariationSettings: `'FILL' ${(hoveredRating || rating) >= star ? 1 : 0}` }}
-                >
-                  star
-                </span>
-              </button>
-            ))}
+        {categories.map((category) => (
+          <div key={category} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm flex flex-col gap-6">
+            <h3 className="text-primary font-bold uppercase tracking-wider text-sm border-b border-primary/10 pb-2">
+              {category}
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {criteria.filter(c => c.category === category).map((item) => (
+                <div key={item.id} className="flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <label className="text-slate-700 dark:text-slate-200 font-bold text-sm">
+                      {item.label}
+                    </label>
+                    <span className="text-primary font-bold text-sm">
+                      {scores[item.id] || 0}/5
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleScoreChange(item.id, star)}
+                        className={`transition-colors ${
+                          (scores[item.id] || 0) >= star ? 'text-primary' : 'text-slate-200 dark:text-slate-700 hover:text-primary/50'
+                        }`}
+                      >
+                        <span 
+                          className="material-symbols-outlined text-2xl" 
+                          style={{ fontVariationSettings: `'FILL' ${(scores[item.id] || 0) >= star ? 1 : 0}` }}
+                        >
+                          star
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ))}
 
-        {/* Lifestyle Highlights */}
-        <div className="flex flex-col gap-4">
-          <label className="text-slate-900 dark:text-slate-100 font-bold text-lg">Lifestyle Highlights</label>
-          <div className="flex flex-wrap gap-2">
-            {HIGHLIGHT_TAGS.map((tag) => {
-              const isSelected = selectedHighlights.has(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => toggleHighlight(tag.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-colors border-none ${
-                    isSelected 
-                      ? 'bg-primary/10 text-primary' 
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-sm">{tag.icon}</span> 
-                  {tag.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Comments */}
-        <div className="flex flex-col gap-3">
-          <label className="text-slate-900 dark:text-slate-100 font-bold text-lg">Detailed Feedback</label>
+        {/* Overall Comment */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm flex flex-col gap-4">
+          <label className="text-slate-900 dark:text-slate-100 font-bold text-lg">Overall Comments</label>
           <textarea 
-            className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-primary focus:border-primary p-4" 
-            placeholder={`What was it like living with ${target.name.split(' ')[0]}? Mention their strengths and any areas for improvement...`}
-            rows={5}
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
+            className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-primary focus:border-primary p-4 text-sm" 
+            placeholder={`Tell others about your experience living with ${targetUser.full_name}...`}
+            rows={4}
+            value={overallComment}
+            onChange={(e) => setOverallComment(e.target.value)}
           />
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Button 
-            type="submit" 
-            variant="primary" 
-            className="flex-1 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90"
-          >
-            Submit Review
-          </Button>
-          <Button 
-            type="button" 
-            variant="ghost" 
-            className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl"
-          >
-            Cancel
-          </Button>
-        </div>
+        {/* Action Button */}
+        <Button 
+          type="submit" 
+          disabled={submitting}
+          className="w-full py-4 rounded-xl text-lg font-bold shadow-lg shadow-primary/20"
+        >
+          {submitting ? 'Saving Changes...' : (initialData ? 'Update Review' : 'Complete Review')}
+        </Button>
       </form>
 
-      {/* Request a Review Section */}
-      <div className="bg-gradient-to-br from-primary to-primary/80 p-8 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-primary/20">
-        <div className="flex flex-col gap-1 text-center md:text-left">
-          <h4 className="dark:text-slate-100 font-bold text-xl text-white">Reciprocity is key</h4>
-          <p className="dark:text-slate-400 max-w-md text-white">
-            Would you like to ask {target.name.split(' ')[0]} to review you as well? It helps build your profile's trustworthiness.
-          </p>
-        </div>
-        <Button 
-          variant="outline"
-          className="whitespace-nowrap flex items-center gap-2 bg-white border-white text-primary hover:text-primary hover:bg-slate-50 rounded-xl border-none shadow-sm font-bold"
-        >
-          <span className="material-symbols-outlined">send</span>
-          Request a Review
-        </Button>
-      </div>
-
-      {/* Footer Help */}
-      <div className="text-center py-6">
-        <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
-          <span className="material-symbols-outlined text-base">lock</span>
-          Reviews are shared only with potential matches and SyncLiving staff.
-        </p>
-      </div>
-
+      <div className="pb-10" />
     </div>
   );
 }
