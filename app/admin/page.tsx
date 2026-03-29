@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
-import { searchUsers, getUserFullDetails } from './actions';
-import { Search, User, Home, Link as LinkIcon, Star, ShieldCheck, Mail, Calendar, MapPin } from 'lucide-react';
+import { searchUsers, getUserFullDetails, updateUserStatus } from './actions';
+import { Search, User, Home, Link as LinkIcon, Star, ShieldCheck, Mail, Calendar, MapPin, AlertCircle, CheckCircle2, Ban, Clock } from 'lucide-react';
 
 export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -12,6 +12,11 @@ export default function AdminPage() {
   const [userDetails, setUserDetails] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  
+  // Local state for status updates
+  const [statusReason, setStatusReason] = useState('');
+  const [suspendDays, setSuspendDays] = useState('7');
 
   // Handle Search
   useEffect(() => {
@@ -39,6 +44,54 @@ export default function AdminPage() {
       });
     }
   }, [selectedUserId]);
+
+  const handleStatusChange = async (status: 'active' | 'suspended' | 'banned') => {
+    if (!selectedUserId) return;
+    
+    setUpdating(true);
+    try {
+      let suspendedUntil = undefined;
+      if (status === 'suspended') {
+        const date = new Date();
+        date.setDate(date.getDate() + parseInt(suspendDays));
+        suspendedUntil = date.toISOString();
+      }
+
+      const updatedProfile = await updateUserStatus(
+        selectedUserId, 
+        status, 
+        statusReason, 
+        suspendedUntil
+      );
+
+      // Refresh local data
+      setUserDetails({
+        ...userDetails,
+        profile: {
+          ...userDetails.profile,
+          account_status: updatedProfile.account_status,
+          status_reason: updatedProfile.status_reason,
+          suspended_until: updatedProfile.suspended_until
+        }
+      });
+      
+      setStatusReason('');
+      alert(`Account status updated to ${status}`);
+    } catch (err: any) {
+      alert(`Failed to update status: ${err.message}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'text-green-500 bg-green-500/10';
+      case 'suspended': return 'text-amber-500 bg-amber-500/10';
+      case 'banned': return 'text-red-500 bg-red-500/10';
+      default: return 'text-slate-500 bg-slate-500/10';
+    }
+  };
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-white dark:bg-slate-950 dark:text-white font-sans">
@@ -146,6 +199,91 @@ export default function AdminPage() {
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-400 font-bold uppercase">Move-in</span>
                       <span className="font-bold dark:text-white">{userDetails.profile.move_in_date || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Management Section */}
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black flex items-center gap-2 dark:text-white">
+                      <ShieldCheck className="text-primary" size={20} />
+                      Account Management
+                    </h3>
+                    <p className="text-sm text-slate-500">Control user access and manage account lifecycle.</p>
+                  </div>
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${getStatusColor(userDetails.profile.account_status)}`}>
+                    {userDetails.profile.account_status === 'active' && <CheckCircle2 size={16} />}
+                    {userDetails.profile.account_status === 'suspended' && <Clock size={16} />}
+                    {userDetails.profile.account_status === 'banned' && <Ban size={16} />}
+                    <span className="uppercase tracking-wider">{userDetails.profile.account_status}</span>
+                  </div>
+                </div>
+
+                {userDetails.profile.account_status !== 'active' && (
+                  <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-start gap-3">
+                    <AlertCircle className="text-amber-500 shrink-0" size={20} />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold dark:text-white">Status Information</p>
+                      <p className="text-xs text-slate-500">
+                        Reason: <span className="text-slate-700 dark:text-slate-300 italic">"{userDetails.profile.status_reason || 'No reason provided'}"</span>
+                      </p>
+                      {userDetails.profile.account_status === 'suspended' && userDetails.profile.suspended_until && (
+                        <p className="text-xs text-slate-500">
+                          Suspended until: <span className="font-bold">{new Date(userDetails.profile.suspended_until).toLocaleDateString()}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase">Reason for Change</label>
+                    <textarea
+                      placeholder="Enter reason for suspension or ban..."
+                      value={statusReason}
+                      onChange={(e) => setStatusReason(e.target.value)}
+                      className="w-full p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm min-h-[100px] outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase">Suspension Period (Days)</label>
+                      <input
+                        type="number"
+                        value={suspendDays}
+                        onChange={(e) => setSuspendDays(e.target.value)}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => handleStatusChange('active')}
+                        disabled={updating || userDetails.profile.account_status === 'active'}
+                        className="flex flex-col items-center justify-center p-3 rounded-2xl bg-green-500 text-white font-bold text-xs gap-2 hover:bg-green-600 transition-colors disabled:opacity-20"
+                      >
+                        <CheckCircle2 size={20} />
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => handleStatusChange('suspended')}
+                        disabled={updating || userDetails.profile.account_status === 'suspended'}
+                        className="flex flex-col items-center justify-center p-3 rounded-2xl bg-amber-500 text-white font-bold text-xs gap-2 hover:bg-amber-600 transition-colors disabled:opacity-20"
+                      >
+                        <Clock size={20} />
+                        Suspend
+                      </button>
+                      <button
+                        onClick={() => handleStatusChange('banned')}
+                        disabled={updating || userDetails.profile.account_status === 'banned'}
+                        className="flex flex-col items-center justify-center p-3 rounded-2xl bg-red-500 text-white font-bold text-xs gap-2 hover:bg-red-600 transition-colors disabled:opacity-20"
+                      >
+                        <Ban size={20} />
+                        Ban User
+                      </button>
                     </div>
                   </div>
                 </div>

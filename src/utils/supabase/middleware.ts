@@ -33,10 +33,34 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Public routes that do not require authentication
-  const publicPaths = ['/', '/login', '/signup', '/auth']
+  const publicPaths = ['/', '/login', '/signup', '/auth', '/suspended']
   const isPublic = publicPaths.some(
     (path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path + '/')
   )
+
+  // Account Status Check
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('account_status')
+      .eq('id', user.id)
+      .single()
+
+    const isSuspendedOrBanned = profile?.account_status === 'suspended' || profile?.account_status === 'banned'
+    const isSuspendedPage = request.nextUrl.pathname === '/suspended'
+
+    if (isSuspendedOrBanned && !isSuspendedPage) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/suspended'
+      return NextResponse.redirect(url)
+    }
+
+    if (!isSuspendedOrBanned && isSuspendedPage) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
 
   if (!user && !isPublic) {
     // Redirect unauthenticated users to the login page

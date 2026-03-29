@@ -68,3 +68,37 @@ export async function getUserFullDetails(userId: string) {
     reviewsReceived: reviewsReceivedRes.data || []
   };
 }
+
+export async function updateUserStatus(
+  userId: string, 
+  status: 'active' | 'suspended' | 'banned', 
+  reason?: string, 
+  suspendedUntil?: string
+) {
+  if (!(await isAdmin())) throw new Error('Unauthorized');
+
+  const supabase = await createClient();
+  
+  const updateData: any = {
+    account_status: status,
+    status_reason: reason || null,
+    suspended_until: status === 'suspended' ? (suspendedUntil || null) : null
+  };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', userId)
+    .select();
+
+  if (error) {
+    console.error('Update status error:', error);
+    throw new Error(error.message);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('No rows updated. Please check if the user exists and your admin permissions.');
+  }
+
+  return data[0];
+}
