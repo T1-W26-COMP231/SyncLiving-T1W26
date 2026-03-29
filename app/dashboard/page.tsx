@@ -46,9 +46,9 @@ export default async function ProviderDashboard() {
     return {
       id: item.id,
       title: item.title,
-      price: item.rental_fee,
+      price: Number(item.rental_fee),
       location: item.address,
-      distance: 'Calculating...',
+      distance: '',
       status: item.status as 'published' | 'draft' | 'archived',
       imageUrl: imageUrl,
       photos: item.photos || [],

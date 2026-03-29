@@ -52,9 +52,9 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
       <Navbar activeTab="Listings" />
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-10">
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl uppercase">EDIT LISTING</h1>
-          <p className="mt-3 text-lg font-medium text-slate-500">Update your property information</p>
+        <div className="flex flex-col gap-1 mb-8">
+          <h1 className="text-3xl font-extrabold text-dark tracking-tight">Edit Listing</h1>
+          <p className="text-slate-500 font-medium">Update your property information.</p>
         </div>
 
         <CreateListingForm 

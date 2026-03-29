@@ -5,6 +5,7 @@ import RoommateDiscovery from '@/components/discovery/RoommateDiscovery';
 export default async function DiscoveryPage() {
   const {
     matches,
+    roomListings,
     userRole,
     preferredTagNames,
     userBinaryPrefs,
@@ -20,12 +21,15 @@ export default async function DiscoveryPage() {
     bufferKm,
     userAmenityNames,
     userRoomTypeNames,
+    allAmenityNames,
+    allRoomTypeNames,
     error,
   } = await getMatches();
 
   return (
     <RoommateDiscovery
       matches={matches}
+      roomListings={roomListings}
       userRole={userRole}
       preferredTagNames={preferredTagNames}
       userBinaryPrefs={userBinaryPrefs}
@@ -41,6 +45,8 @@ export default async function DiscoveryPage() {
       bufferKm={bufferKm}
       userAmenityNames={userAmenityNames}
       userRoomTypeNames={userRoomTypeNames}
+      allAmenityNames={allAmenityNames}
+      allRoomTypeNames={allRoomTypeNames}
       error={error}
     />
   );

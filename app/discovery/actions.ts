@@ -28,6 +28,21 @@ export interface MatchedProfile {
   conflicts: { type: string; clause: string }[];
 }
 
+export interface MatchedListing {
+  id: string;
+  provider_id: string;
+  provider_name: string | null;
+  provider_avatar: string | null;
+  title: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  rental_fee: number;
+  photos: string[];
+  room_type: string | null;
+  amenities: string[];
+}
+
 // Default vector (all 0.5) used when a dimension is unset
 const DEFAULT_VEC = [0.5, 0.5, 0.5, 0.5, 0.5];
 
@@ -71,13 +86,16 @@ export async function getMatches(): Promise<{
   bufferKm: number | null;
   userAmenityNames: string[];
   userRoomTypeNames: string[];
+  allAmenityNames: string[];
+  allRoomTypeNames: string[];
+  roomListings: MatchedListing[];
   error: string | null;
 }> {
   const supabase = await createClient();
 
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Not authenticated', userAmenityNames: [], userRoomTypeNames: [] };
+  if (!user) return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Not authenticated', userAmenityNames: [], userRoomTypeNames: [], allAmenityNames: [], allRoomTypeNames: [], roomListings: [] };
 
   // Fetch current user's profile + preference fields
   const { data: myProfile, error: myErr } = await supabase
@@ -87,7 +105,7 @@ export async function getMatches(): Promise<{
     .single();
 
   if (myErr || !myProfile) {
-    return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load your profile', userAmenityNames: [], userRoomTypeNames: [] };
+    return { matches: [], userRole: null, preferredTagNames: [], userBinaryPrefs: [], userPreferredGender: null, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load your profile', userAmenityNames: [], userRoomTypeNames: [], allAmenityNames: [], allRoomTypeNames: [], roomListings: [] };
   }
 
   const myVWd = toVec(myProfile.v_wd);
@@ -126,9 +144,7 @@ export async function getMatches(): Promise<{
   let candidateQuery = supabase
     .from('profiles')
     .select('id, full_name, avatar_url, age, location, lat, lng, role, bio, budget_min, budget_max, lifestyle_tags, preferred_gender, v_wd, v_we')
-    .neq('id', user.id)
-    .not('v_wd', 'is', null)
-    .not('v_we', 'is', null);
+    .neq('id', user.id);
 
   if (bufferKm !== null && prefLat !== null && prefLng !== null) {
     const box = latLngBoundingBox(prefLat, prefLng, bufferKm);
@@ -145,7 +161,7 @@ export async function getMatches(): Promise<{
   const userPreferredGender: string | null = myProfile.preferred_gender ?? null;
 
   if (candErr) {
-    return { matches: [], userRole: myProfile.role, preferredTagNames, userBinaryPrefs, userPreferredGender, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load candidates', userAmenityNames: [], userRoomTypeNames: [] };
+    return { matches: [], userRole: myProfile.role, preferredTagNames, userBinaryPrefs, userPreferredGender, prefAgeMin: null, prefAgeMax: null, prefBudgetMin: null, prefBudgetMax: null, prefLat: null, prefLng: null, prefMaxDistance: null, prefReferenceLocation: null, bufferKm: null, error: 'Could not load candidates', userAmenityNames: [], userRoomTypeNames: [], allAmenityNames: [], allRoomTypeNames: [], roomListings: [] };
   }
 
   const prefNormalized = preferredTagNames.map(normalizeTag);
@@ -182,13 +198,45 @@ export async function getMatches(): Promise<{
     })
     .sort((a, b) => b.score - a.score);
 
-  const [{ data: amenityRows }, { data: roomTypeRows }] = await Promise.all([
+  // Fetch user's saved preferences AND all available options for the Room view filter panel
+  const [{ data: amenityRows }, { data: roomTypeRows }, { data: allAmenitiesRows }, { data: allRoomTypesRows }] = await Promise.all([
     supabase.from('seeker_amenity_preferences').select('amenities(name)').eq('user_id', user.id),
     supabase.from('seeker_room_type_preferences').select('room_types(name)').eq('user_id', user.id),
+    supabase.from('amenities').select('name').order('name'),
+    supabase.from('room_types').select('name').order('name'),
   ]);
 
   const userAmenityNames  = (amenityRows  ?? []).map((r: any) => r.amenities?.name).filter(Boolean);
   const userRoomTypeNames = (roomTypeRows ?? []).map((r: any) => r.room_types?.name).filter(Boolean);
+  const allAmenityNames   = (allAmenitiesRows  ?? []).map((r: any) => r.name).filter(Boolean);
+  const allRoomTypeNames  = (allRoomTypesRows  ?? []).map((r: any) => r.name).filter(Boolean);
+
+  // Fetch published room listings (excluding the current user's own listings)
+  const { data: listingRows } = await supabase
+    .from('room_listings')
+    .select(`
+      id, provider_id, title, address, lat, lng, rental_fee, photos,
+      profiles!provider_id(full_name, avatar_url),
+      listing_room_types(room_types(name)),
+      listing_amenities(amenities(name))
+    `)
+    .eq('status', 'published')
+    .neq('provider_id', user.id);
+
+  const roomListings: MatchedListing[] = (listingRows ?? []).map((row: any) => ({
+    id: row.id,
+    provider_id: row.provider_id,
+    provider_name: row.profiles?.full_name ?? null,
+    provider_avatar: row.profiles?.avatar_url ?? null,
+    title: row.title,
+    address: row.address,
+    lat: row.lat ?? null,
+    lng: row.lng ?? null,
+    rental_fee: Number(row.rental_fee),
+    photos: row.photos ?? [],
+    room_type: row.listing_room_types?.[0]?.room_types?.name ?? null,
+    amenities: (row.listing_amenities ?? []).map((a: any) => a.amenities?.name).filter(Boolean),
+  }));
 
   return {
     matches: scored,
@@ -207,6 +255,9 @@ export async function getMatches(): Promise<{
     bufferKm,
     userAmenityNames,
     userRoomTypeNames,
+    allAmenityNames,
+    allRoomTypeNames,
+    roomListings,
     error: null,
   };
 }

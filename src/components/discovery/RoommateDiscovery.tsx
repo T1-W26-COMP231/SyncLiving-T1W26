@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { SlidersHorizontal, UserCircle, UserCircle2, ChevronDown, Check, Heart, UserSearch, Map, X } from 'lucide-react';
+import { SlidersHorizontal, UserCircle, UserCircle2, ChevronDown, Check, Heart, UserSearch, Map, X, Building2 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
-import type { MatchedProfile } from '../../../app/discovery/actions';
+import type { MatchedProfile, MatchedListing } from '../../../app/discovery/actions';
 import { toggleSavedProfile } from '../../../app/discovery/saved-actions';
 import { sendMatchRequest } from '../../../app/discovery/actions';
 import { startOrGetConversation } from '../../../app/messages/actions';
@@ -214,6 +214,7 @@ function DualRangeSlider({ min, max, step = 1, valueMin, valueMax, onChangeMin, 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
   matches: MatchedProfile[];
+  roomListings: MatchedListing[];
   userRole: string | null;
   preferredTagNames: string[];
   userBinaryPrefs: string[];
@@ -229,12 +230,15 @@ interface Props {
   bufferKm: number | null;
   userAmenityNames: string[];
   userRoomTypeNames: string[];
+  allAmenityNames: string[];
+  allRoomTypeNames: string[];
   error: string | null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const RoommateDiscovery: React.FC<Props> = ({
   matches,
+  roomListings,
   userRole,
   preferredTagNames,
   userBinaryPrefs,
@@ -250,6 +254,8 @@ const RoommateDiscovery: React.FC<Props> = ({
   bufferKm,
   userAmenityNames,
   userRoomTypeNames,
+  allAmenityNames,
+  allRoomTypeNames,
   error,
 }) => {
   const router = useRouter();
@@ -301,6 +307,17 @@ const RoommateDiscovery: React.FC<Props> = ({
   const [ageFilterOn,    setAgeFilterOn]    = useState(prefAgeMin    !== null || prefAgeMax    !== null);
   const [budgetFilterOn, setBudgetFilterOn] = useState(prefBudgetMin !== null || prefBudgetMax !== null);
   const [distFilterOn,   setDistFilterOn]   = useState(prefLat !== null && prefLng !== null && prefMaxDistance !== null);
+
+  // Two-stage preference tag filters (roommate view):
+  //   selectedPreferenceTags — tags clicked in advanced panel → chips in filter bar + highlighted in cards
+  //   activeTagFilters       — chips clicked → deal-breaker filter (already declared above)
+  const [selectedPreferenceTags, setSelectedPreferenceTags] = useState<string[]>(() => [...userBinaryPrefs]);
+
+  // Two-stage room tag filters:
+  //   selectedRoomTags  — tags clicked in the advanced panel → chips appear in filter bar (no filtering yet)
+  //   activeRoomTagFilters — chips clicked in filter bar → filtering applied + cards highlighted
+  const [selectedRoomTags, setSelectedRoomTags] = useState<string[]>([]);
+  const [activeRoomTagFilters, setActiveRoomTagFilters] = useState<string[]>([]);
 
   // Click-outside to close dropdown
   useEffect(() => {
@@ -359,19 +376,13 @@ const RoommateDiscovery: React.FC<Props> = ({
     setAgeFilterOn(prefAgeMin !== null || prefAgeMax !== null);
     setBudgetFilterOn(prefBudgetMin !== null || prefBudgetMax !== null);
     setDistFilterOn(prefLat !== null && prefLng !== null && prefMaxDistance !== null);
+    setSelectedRoomTags([...userRoomTypeNames, ...userAmenityNames]);
+    setActiveRoomTagFilters([]);
+    setSelectedPreferenceTags([...userBinaryPrefs]);
+    setActiveTagFilters([]);
   }
 
   // ── Quick-filter chip visibility ────────────────────────────────────────────
-  const normalize = (t: string) => t.replace(/[^a-z0-9]/gi, '').toLowerCase();
-  const normalizedBinaryPrefs = userBinaryPrefs.map(normalize);
-  const availableQuickFilters = QUICK_FILTER_TAGS.filter(({ tag }) => {
-    if (tag === '__same_gender__') return normalizedBinaryPrefs.includes('samegenderonly');
-    return normalizedBinaryPrefs.includes(normalize(tag));
-  });
-
-  function toggleTagFilter(tag: string) {
-    setActiveTagFilters(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  }
 
   // ── Apply all filters ───────────────────────────────────────────────────────
   const visibleMatches = applyFilters(
@@ -391,13 +402,71 @@ const RoommateDiscovery: React.FC<Props> = ({
     showIncompatible,
   );
 
-  // Detect when the user is viewing Room results only — age filter is irrelevant for rooms
+  // Filter room listings (only used when isRoomView)
   const isRoomView = activeFilters.length === 1 && activeFilters[0] === 'room';
+
+  const visibleListings = isRoomView ? roomListings.filter(listing => {
+    if (budgetFilterOn && (listing.rental_fee < filterBudgetMin || listing.rental_fee > filterBudgetMax)) return false;
+    if (distFilterOn && prefLat !== null && prefLng !== null) {
+      if (listing.lat !== null && listing.lng !== null) {
+        if (haversineKm(prefLat, prefLng, listing.lat, listing.lng) > filterMaxDist) return false;
+      }
+    }
+    if (activeRoomTagFilters.length > 0) {
+      for (const tag of activeRoomTagFilters) {
+        if (listing.room_type !== tag && !listing.amenities.includes(tag)) return false;
+      }
+    }
+    return true;
+  }) : [];
 
   // Auto-disable age filter when switching to Room view
   useEffect(() => {
     if (isRoomView) setAgeFilterOn(false);
   }, [isRoomView]);
+
+  // When entering room view, pre-select chips from user's saved preferences (they appear in the filter bar but don't filter until clicked).
+  // When leaving room view, clear both states.
+  useEffect(() => {
+    if (isRoomView) {
+      setSelectedRoomTags([...userRoomTypeNames, ...userAmenityNames]);
+    } else {
+      setSelectedRoomTags([]);
+      setActiveRoomTagFilters([]);
+    }
+  }, [isRoomView]);
+
+  // Panel click: add chip to filter bar; clicking again removes chip (and deactivates filter)
+  function toggleSelectedRoomTag(tag: string) {
+    setSelectedRoomTags(prev => {
+      if (prev.includes(tag)) {
+        setActiveRoomTagFilters(a => a.filter(t => t !== tag));
+        return prev.filter(t => t !== tag);
+      }
+      return [...prev, tag];
+    });
+  }
+
+  // Chip click: toggle whether the chip actively filters + highlights cards
+  function toggleActiveRoomTag(tag: string) {
+    setActiveRoomTagFilters(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }
+
+  // Panel click: add/remove preference tag chip from filter bar; also removes from active filters if deselecting
+  function toggleSelectedPreferenceTag(tag: string) {
+    setSelectedPreferenceTags(prev => {
+      if (prev.includes(tag)) {
+        setActiveTagFilters(a => a.filter(t => t !== tag));
+        return prev.filter(t => t !== tag);
+      }
+      return [...prev, tag];
+    });
+  }
+
+  // Chip click: toggle preference tag as deal-breaker filter
+  function toggleActivePreferenceTag(tag: string) {
+    setActiveTagFilters(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }
 
   // Count how many advanced filters are active
   const activeAdvancedCount = [ageFilterOn, budgetFilterOn, distFilterOn].filter(Boolean).length;
@@ -535,31 +604,56 @@ const RoommateDiscovery: React.FC<Props> = ({
                   </div>
                 </div>
               ) : (
-                /* Room preferences summary shown instead of age filter */
+                /* Room preferences — all available options shown; selected ones appear as chips in filter bar */
                 <div>
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Your Room Preferences</p>
-                  {userRoomTypeNames.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-[11px] text-slate-400 mb-1">Room types</p>
-                      <div className="flex flex-wrap gap-1">
-                        {userRoomTypeNames.map(name => (
-                          <span key={name} className="px-2 py-0.5 rounded-full bg-primary/15 text-dark text-[11px] font-semibold border border-primary/30">{name}</span>
-                        ))}
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Room Preferences</p>
+                  {allRoomTypeNames.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[11px] text-slate-400 mb-1.5">Room types</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {allRoomTypeNames.map(name => {
+                          const isSelected = selectedRoomTags.includes(name);
+                          return (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => toggleSelectedRoomTag(name)}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                                isSelected
+                                  ? 'bg-primary/15 border-primary/40 text-dark'
+                                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-primary/30'
+                              }`}
+                            >
+                              {name}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
-                  {userAmenityNames.length > 0 && (
+                  {allAmenityNames.length > 0 && (
                     <div>
-                      <p className="text-[11px] text-slate-400 mb-1">Amenities</p>
-                      <div className="flex flex-wrap gap-1">
-                        {userAmenityNames.map(name => (
-                          <span key={name} className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">{name}</span>
-                        ))}
+                      <p className="text-[11px] text-slate-400 mb-1.5">Amenities</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {allAmenityNames.map(name => {
+                          const isSelected = selectedRoomTags.includes(name);
+                          return (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => toggleSelectedRoomTag(name)}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                                isSelected
+                                  ? 'bg-primary/15 border-primary/40 text-dark'
+                                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-primary/30'
+                              }`}
+                            >
+                              {name}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                  {userRoomTypeNames.length === 0 && userAmenityNames.length === 0 && (
-                    <p className="text-[11px] text-slate-400">No room preferences saved — set them in Settings.</p>
                   )}
                 </div>
               )}
@@ -595,6 +689,32 @@ const RoommateDiscovery: React.FC<Props> = ({
               </div>
 
             </div>
+
+            {/* Preference tags — shown in Roommate view */}
+            {!isRoomView && (
+              <div className="mt-5 pt-5 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Lifestyle Preferences</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_FILTER_TAGS.map(({ tag, label }) => {
+                    const isSelected = selectedPreferenceTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleSelectedPreferenceTag(tag)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                          isSelected
+                            ? 'bg-primary/15 border-primary/40 text-dark'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-primary/30'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -612,7 +732,11 @@ const RoommateDiscovery: React.FC<Props> = ({
         {/* Match count summary */}
         {!error && (
           <p className="text-sm text-slate-500 mb-6 font-medium">
-            {visibleMatches.length === 0
+            {isRoomView
+              ? visibleListings.length === 0
+                ? 'No room listings found — try adjusting your filters.'
+                : `${visibleListings.length} listing${visibleListings.length !== 1 ? 's' : ''} found`
+              : visibleMatches.length === 0
               ? 'No matches found yet — make sure your lifestyle preferences are saved.'
               : `${visibleMatches.length} match${visibleMatches.length !== 1 ? 'es' : ''} found`}
           </p>
@@ -681,16 +805,17 @@ const RoommateDiscovery: React.FC<Props> = ({
             </button>
           )}
 
-          {/* Quick-filter chips — hidden in Room view */}
-          {!isRoomView && availableQuickFilters.length > 0 && (
+          {/* Preference tag chips — hidden in Room view; active = deal-breaker filter */}
+          {!isRoomView && selectedPreferenceTags.length > 0 && (
             <>
               <div className="w-px h-6 bg-slate-200 mx-1" />
-              {availableQuickFilters.map(({ tag, label }) => {
+              {selectedPreferenceTags.map(tag => {
                 const isActive = activeTagFilters.includes(tag);
+                const label = QUICK_FILTER_TAGS.find(f => f.tag === tag)?.label ?? tag;
                 return (
                   <button
                     key={tag}
-                    onClick={() => toggleTagFilter(tag)}
+                    onClick={() => toggleActivePreferenceTag(tag)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-sm ${
                       isActive
                         ? 'bg-primary/20 border-primary/50 text-dark'
@@ -704,9 +829,34 @@ const RoommateDiscovery: React.FC<Props> = ({
               })}
             </>
           )}
+
+          {/* Room preference chips — shown in Room view when tags are selected in advanced panel */}
+          {isRoomView && selectedRoomTags.length > 0 && (
+            <>
+              <div className="w-px h-6 bg-slate-200 mx-1" />
+              {selectedRoomTags.map(tag => {
+                const isActive = activeRoomTagFilters.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleActiveRoomTag(tag)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-sm ${
+                      isActive
+                        ? 'bg-primary/20 border-primary/50 text-dark'
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-primary/40'
+                    }`}
+                  >
+                    {isActive && <span className="mr-1">✓</span>}
+                    {tag}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {/* Roommate Grid */}
+        {!isRoomView && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
           {visibleMatches.map(person => {
             const binaryTags = getBinaryTags(person.lifestyle_tags);
@@ -717,95 +867,98 @@ const RoommateDiscovery: React.FC<Props> = ({
               : null;
 
             return (
-              <div key={person.id} className="bg-white rounded-xl overflow-hidden border border-slate-200 group hover:shadow-xl transition-all duration-300">
+              <div key={person.id} className="relative rounded-xl overflow-hidden border border-slate-200 group hover:shadow-xl transition-all duration-300 h-96">
 
-                {/* Avatar / Photo area */}
-                <div className="relative h-48 overflow-hidden bg-slate-100 flex items-center justify-center">
-                  {person.avatar_url ? (
-                    <img
-                      src={person.avatar_url}
-                      alt={person.full_name ?? 'Profile'}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
+                {/* Full-card photo */}
+                {person.avatar_url ? (
+                  <img
+                    src={person.avatar_url}
+                    alt={person.full_name ?? 'Profile'}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
                     <UserCircle2 size={80} className="text-slate-300" />
-                  )}
+                  </div>
+                )}
 
-                  {/* Favourite button */}
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+
+                {/* Top row: score badge + heart */}
+                <div className="absolute top-3 left-3 right-3 flex justify-between items-center">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg ${tierBadgeClass(person.tier)}`}>
+                    {person.score}% {tierLabel(person.tier)}
+                  </span>
                   <button
                     onClick={() => handleHeartClick(person.id)}
-                    className="absolute top-3 right-3 size-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full transition-colors shadow-sm"
+                    className="size-9 flex items-center justify-center bg-black/30 backdrop-blur-sm rounded-full hover:bg-black/50 transition-colors shadow-sm"
                   >
                     <Heart
                       size={18}
-                      className={savedIds.has(person.id) ? 'text-red-500 fill-red-500' : 'text-slate-400 hover:text-red-400'}
+                      className={savedIds.has(person.id) ? 'text-red-500 fill-red-500' : 'text-white hover:text-red-400'}
                     />
                   </button>
-
-                  {/* Score badge */}
-                  <div className="absolute bottom-3 left-3 flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg ${tierBadgeClass(person.tier)}`}>
-                      {person.score}% {tierLabel(person.tier)}
-                    </span>
-                  </div>
                 </div>
 
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-2">
+                {/* Bottom overlay content */}
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <div className="flex justify-between items-start mb-1">
                     <div>
-                      <h3 className="text-lg font-bold text-dark">{person.full_name ?? 'Anonymous'}</h3>
-                      <p className="text-sm text-slate-500">
+                      <h3 className="text-lg font-bold text-white">{person.full_name ?? 'Anonymous'}</h3>
+                      <p className="text-sm text-white/70">
                         {person.location ?? (person.role === 'provider' ? 'Provider' : 'Seeker')}
                       </p>
                     </div>
                     {budgetLabel && (
                       <span className="text-primary font-bold text-base">
-                        {budgetLabel}<span className="text-xs text-slate-400 font-normal">/mo</span>
+                        {budgetLabel}<span className="text-xs text-white/50 font-normal">/mo</span>
                       </span>
                     )}
                   </div>
 
-                  {/* Bio snippet */}
-                  {person.bio && (
-                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">{person.bio}</p>
-                  )}
-
-                  {/* Binary lifestyle tags */}
+                  {/* Binary lifestyle tags — preferred tags sorted to front and highlighted */}
                   {binaryTags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 my-3">
-                      {binaryTags.map(tag => {
-                        const isHighlighted = (person.highlightedTags ?? []).includes(tag);
-                        return (
-                          <span
-                            key={tag}
-                            className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                              isHighlighted
-                                ? 'bg-primary/20 text-dark border border-primary/40'
-                                : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {isHighlighted && <span className="mr-1">✓</span>}
-                            {tag}
-                          </span>
-                        );
-                      })}
+                    <div className="flex flex-wrap gap-1.5 my-2">
+                      {[...binaryTags]
+                        .sort((a, b) => {
+                          const aSelected = selectedPreferenceTags.includes(a) ? 0 : 1;
+                          const bSelected = selectedPreferenceTags.includes(b) ? 0 : 1;
+                          return aSelected - bSelected;
+                        })
+                        .slice(0, 4)
+                        .map(tag => {
+                          const isHighlighted = selectedPreferenceTags.includes(tag);
+                          return (
+                            <span
+                              key={tag}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                                isHighlighted
+                                  ? 'bg-primary text-dark'
+                                  : 'bg-white/20 text-white/80'
+                              }`}
+                            >
+                              {tag}
+                            </span>
+                          );
+                        })}
                     </div>
                   )}
 
                   {/* Conflict triggers */}
                   {person.conflicts.length > 0 && (
-                    <div className="mt-2 mb-1 flex flex-wrap gap-1">
-                      {person.conflicts.map((c: any) => (
-                        <span key={c.type} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[11px] text-amber-700 font-medium">
-                          <span className="text-amber-400">⚠</span>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {person.conflicts.slice(0, 2).map((c: any) => (
+                        <span key={c.type} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-900/60 border border-amber-500/40 text-[11px] text-amber-300 font-medium">
+                          <span>⚠</span>
                           {conflictHint(c.type)}
                         </span>
                       ))}
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mt-4">
-                    <button className="text-sm font-bold text-primary hover:underline">View Profile</button>
+                  <div className="flex items-center justify-between mt-3">
+                    <button className="text-sm font-bold text-white/80 hover:text-white transition-colors">View Profile</button>
                     <button
                       onClick={() => handleConnect(person.id)}
                       disabled={connectingId === person.id || (localRequestStatuses[person.id] || person.requestStatus) !== null}
@@ -845,6 +998,126 @@ const RoommateDiscovery: React.FC<Props> = ({
             </div>
           )}
         </div>
+        )}
+
+        {/* Room Listings Grid */}
+        {isRoomView && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+            {visibleListings.map(listing => {
+              const photo = listing.photos[0] ?? null;
+              const distKm = (prefLat !== null && prefLng !== null && listing.lat !== null && listing.lng !== null)
+                ? haversineKm(prefLat, prefLng, listing.lat, listing.lng)
+                : null;
+
+              return (
+                <div key={listing.id} className="relative rounded-xl overflow-hidden border border-slate-200 group hover:shadow-xl transition-all duration-300 h-96">
+                  {/* Full-card photo */}
+                  {photo ? (
+                    <img
+                      src={photo}
+                      alt={listing.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
+                      <Building2 size={64} className="text-slate-300" />
+                    </div>
+                  )}
+
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+
+                  {/* Top row: distance + room type */}
+                  <div className="absolute top-3 left-3 right-3 flex justify-between items-start gap-2">
+                    {distKm !== null && (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-black/30 backdrop-blur-sm text-white shadow shrink-0">
+                        {distKm < 1 ? `${Math.round(distKm * 1000)}m away` : `${distKm.toFixed(1)}km away`}
+                      </span>
+                    )}
+                    {listing.room_type && (
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold shadow ml-auto shrink-0 transition-colors ${
+                        selectedRoomTags.includes(listing.room_type)
+                          ? 'bg-primary text-dark'
+                          : 'bg-black/30 backdrop-blur-sm text-white'
+                      }`}>
+                        {listing.room_type}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom overlay content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    {/* Provider info */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {listing.provider_avatar ? (
+                        <img src={listing.provider_avatar} alt={listing.provider_name ?? ''} className="size-6 rounded-full object-cover border border-white/30" />
+                      ) : (
+                        <UserCircle2 size={20} className="text-white/60" />
+                      )}
+                      <span className="text-xs text-white/70 font-medium">{listing.provider_name ?? 'Provider'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="text-lg font-bold text-white leading-tight">{listing.title}</h3>
+                      <span className="text-primary font-bold text-base ml-2 shrink-0">
+                        ${listing.rental_fee.toLocaleString()}<span className="text-xs text-white/50 font-normal">/mo</span>
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-white/70 mb-2 truncate">{listing.address}</p>
+
+                    {/* Amenity chips — preferred tags sorted to front and highlighted */}
+                    {listing.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {[...listing.amenities]
+                          .sort((a, b) => {
+                            const aSelected = selectedRoomTags.includes(a) ? 0 : 1;
+                            const bSelected = selectedRoomTags.includes(b) ? 0 : 1;
+                            return aSelected - bSelected;
+                          })
+                          .slice(0, 4)
+                          .map(a => {
+                            const isHighlighted = selectedRoomTags.includes(a);
+                            return (
+                              <span key={a} className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                                isHighlighted
+                                  ? 'bg-primary text-dark'
+                                  : 'bg-white/20 text-white/80'
+                              }`}>
+                                {a}
+                              </span>
+                            );
+                          })}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-3">
+                      <button className="text-sm font-bold text-white/80 hover:text-white transition-colors">View Listing</button>
+                      <button
+                        onClick={() => handleConnect(listing.provider_id)}
+                        disabled={connectingId === listing.provider_id}
+                        className="px-4 py-2 bg-primary text-dark rounded-full text-sm font-bold hover:brightness-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {connectingId === listing.provider_id ? 'Requesting…' : 'Request'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Empty state */}
+            {visibleListings.length === 0 && !error && (
+              <div className="col-span-full border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+                <div className="size-16 rounded-full bg-slate-200 flex items-center justify-center mb-4">
+                  <Building2 size={32} className="text-slate-400" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-700">No room listings found</h4>
+                <p className="text-sm text-slate-500 mt-2">Try adjusting your filters or check back later.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Location Discovery banner */}
         <div className="rounded-2xl overflow-hidden relative min-h-[300px] flex items-center p-8 mb-8">

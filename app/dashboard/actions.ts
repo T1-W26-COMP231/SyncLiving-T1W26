@@ -55,9 +55,9 @@ export async function createListing(prevState: any, formData: FormData) {
 
   // Ensure coords are added as valid PostGIS string
   if (lat && lng && lat !== '' && lng !== '') {
-    // PostGIS geography expects POINT(longitude latitude)
     listingData.location_coords = `POINT(${lng} ${lat})`;
-    console.log('Generated Coords String:', listingData.location_coords);
+    listingData.lat = parseFloat(lat);
+    listingData.lng = parseFloat(lng);
   } else {
     console.warn('Coordinates missing, field will be NULL in DB.');
   }
@@ -112,4 +112,36 @@ export async function createListing(prevState: any, formData: FormData) {
 
   revalidatePath('/dashboard');
   redirect('/dashboard');
+}
+
+export async function updateListingStatus(id: string, status: 'published' | 'archived' | 'draft') {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('room_listings')
+    .update({ status })
+    .eq('id', id)
+    .eq('provider_id', user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath('/dashboard');
+  return { error: null };
+}
+
+export async function deleteListing(id: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('room_listings')
+    .delete()
+    .eq('id', id)
+    .eq('provider_id', user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath('/dashboard');
+  return { error: null };
 }
