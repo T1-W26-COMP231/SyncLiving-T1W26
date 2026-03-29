@@ -2,6 +2,9 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { computeMatchResult, SURFACE_THRESHOLD } from '@/services/matching';
+import type { Database } from '@/types/supabase';
+
+type MatchRequestStatus = Database['public']['Enums']['match_request_status'];
 
 export interface MatchedProfile {
   id: string;
@@ -19,6 +22,7 @@ export interface MatchedProfile {
   highlightedTags?: string[];
   preferred_gender: string | null;
   isSaved: boolean;
+  requestStatus: MatchRequestStatus | null;
   score: number;
   tier: 'strong' | 'good' | 'borderline' | 'incompatible';
   conflicts: { type: string; clause: string }[];
@@ -121,9 +125,14 @@ export async function getMatches(): Promise<{
     .eq('user_id', user.id);
   const savedIds = new Set((savedRows ?? []).map((r: any) => r.saved_user_id));
 
+  // Fetch match requests sent by the current user
+  const { data: requestRows } = await supabase
+    .from('match_requests')
+    .select('receiver_id, status')
+    .eq('sender_id', user.id);
+  const sentRequestMap = new Map((requestRows ?? []).map((r: any) => [r.receiver_id, r.status]));
+
   // Server-side location pre-filter: bounding box at 2× saved preference distance (capped at 100 km).
-  // Profiles without coords are always included (benefit of the doubt).
-  // Client-side Haversine then applies the exact distance check within this broader set.
   const prefLat: number | null = myProfile.pref_lat ?? null;
   const prefLng: number | null = myProfile.pref_lng ?? null;
   const prefMaxDist: number | null = myProfile.pref_max_distance ?? null;
@@ -139,8 +148,6 @@ export async function getMatches(): Promise<{
 
   if (bufferKm !== null && prefLat !== null && prefLng !== null) {
     const box = latLngBoundingBox(prefLat, prefLng, bufferKm);
-    // Only include candidates whose coords fall within the bounding box.
-    // Profiles without coords are excluded when the user has a location set.
     candidateQuery = candidateQuery
       .not('lat', 'is', null)
       .not('lng', 'is', null)
@@ -151,7 +158,6 @@ export async function getMatches(): Promise<{
   }
 
   const { data: candidates, error: candErr } = await candidateQuery;
-
   const userPreferredGender: string | null = myProfile.preferred_gender ?? null;
 
   if (candErr) {
@@ -160,12 +166,9 @@ export async function getMatches(): Promise<{
 
   const prefNormalized = preferredTagNames.map(normalizeTag);
 
-  // Score and apply surface-threshold filter only — all other filters are applied client-side
   const scored: MatchedProfile[] = (candidates ?? [])
     .map(p => {
       const result = computeMatchResult(myVWd, myVWe, toVec(p.v_wd), toVec(p.v_we));
-
-      // Mark which of the candidate's tags match the user's preferred tags
       const tags: string[] = p.lifestyle_tags ?? [];
       const highlightedTags = prefNormalized.length > 0
         ? tags.filter(t => prefNormalized.includes(normalizeTag(t)))
@@ -187,6 +190,7 @@ export async function getMatches(): Promise<{
         highlightedTags,
         preferred_gender: p.preferred_gender ?? null,
         isSaved: savedIds.has(p.id),
+        requestStatus: (sentRequestMap.get(p.id) as any) ?? null,
         score: Math.round(result.score),
         tier: result.tier,
         conflicts: result.conflicts,
@@ -256,4 +260,26 @@ export async function getMatches(): Promise<{
     roomListings,
     error: null,
   };
+}
+
+export async function sendMatchRequest(receiverId: string, message?: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('match_requests')
+    .insert({
+      sender_id: user.id,
+      receiver_id: receiverId,
+      status: 'pending',
+      message
+    });
+
+  if (error) {
+    console.error('Error sending match request:', error);
+    return { error: error.message };
+  }
+
+  return { success: true };
 }

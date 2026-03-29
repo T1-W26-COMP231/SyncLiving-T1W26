@@ -6,6 +6,7 @@ import { SlidersHorizontal, UserCircle, UserCircle2, ChevronDown, Check, Heart, 
 import Navbar from '@/components/layout/Navbar';
 import type { MatchedProfile, MatchedListing } from '../../../app/discovery/actions';
 import { toggleSavedProfile } from '../../../app/discovery/saved-actions';
+import { sendMatchRequest } from '../../../app/discovery/actions';
 import { startOrGetConversation } from '../../../app/messages/actions';
 import { createClient } from '@/utils/supabase/client';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
@@ -268,6 +269,7 @@ const RoommateDiscovery: React.FC<Props> = ({
   const [savedIds, setSavedIds] = useState<Set<string>>(
     () => new Set(matches.filter(m => m.isSaved).map(m => m.id))
   );
+  const [localRequestStatuses, setLocalRequestStatuses] = useState<Record<string, string>>({});
   const [, startTransition] = useTransition();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -345,12 +347,12 @@ const RoommateDiscovery: React.FC<Props> = ({
   async function handleConnect(targetUserId: string) {
     setConnectingId(targetUserId);
     try {
-      const result = await startOrGetConversation(targetUserId);
+      const result = await sendMatchRequest(targetUserId);
       if (result.error) {
-        alert('Could not start conversation: ' + result.error);
+        alert('Could not send match request: ' + result.error);
         return;
       }
-      router.push(`/messages?conversation=${result.conversationId}`);
+      setLocalRequestStatuses(prev => ({ ...prev, [targetUserId]: 'pending' }));
     } finally {
       setConnectingId(null);
     }
@@ -959,10 +961,22 @@ const RoommateDiscovery: React.FC<Props> = ({
                     <button className="text-sm font-bold text-white/80 hover:text-white transition-colors">View Profile</button>
                     <button
                       onClick={() => handleConnect(person.id)}
-                      disabled={connectingId === person.id}
-                      className="px-4 py-2 bg-primary text-dark rounded-full text-sm font-bold hover:brightness-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={connectingId === person.id || (localRequestStatuses[person.id] || person.requestStatus) !== null}
+                      className={`px-4 py-2 rounded-full text-sm font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
+                        (localRequestStatuses[person.id] || person.requestStatus) === 'pending'
+                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                          : (localRequestStatuses[person.id] || person.requestStatus) === 'accepted'
+                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          : 'bg-primary/10 text-primary hover:bg-primary hover:text-dark'
+                      }`}
                     >
-                      {connectingId === person.id ? 'Connecting…' : 'Connect'}
+                      {connectingId === person.id 
+                        ? 'Sending…' 
+                        : (localRequestStatuses[person.id] || person.requestStatus) === 'pending'
+                        ? 'Request Sent'
+                        : (localRequestStatuses[person.id] || person.requestStatus) === 'accepted'
+                        ? 'Matched'
+                        : 'Connect'}
                     </button>
                   </div>
                 </div>

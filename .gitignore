@@ -40,5 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-#google stitch
+# google stitch
 .mcp.json
+
+# Supabase
+.supabase/
+/supabase/snippets
