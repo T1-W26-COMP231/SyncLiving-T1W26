@@ -958,7 +958,12 @@ const RoommateDiscovery: React.FC<Props> = ({
                   )}
 
                   <div className="flex items-center justify-between mt-3">
-                    <button className="text-sm font-bold text-white/80 hover:text-white transition-colors">View Profile</button>
+                    <button 
+                      onClick={() => router.push(`/discovery/profile/${person.id}`)}
+                      className="text-sm font-bold text-white/80 hover:text-white transition-colors"
+                    >
+                      View Profile
+                    </button>
                     <button
                       onClick={() => handleConnect(person.id)}
                       disabled={connectingId === person.id || (localRequestStatuses[person.id] || person.requestStatus) !== null}
