@@ -1,28 +1,38 @@
 import { ProfileDetails } from '@/components/discovery/ProfileDetails';
+import { createClient } from '@/utils/supabase/server';
+import { notFound } from 'next/navigation';
 
-// Mock data for initial development
-const MOCK_PROFILE = {
-  id: 'user-123',
-  full_name: 'Sarah Mitchell',
-  avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&q=80',
-  bio: 'Hi there! I am a software engineer looking for a quiet place in the city. I am clean, organized, and love to cook. I usually spend my weekends hiking or reading at a local cafe. I am looking for a roommate who is respectful of personal space but also down for a movie night once in a while.',
-  age: 26,
-  location: 'Toronto, ON',
-  role: 'seeker' as const,
-  lifestyle_tags: ['Non-Smoker', 'Quiet', 'Early Bird', 'Pet Friendly', 'Organized', 'Vegan'],
-  budget_min: 1200,
-  budget_max: 1800,
-  move_in_date: '2026-05-01',
-  preferred_gender: 'Female',
-  photos: [
-    'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
-  ]
-};
+export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
-  // In a real implementation, we would fetch the profile from Supabase using the ID
-  // For now, we use the mock profile
-  return <ProfileDetails profile={{ ...MOCK_PROFILE, id: params.id }} />;
+  if (error || !profile) {
+    console.error('Error fetching profile:', error);
+    notFound();
+  }
+
+  // Map database profile to component expected props
+  const formattedProfile = {
+    id: profile.id,
+    full_name: profile.full_name || 'Anonymous',
+    avatar_url: profile.avatar_url || undefined,
+    bio: profile.bio || undefined,
+    age: profile.age || undefined,
+    location: profile.location || undefined,
+    role: (profile.role as 'seeker' | 'provider') || 'seeker',
+    lifestyle_tags: profile.lifestyle_tags || [],
+    budget_min: profile.budget_min || undefined,
+    budget_max: profile.budget_max || undefined,
+    move_in_date: profile.move_in_date || undefined,
+    preferred_gender: profile.preferred_gender || undefined,
+    photos: profile.photos || [],
+  };
+
+  return <ProfileDetails profile={formattedProfile} />;
 }
