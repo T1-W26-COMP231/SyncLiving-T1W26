@@ -125,7 +125,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       .limit(1)
       .maybeSingle();
 
-    initialRequestStatus = (reqRow?.status as typeof initialRequestStatus) ?? null;
+    initialRequestStatus = (reqRow?.status as unknown as typeof initialRequestStatus) ?? null;
   }
 
   // Fetch active listing for providers — includes space photos from the listing
