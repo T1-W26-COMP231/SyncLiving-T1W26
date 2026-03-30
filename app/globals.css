@@ -6,6 +6,8 @@
   --primary: #00f0d1;
   --secondary: #ccdfad;
   --dark: #101d22;
+  --admin-primary: #14b8a6;
+  --admin-dark: #0f2027;
 
 
 
@@ -28,6 +30,8 @@
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-dark: var(--dark);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-dark: var(--admin-dark);
   --font-sans: var(--font-plus-jakarta-sans), sans-serif;
 }
 

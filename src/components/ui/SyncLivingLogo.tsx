@@ -4,6 +4,8 @@ interface SyncLivingLogoProps {
   /** 'sm' = footer/compact use, 'md' = default navbars, 'lg' = auth page headers */
   size?: 'sm' | 'md' | 'lg';
   href?: string;
+  /** Override the "Living" accent color — defaults to text-primary */
+  accentColor?: string;
 }
 
 const sizeMap = {
@@ -12,7 +14,7 @@ const sizeMap = {
   lg: { svg: 'w-10 h-10 rounded-xl', gap: 'gap-2.5', text: 'text-3xl', stroke: 'stroke-2' },
 };
 
-const SyncLivingLogo = ({ size = 'md', href = '/' }: SyncLivingLogoProps) => {
+const SyncLivingLogo = ({ size = 'md', href = '/', accentColor }: SyncLivingLogoProps) => {
   const { svg, gap, text, stroke } = sizeMap[size];
 
   return (
@@ -39,7 +41,7 @@ const SyncLivingLogo = ({ size = 'md', href = '/' }: SyncLivingLogoProps) => {
       {/* Typography */}
       <div className={`font-extrabold tracking-tight flex items-center ${text}`}>
         <span className="text-dark">Sync</span>
-        <span className="text-primary">Living</span>
+        <span className={accentColor ?? 'text-primary'}>Living</span>
       </div>
     </Link>
   );
