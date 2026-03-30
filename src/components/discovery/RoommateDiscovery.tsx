@@ -1166,6 +1166,12 @@ const RoommateDiscovery: React.FC<Props> = ({
                   )}
 
                   <div className="flex items-center justify-between mt-3">
+                    <button 
+                      onClick={() => router.push(`/discovery/profile/${person.id}`)}
+                      className="text-sm font-bold text-white/80 hover:text-white transition-colors"
+                    >
+                      View Profile
+                    </button>
                     <button
                       onClick={e => { e.stopPropagation(); router.push(`/profile/${person.id}?score=${person.score}`); }}
                       className="text-sm font-bold text-white/80 hover:text-white transition-colors"

@@ -52,6 +52,14 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
+### 2.1 Environment Template
+
+For convenience, a `.env.example` file is included in the repository.  
+Copy it to `.env.local` and fill in your own credentials:
+
+```bash
+cp .env.example .env.local
+
 ### 3. Map Services Setup
 To enable address validation and geolocation in the provider dashboard, you must:
 1. Go to [Google Cloud Console](https://console.cloud.google.com/).
@@ -199,3 +207,36 @@ git push origin feature/your-feature-name
 - **Database:** Never modify DB structure via UI. Always use migrations (refer to [GEMINI.md](./GEMINI.md)).
 - **Types:** Always use generated types from `src/types/supabase.ts`.
 
+---
+
+## 🐛 Troubleshooting
+
+### Docker not starting
+Ensure WSL 2 is enabled and Docker Desktop is running before executing any Supabase CLI commands.
+
+### Supabase CLI errors
+If you see `Error: Supabase local containers not running`, try:
+
+npx supabase stop
+npx supabase start
+
+### Environment variables not loading
+Confirm that `.env.local` exists in the project root and matches the structure in `.env.example`.
+
+### Next.js not updating
+Restart the development server:
+
+npm run dev
+
+### Database schema mismatch
+If your local database does not match the latest migrations, run:
+
+npx supabase db reset
+
+This will rebuild your local schema using the migration files in `supabase/migrations/`.
+
+### Google Maps autocomplete not working
+Verify that:
+- Your API key is valid
+- The correct APIs are enabled (Maps JavaScript API, Places API, Geocoding API)
+- The key is added to `.env.local` as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
