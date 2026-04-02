@@ -114,10 +114,10 @@ export default function UserManagement() {
         location: profile.location || 'Not provided',
         bio: profile.bio || '',
         lifestyle_tags: profile.lifestyle_tags || [],
-        budget_min: profile.budget_min,
-        budget_max: profile.budget_max,
-        age: profile.age,
-        preferred_gender: profile.preferred_gender,
+        budget_min: profile.budget_min ?? undefined,
+        budget_max: profile.budget_max ?? undefined,
+        age: profile.age ?? undefined,
+        preferred_gender: profile.preferred_gender ?? undefined,
       }));
 
       setUsers(mappedUsers);
@@ -145,7 +145,7 @@ export default function UserManagement() {
   const pageUsers = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   async function handleAction(userId: string, action: 'suspend' | 'ban' | 'activate') {
-    const statusMap = {
+    const statusMap: Record<'suspend' | 'ban' | 'activate', 'active' | 'suspended' | 'banned'> = {
       suspend: 'suspended',
       ban: 'banned',
       activate: 'active'
