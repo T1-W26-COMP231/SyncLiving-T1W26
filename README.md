@@ -105,6 +105,29 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 
 ---
 
+## 🧪 Testing
+
+SyncLiving uses **Vitest** for unit and logic testing. We prioritize testing core business logic, utility functions, and complex data transformations.
+
+### 1. Running Tests
+To execute the test suite once:
+```powershell
+npm test
+```
+
+To run tests in watch mode (re-runs on file changes):
+```powershell
+npx vitest
+```
+
+### 2. What is Tested
+-   **Matching Algorithm (`src/services/matching.ts`)**: Ensures compatibility scores, tiers, and conflict triggers are calculated correctly using the FCRM engine.
+-   **Activity Logger (`src/utils/activity-logger.ts`)**: Verifies that user actions are correctly formatted and sent to the database.
+-   **Validation Utilities (`src/utils/validation.ts`)**: Validates critical form data like age, names, and dates to ensure data integrity.
+-   **Component Tests (`src/components/...`)**: Verified using **React Testing Library**. We test that UI elements render correctly, icons are present, and navigation links point to the correct destinations (e.g., `src/components/layout/Navbar.test.tsx`).
+
+---
+
 ## 📂 Project Structure
 - `/app`: Next.js routes and UI components.
 - `/src`: Main source code, reusable components, and Supabase integration.
