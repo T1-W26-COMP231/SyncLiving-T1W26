@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { logActivity } from '@/utils/activity-logger'
+
 
 /**
  * Action to handle user login
@@ -28,6 +30,9 @@ export async function login(formData: FormData) {
   if (!user) {
     redirect('/dashboard') // Fallback, though we should have a user here
   }
+
+  // Log the login activity
+  await logActivity(user.id, 'login', { email: user.email });
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -71,6 +76,9 @@ export async function signup(formData: FormData) {
   if (!data.user?.id) {
     redirect('/dashboard') // Fallback
   }
+
+  // Log the signup activity
+  await logActivity(data.user.id, 'signup', { email: data.user.email, full_name });
 
   // For signup, usually not an admin yet, but checking just in case of future logic
   const { data: profile } = await supabase
