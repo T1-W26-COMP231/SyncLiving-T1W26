@@ -119,6 +119,11 @@ This is the primary table for storing user-specific data, lifestyle preferences,
     *   **Global Access:** When accessing `window.google` or other global objects, use type casting (e.g., `(window as any).google`) to avoid reference errors.
     *   **Supabase Enum Matching:** When defining frontend UI states or form parameters that map directly to database enum fields (e.g. `post_status`), NEVER hardcode custom strings (like `'paused'`) if the database expects something else (like `'archived'`). ALWAYS rely on the generated Supabase types (`src/types/supabase.ts`) to ensure your parameters strictly match the DB schema. If the UI requires a different display label, map it at the presentation layer, but keep the underlying data values consistent with the database.
     *   **Verification:** After making changes, always run `npx tsc --noEmit` to simulate the Vercel build check and ensure zero errors.
+7.  **🧪 Testing Standards:**
+    *   **Mandatory Tests:** You MUST add or update unit tests (using Vitest) whenever you implement new business logic, utility functions (in `src/utils/`), or complex data transformations (in `src/services/`).
+    *   **Test Location:** Place test files adjacent to the source file with a `.test.ts` or `.test.tsx` extension (e.g., `src/utils/validation.ts` -> `src/utils/validation.test.ts`).
+    *   **Verification:** Always run `npm test` after making logic changes to ensure no regressions are introduced and the new code behaves as expected.
+    *   **Mocking:** Use Vitest's `vi.mock()` to isolate units, especially when dealing with external dependencies like Supabase.
 
 ---
 

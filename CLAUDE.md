@@ -110,6 +110,10 @@ This is the primary table for storing user-specific data, lifestyle preferences,
 3.  **Security:** Always enable **Row Level Security (RLS)** for any new table created in a migration.
 4.  **State Management:** Prefer **Server Actions** over client-side `fetch` for data mutations.
 5.  **Style:** Adhere strictly to the existing **Tailwind CSS** and **TypeScript** standards.
+6.  **🧪 Testing Standards:**
+    *   **Mandatory Tests:** You MUST add or update unit tests (using Vitest) whenever you implement new business logic, utility functions (in `src/utils/`), or complex data transformations (in `src/services/`).
+    *   **Test Location:** Place test files adjacent to the source file with a `.test.ts` or `.test.tsx` extension.
+    *   **Verification:** Always run `npm test` after making logic changes to ensure integrity.
 
 ---
 
