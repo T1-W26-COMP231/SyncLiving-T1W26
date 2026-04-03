@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { logActivity } from '@/utils/activity-logger';
 
 export async function createListing(prevState: any, formData: FormData) {
   const supabase = await createClient();
@@ -105,6 +106,13 @@ export async function createListing(prevState: any, formData: FormData) {
       const { error: amError } = await supabase.from('listing_amenities').insert(amenitiesToInsert);
       if (amError) throw amError;
     }
+
+    // Log the activity
+    await logActivity(user.id, id ? 'update_listing' : 'create_listing', {
+      listing_id: listingId,
+      title: title
+    });
+
   } catch (err: any) {
     console.error('Database Error:', err);
     return { error: err.message || 'An unexpected database error occurred.' };

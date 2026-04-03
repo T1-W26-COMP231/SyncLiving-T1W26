@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { computeMatchResult, SURFACE_THRESHOLD } from '@/services/matching';
 import type { Database } from '@/types/supabase';
+import { logActivity } from '@/utils/activity-logger';
 
 type MatchRequestStatus = Database['public']['Enums']['match_request_status'];
 
@@ -280,6 +281,12 @@ export async function sendMatchRequest(receiverId: string, message?: string) {
     console.error('Error sending match request:', error);
     return { error: error.message };
   }
+
+  // Log activity
+  await logActivity(user.id, 'match_request_sent', { 
+    receiver_id: receiverId,
+    has_message: !!message
+  });
 
   return { success: true };
 }

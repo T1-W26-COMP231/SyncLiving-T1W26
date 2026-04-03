@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { logActivity } from '@/utils/activity-logger';
 
 export interface MatchProfile {
   id: string;
@@ -183,6 +184,12 @@ export async function respondToMatchRequest(requestId: string, status: 'accepted
   }
 
   console.log('Match request updated successfully:', request);
+
+  // Log activity
+  await logActivity(user.id, 'match_request_responded', { 
+    sender_id: request.sender_id,
+    status: status
+  });
 
   // 2. If accepted, create a conversation and a user connection for testing
   if (status === 'accepted' && request) {
