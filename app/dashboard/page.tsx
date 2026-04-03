@@ -21,6 +21,10 @@ export default async function ProviderDashboard() {
     .eq('id', user.id)
     .single();
 
+  if (profile?.is_admin) {
+    redirect('/admin/dashboard');
+  }
+
   const userName = user.email?.split('@')[0] || 'User';
   const name = profile?.full_name || user.email?.split('@')[0] || 'User';
 

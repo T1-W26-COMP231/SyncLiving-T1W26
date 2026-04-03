@@ -22,9 +22,24 @@ export async function login(formData: FormData) {
     redirect('/login?error=' + encodeURIComponent(error.message))
   }
 
+  // Check if user is an admin to determine redirect path
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    redirect('/dashboard') // Fallback, though we should have a user here
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
+
+  const redirectPath = profile?.is_admin ? '/admin/dashboard' : '/dashboard'
+
   // Refresh the data on the current page
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect(redirectPath)
 }
 
 /**
@@ -37,7 +52,7 @@ export async function signup(formData: FormData) {
   const password = formData.get('password') as string
   const full_name = formData.get('full_name') as string
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -53,8 +68,21 @@ export async function signup(formData: FormData) {
     redirect('/signup?error=' + encodeURIComponent(error.message))
   }
 
+  if (!data.user?.id) {
+    redirect('/dashboard') // Fallback
+  }
+
+  // For signup, usually not an admin yet, but checking just in case of future logic
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', data.user.id)
+    .single()
+
+  const redirectPath = profile?.is_admin ? '/admin/dashboard' : '/dashboard'
+
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect(redirectPath)
 }
 
 /**
