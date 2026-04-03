@@ -114,6 +114,12 @@ This is the primary table for storing user-specific data, lifestyle preferences,
     *   **Mandatory Tests:** You MUST add or update unit tests (using Vitest) whenever you implement new business logic, utility functions (in `src/utils/`), or complex data transformations (in `src/services/`).
     *   **Test Location:** Place test files adjacent to the source file with a `.test.ts` or `.test.tsx` extension.
     *   **Verification:** Always run `npm test` after making logic changes to ensure integrity.
+    *   **UI Testing Rules:**
+        1. **Global Mocks:** Rely on `src/test/setup.ts` for automatic mocking of `lucide-react`, `next/navigation`, and `next/link`.
+        2. **Supabase Isolation:** Always mock the Supabase client in component tests to prevent real network calls and side effects.
+        3. **Async Awareness:** Use `async/await` with `findBy` or `waitFor` queries for any component using `useEffect` or fetching data. This resolves the `act()` warning and ensures state updates are rendered.
+        4. **Test IDs:** Use `data-testid` for targeting stable elements like icons or dynamically rendered containers.
+        5. **Behavioral Focus:** Do not write tests just to verify that React itself works. Focus on behavioral outcomes and business logic: "When input A is provided, does the UI correctly display B?" or "Does clicking this button trigger the correct mocked function?"
 
 ---
 

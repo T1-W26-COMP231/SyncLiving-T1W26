@@ -124,6 +124,7 @@ npx vitest
 -   **Matching Algorithm (`src/services/matching.ts`)**: Ensures compatibility scores, tiers, and conflict triggers are calculated correctly using the FCRM engine.
 -   **Activity Logger (`src/utils/activity-logger.ts`)**: Verifies that user actions are correctly formatted and sent to the database.
 -   **Validation Utilities (`src/utils/validation.ts`)**: Validates critical form data like age, names, and dates to ensure data integrity.
+-   **Component Tests (`src/components/...`)**: Verified using **React Testing Library**. We test that UI elements render correctly, icons are present, and navigation links point to the correct destinations (e.g., `src/components/layout/Navbar.test.tsx`).
 
 ---
 
