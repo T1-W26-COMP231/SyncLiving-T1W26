@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import ProfileDetailsPage, { type ProfileData, type ReviewData, type CompatibilityItem } from '@/components/profile/ProfileDetailsPage';
+import ProfileDetailsPage from '@/components/profile/ProfileDetailsPage';
+import { type ProfileData, type ReviewData, type CompatibilityItem } from '@/components/profile/types';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -64,6 +65,12 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       reviewer:profiles!reviews_reviewer_id_fkey (
         full_name,
         avatar_url
+      ),
+      scores:review_scores (
+        score,
+        criteria:review_criteria (
+          label
+        )
       )
     `)
     .eq('reviewee_id', id)
@@ -77,6 +84,10 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     duration: '',
     rating: r.average_score ? Number(r.average_score) : 5,
     text: r.overall_comment ?? '',
+    scores: r.scores?.map((s: any) => ({
+      score: s.score,
+      label: s.criteria?.label ?? 'Unnamed Criteria',
+    })) ?? [],
   }));
 
   // Average reputation from reviews
