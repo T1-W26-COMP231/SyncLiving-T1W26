@@ -35,6 +35,7 @@ export interface ReviewData {
   text: string;
   rating: number;
   scores?: { score: number; label: string }[];
+  status: string;
 }
 
 export interface CompatibilityItem {

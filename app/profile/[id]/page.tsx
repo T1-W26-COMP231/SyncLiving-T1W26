@@ -61,6 +61,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       id,
       overall_comment,
       average_score,
+      status,
       reviewer_id,
       reviewer:profiles!reviews_reviewer_id_fkey (
         full_name,
@@ -74,6 +75,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       )
     `)
     .eq('reviewee_id', id)
+    .in('status', ['active', 'reported'])
     .order('id', { ascending: false })
     .limit(20);
 
@@ -88,6 +90,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       score: s.score,
       label: s.criteria?.label ?? 'Unnamed Criteria',
     })) ?? [],
+    status: r.status,
   }));
 
   // Average reputation from reviews
