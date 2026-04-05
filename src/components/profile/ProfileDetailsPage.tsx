@@ -5,48 +5,9 @@ import Link from 'next/link';
 import { ArrowLeft, Star, MapPin, Briefcase, CheckCircle, Share2, MoreHorizontal, Home, Send, MessageCircle, AlertTriangle } from 'lucide-react';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import { sendMatchRequest } from '../../../app/discovery/actions';
+import ReviewDetailsModal from './ReviewDetailsModal';
 
-// Profile data shape passed in from the server component
-export interface ProfileData {
-  id: string;
-  full_name: string;
-  avatar_url?: string | null;
-  age?: number | null;
-  location?: string | null;
-  role?: string | null;
-  /** Raw lifestyle_tags from DB — wd:/we: prefixed tags are filtered out before display */
-  lifestyle_tags?: string[] | null;
-  budget_min?: number | null;
-  budget_max?: number | null;
-  move_in_date?: string | null;
-  bio?: string | null;
-  occupation?: string | null;
-  match_score?: number | null;
-  reputation?: number | null;
-  reviews?: ReviewData[];
-  /** Per-dimension compatibility scores computed on the server */
-  compatibility?: CompatibilityItem[];
-  /** Personal/extra photos from profiles.photos — shown in About section */
-  profile_photos?: string[];
-  /** Space photos from room_listings.photos — shown in Living Space section */
-  space_photos?: string[];
-  /** Active listing info if the provider has created one */
-  space_listing?: { title: string; address: string; rental_fee: number } | null;
-}
-
-export interface ReviewData {
-  id: string;
-  reviewer_name: string;
-  reviewer_avatar?: string | null;
-  duration: string;
-  text: string;
-  rating: number;
-}
-
-export interface CompatibilityItem {
-  label: string;
-  percentage: number;
-}
+import { type ProfileData, type ReviewData, type CompatibilityItem } from './types';
 
 interface ProfileDetailsPageProps {
   profile: ProfileData;
@@ -125,6 +86,7 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
   const [requestStatus, setRequestStatus] = useState<'pending' | 'accepted' | 'declined' | null>(initialRequestStatus);
   const [isConnecting, setIsConnecting] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<ReviewData | null>(null);
 
   async function handleConnect() {
     if (requestStatus !== null || isConnecting) return;
@@ -515,9 +477,12 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
 
                 <div className="space-y-6">
                   {displayedReviews.map((review, index) => (
-                    <div
+                    <button
                       key={review.id}
-                      className={index < displayedReviews.length - 1 ? 'border-b border-slate-100 pb-6' : ''}
+                      onClick={() => setSelectedReview(review)}
+                      className={`w-full text-left p-4 rounded-lg transition-colors hover:bg-slate-50 ${
+                        index < displayedReviews.length - 1 ? 'border-b border-slate-100 pb-6' : ''
+                      }`}
                     >
                       <div className="flex items-center gap-3 mb-3">
                         {review.reviewer_avatar ? (
@@ -540,7 +505,7 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                       <p className="text-slate-600 text-sm leading-relaxed mt-2">
                         &ldquo;{review.text}&rdquo;
                       </p>
-                    </div>
+                    </button>
                   ))}
                 </div>
 
@@ -557,6 +522,13 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
           </div>
         </div>
       </main>
+
+      {selectedReview && (
+        <ReviewDetailsModal
+          review={selectedReview}
+          onClose={() => setSelectedReview(null)}
+        />
+      )}
     </div>
   );
 }
