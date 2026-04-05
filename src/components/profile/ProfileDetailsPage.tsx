@@ -1,17 +1,33 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Star, MapPin, Briefcase, CheckCircle, Share2, MoreHorizontal, Home, Send, MessageCircle, AlertTriangle } from 'lucide-react';
-import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
-import { sendMatchRequest } from '../../../app/discovery/actions';
-import ReviewDetailsModal from './ReviewDetailsModal';
+import React, { useState } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Star,
+  MapPin,
+  Briefcase,
+  CheckCircle,
+  Share2,
+  MoreHorizontal,
+  Home,
+  Send,
+  MessageCircle,
+  AlertTriangle,
+} from "lucide-react";
+import SyncLivingLogo from "@/components/ui/SyncLivingLogo";
+import { sendMatchRequest } from "../../../app/discovery/actions";
+import ReviewDetailsModal from "./ReviewDetailsModal";
 
-import { type ProfileData, type ReviewData, type CompatibilityItem } from './types';
+import {
+  type ProfileData,
+  type ReviewData,
+  type CompatibilityItem,
+} from "./types";
 
 interface ProfileDetailsPageProps {
   profile: ProfileData;
-  initialRequestStatus?: 'pending' | 'accepted' | 'declined' | null;
+  initialRequestStatus?: "pending" | "accepted" | "declined" | null;
 }
 
 // Render star rating as a row of filled/empty stars
@@ -21,7 +37,7 @@ function StarRating({ rating, max = 5 }: { rating: number; max?: number }) {
       {Array.from({ length: max }).map((_, i) => (
         <Star
           key={i}
-          className={`w-4 h-4 ${i < Math.round(rating) ? 'fill-primary text-primary' : 'text-slate-300'}`}
+          className={`w-4 h-4 ${i < Math.round(rating) ? "fill-primary text-primary" : "text-slate-300"}`}
         />
       ))}
     </div>
@@ -30,29 +46,33 @@ function StarRating({ rating, max = 5 }: { rating: number; max?: number }) {
 
 // Lifestyle tag icon mapping
 const LIFESTYLE_ICONS: Record<string, string> = {
-  'Early Riser': '🌅',
-  'Pet Friendly': '🐾',
-  'Non-Smoker': '🚭',
-  'Non-smoker': '🚭',
-  'Remote Worker': '💻',
-  'Clean Freak': '🧹',
-  'Night Owl': '🦉',
-  'Vegan': '🌱',
-  'Vegetarian': '🥦',
-  'Social': '🎉',
-  'Quiet': '🤫',
-  'Gym Goer': '💪',
-  'Student': '📚',
-  'No Pets': '🚫',
+  "Early Riser": "🌅",
+  "Pet Friendly": "🐾",
+  "Non-Smoker": "🚭",
+  "Non-smoker": "🚭",
+  "Remote Worker": "💻",
+  "Clean Freak": "🧹",
+  "Night Owl": "🦉",
+  Vegan: "🌱",
+  Vegetarian: "🥦",
+  Social: "🎉",
+  Quiet: "🤫",
+  "Gym Goer": "💪",
+  Student: "📚",
+  "No Pets": "🚫",
 };
 
 function getLifestyleIcon(tag: string): string {
-  return LIFESTYLE_ICONS[tag] ?? '✨';
+  return LIFESTYLE_ICONS[tag] ?? "✨";
 }
 
 function formatMoveInDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 function averageRating(reviews: ReviewData[]): number {
@@ -65,25 +85,31 @@ const CONFLICT_THRESHOLD = 65;
 
 // Per-dimension "may..." warning shown on conflict items
 const CONFLICT_DESCRIPTIONS: Record<string, string> = {
-  'Sleep Schedule': 'may affect your rest and daily routine',
-  'Noise Level': 'may cause disruptions at home',
-  'Cleanliness': 'may lead to disagreements on household tidiness',
-  'Cleanliness & Organization': 'may lead to disagreements on household tidiness',
-  'Guest Policy': 'may create tension around visitors',
-  'Social Style': 'may lead to friction around social gatherings',
-  'Social Style & Guests': 'may lead to friction around social gatherings',
-  'Pet Policy': 'may be an issue if you have or dislike pets',
-  'Smoking': 'may affect indoor air quality and comfort',
-  'Work From Home': 'may affect shared space usage during the day',
-  'Study Habits': 'may impact quiet hours and concentration',
-  'Budget': 'may lead to disagreements on shared expenses',
-  'Work Schedule': 'may affect shared routines and quiet hours',
-  'Cooking Habits': 'may lead to friction over kitchen use',
-  'Temperature': 'may cause disagreements on heating or cooling',
+  "Sleep Schedule": "may affect your rest and daily routine",
+  "Noise Level": "may cause disruptions at home",
+  Cleanliness: "may lead to disagreements on household tidiness",
+  "Cleanliness & Organization":
+    "may lead to disagreements on household tidiness",
+  "Guest Policy": "may create tension around visitors",
+  "Social Style": "may lead to friction around social gatherings",
+  "Social Style & Guests": "may lead to friction around social gatherings",
+  "Pet Policy": "may be an issue if you have or dislike pets",
+  Smoking: "may affect indoor air quality and comfort",
+  "Work From Home": "may affect shared space usage during the day",
+  "Study Habits": "may impact quiet hours and concentration",
+  Budget: "may lead to disagreements on shared expenses",
+  "Work Schedule": "may affect shared routines and quiet hours",
+  "Cooking Habits": "may lead to friction over kitchen use",
+  Temperature: "may cause disagreements on heating or cooling",
 };
 
-export default function ProfileDetailsPage({ profile, initialRequestStatus = null }: ProfileDetailsPageProps) {
-  const [requestStatus, setRequestStatus] = useState<'pending' | 'accepted' | 'declined' | null>(initialRequestStatus);
+export default function ProfileDetailsPage({
+  profile,
+  initialRequestStatus = null,
+}: ProfileDetailsPageProps) {
+  const [requestStatus, setRequestStatus] = useState<
+    "pending" | "accepted" | "declined" | null
+  >(initialRequestStatus);
   const [isConnecting, setIsConnecting] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [selectedReview, setSelectedReview] = useState<ReviewData | null>(null);
@@ -94,31 +120,35 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
     try {
       const result = await sendMatchRequest(profile.id);
       if (result.error) {
-        alert('Could not send connection request: ' + result.error);
+        alert("Could not send connection request: " + result.error);
         return;
       }
-      setRequestStatus('pending');
+      setRequestStatus("pending");
     } finally {
       setIsConnecting(false);
     }
   }
 
-  const avgRating = profile.reviews?.length ? averageRating(profile.reviews) : 0;
+  const avgRating = profile.reviews?.length
+    ? averageRating(profile.reviews)
+    : 0;
   const displayedReviews = showAllReviews
     ? (profile.reviews ?? [])
     : (profile.reviews ?? []).slice(0, 2);
 
-  const roleLabel = profile.role === 'provider' ? 'Verified Provider' : 'Room Seeker';
-  const roleColor = profile.role === 'provider'
-    ? 'bg-primary/10 text-primary'
-    : 'bg-secondary/30 text-foreground';
+  const roleLabel =
+    profile.role === "provider" ? "Verified Provider" : "Room Seeker";
+  const roleColor =
+    profile.role === "provider"
+      ? "bg-primary/10 text-primary"
+      : "bg-secondary/30 text-foreground";
 
   const visibleTags = (profile.lifestyle_tags ?? []).filter(
-    t => !t.startsWith('wd:') && !t.startsWith('we:')
+    (t) => !t.startsWith("wd:") && !t.startsWith("we:"),
   );
 
   const conflictDimensions = (profile.compatibility ?? []).filter(
-    c => c.percentage < CONFLICT_THRESHOLD
+    (c) => c.percentage < CONFLICT_THRESHOLD,
   );
 
   return (
@@ -157,10 +187,8 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
       {/* Page content */}
       <main className="flex-1 flex justify-center py-6 px-4 lg:px-40">
         <div className="max-w-[1000px] w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           {/* Left Column: User Overview */}
           <div className="lg:col-span-1 space-y-6">
-
             {/* Profile Card */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col items-center">
               <div className="relative">
@@ -173,7 +201,7 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                     />
                   ) : (
                     <div className="w-full h-full rounded-full bg-primary/20 flex items-center justify-center text-primary text-3xl font-bold">
-                      {profile.full_name?.[0] ?? '?'}
+                      {profile.full_name?.[0] ?? "?"}
                     </div>
                   )}
                 </div>
@@ -182,7 +210,8 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
 
               <div className="mt-4 text-center">
                 <h1 className="text-2xl font-bold text-foreground">
-                  {profile.full_name}{profile.age ? `, ${profile.age}` : ''}
+                  {profile.full_name}
+                  {profile.age ? `, ${profile.age}` : ""}
                 </h1>
                 <p className="text-slate-500 font-medium text-sm mt-1 flex items-center justify-center gap-1.5 flex-wrap">
                   {profile.occupation && (
@@ -202,7 +231,9 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
               </div>
 
               {/* Role badge */}
-              <div className={`flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${roleColor}`}>
+              <div
+                className={`flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${roleColor}`}
+              >
                 <CheckCircle className="w-3.5 h-3.5" />
                 {roleLabel}
               </div>
@@ -213,24 +244,24 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                   onClick={handleConnect}
                   disabled={isConnecting || requestStatus !== null}
                   className={`w-full font-bold py-3 rounded-full transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                    requestStatus === 'pending'
-                      ? 'bg-amber-100 text-amber-700'
-                      : requestStatus === 'accepted'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-primary text-white hover:opacity-90'
+                    requestStatus === "pending"
+                      ? "bg-amber-100 text-amber-700"
+                      : requestStatus === "accepted"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-primary text-white hover:opacity-90"
                   }`}
                 >
                   <Send className="w-4 h-4" />
                   {isConnecting
-                    ? 'Sending…'
-                    : requestStatus === 'pending'
-                    ? 'Request Sent'
-                    : requestStatus === 'accepted'
-                    ? 'Matched!'
-                    : 'Send Connection Request'}
+                    ? "Sending…"
+                    : requestStatus === "pending"
+                      ? "Request Sent"
+                      : requestStatus === "accepted"
+                        ? "Matched!"
+                        : "Send Connection Request"}
                 </button>
                 <button
-                  disabled={requestStatus !== 'accepted'}
+                  disabled={requestStatus !== "accepted"}
                   className="w-full bg-slate-100 text-foreground font-bold py-3 rounded-full hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <MessageCircle className="w-4 h-4" />
@@ -244,13 +275,17 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                   <span className="text-primary font-bold text-xl">
                     {profile.reputation?.toFixed(1) ?? avgRating.toFixed(1)}
                   </span>
-                  <p className="text-[10px] uppercase text-slate-500 font-bold mt-0.5">Reputation</p>
+                  <p className="text-[10px] uppercase text-slate-500 font-bold mt-0.5">
+                    Reputation
+                  </p>
                 </div>
                 <div className="bg-background p-3 rounded-xl text-center border border-slate-100">
                   <span className="text-primary font-bold text-xl">
-                    {profile.match_score ? `${profile.match_score}%` : 'N/A'}
+                    {profile.match_score ? `${profile.match_score}%` : "N/A"}
                   </span>
-                  <p className="text-[10px] uppercase text-slate-500 font-bold mt-0.5">Match Score</p>
+                  <p className="text-[10px] uppercase text-slate-500 font-bold mt-0.5">
+                    Match Score
+                  </p>
                 </div>
               </div>
             </div>
@@ -274,20 +309,27 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
             )}
 
             {/* Budget & Move-in */}
-            {(profile.budget_min || profile.budget_max || profile.move_in_date) && (
+            {(profile.budget_min ||
+              profile.budget_max ||
+              profile.move_in_date) && (
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
                 <h3 className="font-bold text-lg">Preferences</h3>
                 {(profile.budget_min || profile.budget_max) && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500 font-medium">Monthly Budget</span>
+                    <span className="text-sm text-slate-500 font-medium">
+                      Monthly Budget
+                    </span>
                     <span className="text-sm font-bold text-foreground">
-                      ${profile.budget_min?.toLocaleString() ?? '?'} – ${profile.budget_max?.toLocaleString() ?? '?'}
+                      ${profile.budget_min?.toLocaleString() ?? "?"} – $
+                      {profile.budget_max?.toLocaleString() ?? "?"}
                     </span>
                   </div>
                 )}
                 {profile.move_in_date && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500 font-medium">Move-in Date</span>
+                    <span className="text-sm text-slate-500 font-medium">
+                      Move-in Date
+                    </span>
                     <span className="text-sm font-bold text-foreground">
                       {formatMoveInDate(profile.move_in_date)}
                     </span>
@@ -299,54 +341,71 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
 
           {/* Right Column: Content */}
           <div className="lg:col-span-2 space-y-8">
-
             {/* About / Bio — includes profile_photos (personal extra photos) */}
-            {(profile.bio || (profile.profile_photos && profile.profile_photos.length > 0)) && (
+            {(profile.bio ||
+              (profile.profile_photos &&
+                profile.profile_photos.length > 0)) && (
               <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <span className="text-primary">👤</span> About {profile.full_name?.split(' ')[0]}
+                  <span className="text-primary">👤</span> About{" "}
+                  {profile.full_name?.split(" ")[0]}
                 </h2>
                 {profile.bio && (
-                  <p className="text-slate-600 text-sm leading-relaxed">{profile.bio}</p>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    {profile.bio}
+                  </p>
                 )}
                 {/* Personal extra photos — 1 wide left (row-span-2) + 2 small stacked right, same as Living Space */}
-                {profile.profile_photos && profile.profile_photos.length > 0 && (
-                  <div className={profile.bio ? 'mt-6' : ''}>
-                    {profile.profile_photos.length === 1 ? (
-                      <div className="rounded-xl overflow-hidden bg-slate-100" style={{ height: '240px' }}>
-                        <img
-                          src={profile.profile_photos[0]}
-                          alt="Photo 1"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div
-                        className="grid gap-3"
-                        style={{ gridTemplateColumns: '3fr 2fr', gridTemplateRows: '1fr 1fr', height: '240px' }}
-                      >
-                        {/* Wide featured photo spanning full height on the left */}
-                        <div className="row-span-2 rounded-xl overflow-hidden bg-slate-100">
+                {profile.profile_photos &&
+                  profile.profile_photos.length > 0 && (
+                    <div className={profile.bio ? "mt-6" : ""}>
+                      {profile.profile_photos.length === 1 ? (
+                        <div
+                          className="rounded-xl overflow-hidden bg-slate-100"
+                          style={{ height: "240px" }}
+                        >
                           <img
                             src={profile.profile_photos[0]}
                             alt="Photo 1"
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        {/* Up to 2 smaller photos stacked on the right */}
-                        {profile.profile_photos.slice(1, 3).map((url, idx) => (
-                          <div key={idx} className="rounded-xl overflow-hidden bg-slate-100">
+                      ) : (
+                        <div
+                          className="grid gap-3"
+                          style={{
+                            gridTemplateColumns: "3fr 2fr",
+                            gridTemplateRows: "1fr 1fr",
+                            height: "240px",
+                          }}
+                        >
+                          {/* Wide featured photo spanning full height on the left */}
+                          <div className="row-span-2 rounded-xl overflow-hidden bg-slate-100">
                             <img
-                              src={url}
-                              alt={`Photo ${idx + 2}`}
+                              src={profile.profile_photos[0]}
+                              alt="Photo 1"
                               className="w-full h-full object-cover"
                             />
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                          {/* Up to 2 smaller photos stacked on the right */}
+                          {profile.profile_photos
+                            .slice(1, 3)
+                            .map((url, idx) => (
+                              <div
+                                key={idx}
+                                className="rounded-xl overflow-hidden bg-slate-100"
+                              >
+                                <img
+                                  src={url}
+                                  alt={`Photo ${idx + 2}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
             )}
 
@@ -354,7 +413,8 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
             {profile.compatibility && profile.compatibility.length > 0 && (
               <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
                 <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-                  <span className="text-primary">📊</span> Compatibility Breakdown
+                  <span className="text-primary">📊</span> Compatibility
+                  Breakdown
                 </h2>
 
                 {/* Conflict summary banner */}
@@ -362,16 +422,22 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                   <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span className="text-xs font-bold text-amber-700">Potential conflicts — discuss before moving in</span>
+                      <span className="text-xs font-bold text-amber-700">
+                        Potential conflicts — discuss before moving in
+                      </span>
                     </div>
                     <ul className="space-y-1">
-                      {conflictDimensions.map(c => (
-                        <li key={c.label} className="flex items-start gap-1.5 text-xs text-amber-700">
+                      {conflictDimensions.map((c) => (
+                        <li
+                          key={c.label}
+                          className="flex items-start gap-1.5 text-xs text-amber-700"
+                        >
                           <span className="mt-0.5 shrink-0">•</span>
                           <span>
                             <span className="font-semibold">{c.label}</span>
-                            {' — '}
-                            {CONFLICT_DESCRIPTIONS[c.label] ?? 'may need a conversation before moving in together'}
+                            {" — "}
+                            {CONFLICT_DESCRIPTIONS[c.label] ??
+                              "may need a conversation before moving in together"}
                           </span>
                         </li>
                       ))}
@@ -386,20 +452,24 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                       <div key={item.label}>
                         <div className="flex justify-between mb-2 items-center">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{item.label}</span>
+                            <span className="text-sm font-medium">
+                              {item.label}
+                            </span>
                             {isConflict && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-600 border border-amber-200">
                                 Conflict
                               </span>
                             )}
                           </div>
-                          <span className={`text-sm font-bold ${isConflict ? 'text-amber-500' : 'text-primary'}`}>
+                          <span
+                            className={`text-sm font-bold ${isConflict ? "text-amber-500" : "text-primary"}`}
+                          >
                             {item.percentage}%
                           </span>
                         </div>
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-500 ${isConflict ? 'bg-amber-400' : 'bg-primary'}`}
+                            className={`h-full rounded-full transition-all duration-500 ${isConflict ? "bg-amber-400" : "bg-primary"}`}
                             style={{ width: `${item.percentage}%` }}
                           />
                         </div>
@@ -411,18 +481,23 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
             )}
 
             {/* Living Space — space_photos from room_listings + listing info */}
-            {((profile.space_photos && profile.space_photos.length > 0) || profile.space_listing) && (
+            {((profile.space_photos && profile.space_photos.length > 0) ||
+              profile.space_listing) && (
               <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
                 <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                   <Home className="w-5 h-5 text-primary" />
-                  {profile.full_name?.split(' ')[0]}&apos;s Living Space
+                  {profile.full_name?.split(" ")[0]}&apos;s Living Space
                 </h2>
 
                 {/* Space photo grid — 1 wide left (row-span-2) + 2 small stacked right, matching Stitch design */}
                 {profile.space_photos && profile.space_photos.length > 0 && (
                   <div
                     className="grid gap-3"
-                    style={{ gridTemplateColumns: '3fr 2fr', gridTemplateRows: '1fr 1fr', height: '280px' }}
+                    style={{
+                      gridTemplateColumns: "3fr 2fr",
+                      gridTemplateRows: "1fr 1fr",
+                      height: "280px",
+                    }}
                   >
                     {/* Wide featured photo spanning full height on the left */}
                     <div className="row-span-2 rounded-xl overflow-hidden bg-slate-100">
@@ -434,7 +509,10 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                     </div>
                     {/* Two small photos stacked on the right */}
                     {profile.space_photos.slice(1, 3).map((url, idx) => (
-                      <div key={idx} className="rounded-xl overflow-hidden bg-slate-100">
+                      <div
+                        key={idx}
+                        className="rounded-xl overflow-hidden bg-slate-100"
+                      >
                         <img
                           src={url}
                           alt={`Space photo ${idx + 2}`}
@@ -449,9 +527,12 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                 {profile.space_listing && (
                   <div className="flex items-start justify-between mt-4">
                     <div>
-                      <p className="font-bold text-foreground text-sm">{profile.space_listing.title}</p>
+                      <p className="font-bold text-foreground text-sm">
+                        {profile.space_listing.title}
+                      </p>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {profile.space_listing.address} • ${profile.space_listing.rental_fee.toLocaleString()}/mo
+                        {profile.space_listing.address} • $
+                        {profile.space_listing.rental_fee.toLocaleString()}/mo
                       </p>
                     </div>
                     <button className="text-xs font-semibold text-primary hover:opacity-75 transition-opacity shrink-0 ml-4">
@@ -467,11 +548,14 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
               <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Star className="w-5 h-5 text-primary fill-primary" /> Past Reviews
+                    <Star className="w-5 h-5 text-primary fill-primary" /> Past
+                    Reviews
                   </h2>
                   <div className="flex items-center gap-2 text-primary">
                     <StarRating rating={avgRating} />
-                    <span className="ml-1 font-bold">{avgRating.toFixed(1)}</span>
+                    <span className="ml-1 font-bold">
+                      {avgRating.toFixed(1)}
+                    </span>
                   </div>
                 </div>
 
@@ -481,26 +565,41 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                       key={review.id}
                       onClick={() => setSelectedReview(review)}
                       className={`w-full text-left p-4 rounded-lg transition-colors hover:bg-slate-50 ${
-                        index < displayedReviews.length - 1 ? 'border-b border-slate-100 pb-6' : ''
+                        index < displayedReviews.length - 1
+                          ? "border-b border-slate-100 pb-6"
+                          : ""
                       }`}
                     >
-                      <div className="flex items-center gap-3 mb-3">
-                        {review.reviewer_avatar ? (
-                          <img
-                            src={review.reviewer_avatar}
-                            alt={review.reviewer_name}
-                            className="size-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                            {review.reviewer_name[0]}
+                      <div className="flex items-center justify-between mb-3 w-full">
+                        <div className="flex items-center gap-3">
+                          {review.reviewer_avatar ? (
+                            <img
+                              src={review.reviewer_avatar}
+                              alt={review.reviewer_name}
+                              className="size-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                              {review.reviewer_name[0]}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-bold">
+                              {review.reviewer_name}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {review.duration}
+                            </p>
                           </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-bold">{review.reviewer_name}</p>
-                          <p className="text-[10px] text-slate-500">{review.duration}</p>
                         </div>
+
+                        {review.status === "reported" && (
+                          <span className="bg-red-50 text-red-500 border border-red-100 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            Reported
+                          </span>
+                        )}
                       </div>
+
                       <StarRating rating={review.rating} />
                       <p className="text-slate-600 text-sm leading-relaxed mt-2">
                         &ldquo;{review.text}&rdquo;
@@ -514,7 +613,9 @@ export default function ProfileDetailsPage({ profile, initialRequestStatus = nul
                     onClick={() => setShowAllReviews(!showAllReviews)}
                     className="w-full mt-6 text-slate-500 font-bold text-sm hover:text-primary transition-colors"
                   >
-                    {showAllReviews ? 'Show fewer reviews' : `View all ${profile.reviews.length} reviews`}
+                    {showAllReviews
+                      ? "Show fewer reviews"
+                      : `View all ${profile.reviews.length} reviews`}
                   </button>
                 )}
               </div>

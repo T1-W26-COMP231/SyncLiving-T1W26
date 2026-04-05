@@ -62,9 +62,16 @@ export default function WriteReviewForm({ targetUser, criteria, initialData, onS
       
       {/* Header Section */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-slate-900 dark:text-slate-100 text-3xl font-extrabold leading-tight">
-          Review for {targetUser.full_name}
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-slate-900 dark:text-slate-100 text-3xl font-extrabold leading-tight">
+            Review for {targetUser.full_name}
+          </h1>
+          {initialData?.status === 'reported' && (
+            <span className="px-3 py-1 text-xs font-bold text-red-700 bg-red-100 border border-red-200 rounded-full">
+              Reported
+            </span>
+          )}
+        </div>
         <p className="text-slate-500 dark:text-slate-400 text-base">
           {initialData ? 'You have already reviewed this roommate. You can update your feedback here.' : 'Be honest and objective. Your feedback helps the SyncLiving community.'}
         </p>
