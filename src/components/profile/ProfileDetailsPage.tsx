@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Star,
@@ -14,10 +15,14 @@ import {
   Send,
   MessageCircle,
   AlertTriangle,
+  UserX,
+  Flag,
 } from "lucide-react";
 import SyncLivingLogo from "@/components/ui/SyncLivingLogo";
 import { sendMatchRequest } from "../../../app/discovery/actions";
+import { unmatchUser, reportUser } from "../../../app/matches/actions";
 import ReviewDetailsModal from "./ReviewDetailsModal";
+import { ReportUserModal } from "../matches/ReportUserModal";
 
 import {
   type ProfileData,
@@ -113,6 +118,35 @@ export default function ProfileDetailsPage({
   const [isConnecting, setIsConnecting] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [selectedReview, setSelectedReview] = useState<ReviewData | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isUnmatching, setIsUnmatching] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleUnmatch() {
+    if (!confirm(`Are you sure you want to unmatch with ${profile.full_name}?`)) return;
+    setIsUnmatching(true);
+    setMenuOpen(false);
+    const result = await unmatchUser(profile.id);
+    if (result.success) {
+      router.push("/matches");
+    } else {
+      alert("Could not unmatch: " + result.error);
+      setIsUnmatching(false);
+    }
+  }
 
   async function handleConnect() {
     if (requestStatus !== null || isConnecting) return;
@@ -167,19 +201,45 @@ export default function ProfileDetailsPage({
             <div className="h-5 w-px bg-slate-200 hidden sm:block" />
             <SyncLivingLogo size="md" href="/dashboard" />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button
               className="flex items-center justify-center rounded-full h-9 w-9 bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
               aria-label="Share profile"
             >
               <Share2 className="w-4 h-4" />
             </button>
-            <button
-              className="flex items-center justify-center rounded-full h-9 w-9 bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
+
+            {/* 3-dot menu */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(prev => !prev)}
+                className="flex items-center justify-center rounded-full h-9 w-9 bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                aria-label="More options"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 z-50 overflow-hidden">
+                  <button
+                    onClick={() => { setMenuOpen(false); setShowReportModal(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    <Flag size={15} className="text-slate-400" />
+                    Report User
+                  </button>
+                  <div className="my-1 border-t border-slate-100" />
+                  <button
+                    onClick={handleUnmatch}
+                    disabled={isUnmatching}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    <UserX size={15} />
+                    {isUnmatching ? "Unmatching…" : "Unmatch"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -188,7 +248,7 @@ export default function ProfileDetailsPage({
       <main className="flex-1 flex justify-center py-6 px-4 lg:px-40">
         <div className="max-w-[1000px] w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: User Overview */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-20 lg:self-start">
             {/* Profile Card */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col items-center">
               <div className="relative">
@@ -290,53 +350,6 @@ export default function ProfileDetailsPage({
               </div>
             </div>
 
-            {/* Lifestyle Tags — wd:/we: FCRM dimension tags filtered out */}
-            {visibleTags.length > 0 && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-                <h3 className="font-bold text-lg mb-4">Lifestyle</h3>
-                <div className="flex flex-wrap gap-2">
-                  {visibleTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium flex items-center gap-1.5"
-                    >
-                      <span>{getLifestyleIcon(tag)}</span>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Budget & Move-in */}
-            {(profile.budget_min ||
-              profile.budget_max ||
-              profile.move_in_date) && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 space-y-4">
-                <h3 className="font-bold text-lg">Preferences</h3>
-                {(profile.budget_min || profile.budget_max) && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500 font-medium">
-                      Monthly Budget
-                    </span>
-                    <span className="text-sm font-bold text-foreground">
-                      ${profile.budget_min?.toLocaleString() ?? "?"} – $
-                      {profile.budget_max?.toLocaleString() ?? "?"}
-                    </span>
-                  </div>
-                )}
-                {profile.move_in_date && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-500 font-medium">
-                      Move-in Date
-                    </span>
-                    <span className="text-sm font-bold text-foreground">
-                      {formatMoveInDate(profile.move_in_date)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Right Column: Content */}
@@ -409,6 +422,31 @@ export default function ProfileDetailsPage({
               </div>
             )}
 
+            {/* Preferences — Budget & Move-in */}
+            {(profile.budget_min ||
+              profile.budget_max ||
+              profile.move_in_date) && (
+              <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100 space-y-4">
+                <h2 className="text-xl font-bold">Preferences</h2>
+                {(profile.budget_min || profile.budget_max) && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500 font-medium">Monthly Budget</span>
+                    <span className="text-sm font-bold text-foreground">
+                      ${profile.budget_min?.toLocaleString() ?? "?"} – ${profile.budget_max?.toLocaleString() ?? "?"}
+                    </span>
+                  </div>
+                )}
+                {profile.move_in_date && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500 font-medium">Move-in Date</span>
+                    <span className="text-sm font-bold text-foreground">
+                      {formatMoveInDate(profile.move_in_date)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Compatibility Breakdown — conflicts highlighted */}
             {profile.compatibility && profile.compatibility.length > 0 && (
               <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
@@ -476,6 +514,26 @@ export default function ProfileDetailsPage({
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Lifestyle Tags — placed below Compatibility Breakdown */}
+            {visibleTags.length > 0 && (
+              <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="text-primary">✨</span> Lifestyle
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {visibleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium flex items-center gap-1.5"
+                    >
+                      <span>{getLifestyleIcon(tag)}</span>
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -628,6 +686,14 @@ export default function ProfileDetailsPage({
         <ReviewDetailsModal
           review={selectedReview}
           onClose={() => setSelectedReview(null)}
+        />
+      )}
+
+      {showReportModal && (
+        <ReportUserModal
+          reportedUserId={profile.id}
+          reportedUserName={profile.full_name}
+          onClose={() => setShowReportModal(false)}
         />
       )}
     </div>

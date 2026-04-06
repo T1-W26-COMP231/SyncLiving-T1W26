@@ -5,7 +5,9 @@ import { notFound } from 'next/navigation';
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  
+
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
@@ -15,6 +17,31 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
   if (error || !profile) {
     console.error('Error fetching profile:', error);
     notFound();
+  }
+
+  // Check for a pending incoming request from this profile to the current user
+  let incomingRequestId: string | null = null;
+  let existingRequestStatus: string | null = null;
+
+  if (user) {
+    // Incoming: profile user sent me a request
+    const { data: incomingRow } = await supabase
+      .from('match_requests')
+      .select('id')
+      .eq('sender_id', id)
+      .eq('receiver_id', user.id)
+      .eq('status', 'pending')
+      .maybeSingle();
+    incomingRequestId = incomingRow?.id ?? null;
+
+    // Outgoing: I sent this profile user a request
+    const { data: outgoingRow } = await supabase
+      .from('match_requests')
+      .select('status')
+      .eq('sender_id', user.id)
+      .eq('receiver_id', id)
+      .maybeSingle();
+    existingRequestStatus = outgoingRow?.status ?? null;
   }
 
   // Map database profile to component expected props
@@ -34,5 +61,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     photos: profile.photos || [],
   };
 
-  return <ProfileDetails profile={formattedProfile} />;
+  return (
+    <ProfileDetails
+      profile={formattedProfile}
+      incomingRequestId={incomingRequestId}
+      existingRequestStatus={existingRequestStatus}
+    />
+  );
 }
