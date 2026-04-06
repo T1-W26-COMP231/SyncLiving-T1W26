@@ -444,7 +444,7 @@ export async function submitMatchFeedback({
   };
 
   const { error } = await supabase
-    .from("match_feedback")
+    .from("match_feedback" as any)
     .upsert([feedbackData], { onConflict: "user_id, target_id" });
 
   if (error) {
