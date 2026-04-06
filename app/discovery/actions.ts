@@ -24,6 +24,8 @@ export interface MatchedProfile {
   preferred_gender: string | null;
   isSaved: boolean;
   requestStatus: MatchRequestStatus | null;
+  /** ID of a pending request sent FROM this person TO the current user, if any */
+  incomingRequestId: string | null;
   score: number;
   tier: 'strong' | 'good' | 'borderline' | 'incompatible';
   conflicts: { type: string; clause: string }[];
@@ -133,6 +135,14 @@ export async function getMatches(): Promise<{
     .eq('sender_id', user.id);
   const sentRequestMap = new Map((requestRows ?? []).map((r: any) => [r.receiver_id, r.status]));
 
+  // Fetch pending match requests received by the current user (incoming from others)
+  const { data: receivedRows } = await supabase
+    .from('match_requests')
+    .select('sender_id, id')
+    .eq('receiver_id', user.id)
+    .eq('status', 'pending');
+  const receivedRequestMap = new Map((receivedRows ?? []).map((r: any) => [r.sender_id, r.id]));
+
   // Server-side location pre-filter: bounding box at 2× saved preference distance (capped at 100 km).
   const prefLat: number | null = myProfile.pref_lat ?? null;
   const prefLng: number | null = myProfile.pref_lng ?? null;
@@ -192,6 +202,7 @@ export async function getMatches(): Promise<{
         preferred_gender: p.preferred_gender ?? null,
         isSaved: savedIds.has(p.id),
         requestStatus: (sentRequestMap.get(p.id) as any) ?? null,
+        incomingRequestId: (receivedRequestMap.get(p.id) as string) ?? null,
         score: Math.round(result.score),
         tier: result.tier,
         conflicts: result.conflicts,

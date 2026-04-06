@@ -94,6 +94,70 @@ export async function getUserFullDetails(userId: string) {
   }
 }
 
+export interface UserReport {
+  id: string;
+  reportedUser: string;
+  reportedUserId: string;
+  avatarUrl: string | null;
+  reason: string;
+  reporter: string;
+  reporterId: string;
+  status: 'new' | 'investigating' | 'resolved';
+  date: string;
+}
+
+export async function getUserReports(): Promise<UserReport[]> {
+  if (!(await isAdmin())) throw new Error('Unauthorized');
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('user_reports')
+    .select('id, reason, status, description, created_at, reported_user_id, reporter_id')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  const userIds = [...new Set([...data.map(r => r.reported_user_id), ...data.map(r => r.reporter_id)])];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', userIds);
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+
+  return data.map(r => {
+    const reported = profileMap.get(r.reported_user_id);
+    const reporter = profileMap.get(r.reporter_id);
+    return {
+      id: r.id,
+      reportedUserId: r.reported_user_id,
+      reportedUser: reported?.full_name || 'Unknown',
+      avatarUrl: reported?.avatar_url || null,
+      reason: r.reason,
+      reporter: reporter?.full_name || 'Unknown',
+      reporterId: r.reporter_id,
+      status: r.status as 'new' | 'investigating' | 'resolved',
+      date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    };
+  });
+}
+
+export async function updateReportStatus(
+  reportId: string,
+  status: 'new' | 'investigating' | 'resolved',
+) {
+  if (!(await isAdmin())) throw new Error('Unauthorized');
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('user_reports')
+    .update({ status })
+    .eq('id', reportId);
+
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
 export async function updateUserStatus(
   userId: string, 
   status: 'active' | 'suspended' | 'banned', 

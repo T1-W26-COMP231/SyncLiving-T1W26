@@ -22,6 +22,13 @@ const plusJakartaSans = localFont({
 export const metadata: Metadata = {
   title: "SyncLiving — Find Your Perfect Roommate",
   description: "Compatibility-first roommate matching based on lifestyle, habits, and values.",
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

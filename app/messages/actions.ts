@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { logActivity } from '@/utils/activity-logger';
+import { revalidatePath } from 'next/cache';
 
 export interface MatchProfile {
   id: string;
@@ -220,6 +221,9 @@ export async function respondToMatchRequest(requestId: string, status: 'accepted
     }
   }
 
+  // Invalidate the discovery page so request statuses reflect correctly on refresh
+  revalidatePath('/discovery');
+
   return { success: true };
 }
 
@@ -261,6 +265,50 @@ export async function getMatches() {
       other_user: otherUser as MatchProfile,
     };
   }) as Match[];
+}
+
+/**
+ * Marks all unread messages in a conversation as read for the current user.
+ */
+export async function markMessagesAsRead(conversationId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', user.id)
+    .eq('is_read', false);
+}
+
+/**
+ * Counts unread messages sent by others in conversations the current user is part of.
+ */
+export async function getUnreadMessageCount(): Promise<number> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  // Get all conversation IDs the current user is part of
+  const { data: convs } = await supabase
+    .from('conversations')
+    .select('id')
+    .or(`seeker_id.eq.${user.id},provider_id.eq.${user.id}`);
+
+  if (!convs || convs.length === 0) return 0;
+
+  const convIds = convs.map(c => c.id);
+
+  const { count } = await supabase
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .in('conversation_id', convIds)
+    .neq('sender_id', user.id)
+    .eq('is_read', false);
+
+  return count ?? 0;
 }
 
 /**

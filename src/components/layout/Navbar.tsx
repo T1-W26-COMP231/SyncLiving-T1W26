@@ -2,11 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Bell, ChevronDown, Settings, LogOut, SlidersHorizontal } from 'lucide-react';
+import { Search, ChevronDown, Settings, LogOut, SlidersHorizontal } from 'lucide-react';
 import SyncLivingLogo from '@/components/ui/SyncLivingLogo';
 import { logout } from '../../../app/auth/actions';
 import { createClient } from '@/utils/supabase/client';
 import SettingsModal from '@/components/settings/SettingsModal';
+import { NotificationBell } from './NotificationBell';
+import { getUnreadMessageCount } from '../../../app/messages/actions';
 
 interface NavbarProps {
   activeTab?: string;
@@ -21,6 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
   const [roomTypes,         setRoomTypes]         = useState<{ id: string; name: string }[]>([]);
   const [amenityIds,        setAmenityIds]        = useState<string[]>([]);
   const [roomTypeIds,       setRoomTypeIds]       = useState<string[]>([]);
+  const [unreadCount,       setUnreadCount]       = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch user + settings data
@@ -48,6 +51,45 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
     fetchData();
   }, []);
 
+  // Fetch unread message count + real-time subscription
+  useEffect(() => {
+    getUnreadMessageCount().then(setUnreadCount);
+
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+
+      channel = supabase
+        .channel('navbar-unread-messages')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            const msg = payload.new as { sender_id: string; is_read: boolean };
+            // Only increment if the new message was sent by someone else
+            if (msg.sender_id !== user.id) {
+              setUnreadCount(prev => prev + 1);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'messages' },
+          () => {
+            // Re-fetch on any read-status update
+            getUnreadMessageCount().then(setUnreadCount);
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -72,9 +114,8 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
           <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
             <NavLink label="Listings"   href="/dashboard" active={activeTab === 'Listings'} />
             <NavLink label="Discovery"  href="/discovery"          active={activeTab === 'Discovery'} />
-            <NavLink label="Matches"    href="#"    badge="12"     active={activeTab === 'Matches'} />
-            <NavLink label="Messages"   href="/messages" badge="3" active={activeTab === 'Messages'} />
-            <NavLink label="Reviews"    href="/reviews"            active={activeTab === 'Reviews'} />
+            <NavLink label="Reviews"    href="/matches"              active={activeTab === 'Matches' || activeTab === 'Reviews'} />
+            <NavLink label="Messages"   href="/messages" badge={unreadCount > 0 ? String(unreadCount) : undefined} active={activeTab === 'Messages'} />
           </nav>
 
           {/* Right Actions */}
@@ -88,10 +129,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
               />
             </div>
 
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 size-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            <NotificationBell />
 
             {/* User menu */}
             <div className="relative pl-4 border-l border-slate-200" ref={dropdownRef}>

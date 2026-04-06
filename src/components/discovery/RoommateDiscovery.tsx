@@ -7,7 +7,8 @@ import Navbar from '@/components/layout/Navbar';
 import type { MatchedProfile, MatchedListing } from '../../../app/discovery/actions';
 import { toggleSavedProfile } from '../../../app/discovery/saved-actions';
 import { sendMatchRequest } from '../../../app/discovery/actions';
-import { startOrGetConversation } from '../../../app/messages/actions';
+import { respondToMatchRequest, startOrGetConversation } from '../../../app/messages/actions';
+import { MatchConfirmedModal } from '@/components/ui/MatchConfirmedModal';
 import { createClient } from '@/utils/supabase/client';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
 
@@ -217,7 +218,7 @@ interface ProfileDetailDrawerProps {
   onClose: () => void;
   isSaved: boolean;
   onHeartClick: (id: string) => void;
-  onConnect: (id: string) => void;
+  onConnect: (id: string, incomingRequestId?: string | null) => void;
   connectingId: string | null;
   localRequestStatuses: Record<string, string>;
   selectedPreferenceTags: string[];
@@ -394,22 +395,26 @@ function ProfileDetailDrawer({
           </button>
 
           <button
-            onClick={() => onConnect(profile.id)}
-            disabled={connectingId === profile.id || requestStatus !== null}
+            onClick={() => onConnect(profile.id, profile.incomingRequestId)}
+            disabled={connectingId === profile.id || (requestStatus !== null && !profile.incomingRequestId)}
             className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
-              requestStatus === 'pending'
-                ? 'bg-amber-100 text-amber-700'
-                : requestStatus === 'accepted'
+              requestStatus === 'accepted'
                 ? 'bg-emerald-100 text-emerald-700'
+                : profile.incomingRequestId
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : requestStatus === 'pending'
+                ? 'bg-amber-100 text-amber-700'
                 : 'bg-primary text-dark hover:brightness-105'
             }`}
           >
             {connectingId === profile.id
-              ? 'Sending…'
-              : requestStatus === 'pending'
-              ? 'Request Sent'
+              ? 'Accepting…'
               : requestStatus === 'accepted'
               ? 'Matched'
+              : profile.incomingRequestId
+              ? 'Accept'
+              : requestStatus === 'pending'
+              ? 'Request Sent'
               : 'Connect'}
           </button>
         </div>
@@ -551,16 +556,61 @@ const RoommateDiscovery: React.FC<Props> = ({
 
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchedProfile | null>(null);
+  const [matchConfirmedUser, setMatchConfirmedUser] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
 
-  async function handleConnect(targetUserId: string) {
+  // Real-time: update button to "Matched" when someone accepts my sent request
+  useEffect(() => {
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+
+      channel = supabase
+        .channel('discovery-request-accepted')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'match_requests',
+            filter: `sender_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updated = payload.new as { status: string; receiver_id: string };
+            if (updated.status !== 'accepted') return;
+            setLocalRequestStatuses(prev => ({ ...prev, [updated.receiver_id]: 'accepted' }));
+          }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  async function handleConnect(targetUserId: string, incomingRequestId?: string | null) {
     setConnectingId(targetUserId);
     try {
-      const result = await sendMatchRequest(targetUserId);
-      if (result.error) {
-        alert('Could not send match request: ' + result.error);
-        return;
+      if (incomingRequestId) {
+        // Accept the incoming request from this person
+        const result = await respondToMatchRequest(incomingRequestId, 'accepted');
+        if (result.error) {
+          alert('Could not accept request: ' + result.error);
+          return;
+        }
+        const person = matches.find(m => m.id === targetUserId);
+        setMatchConfirmedUser({ full_name: person?.full_name ?? null, avatar_url: person?.avatar_url ?? null });
+        setLocalRequestStatuses(prev => ({ ...prev, [targetUserId]: 'accepted' }));
+      } else {
+        const result = await sendMatchRequest(targetUserId);
+        if (result.error) {
+          alert('Could not send match request: ' + result.error);
+          return;
+        }
+        setLocalRequestStatuses(prev => ({ ...prev, [targetUserId]: 'pending' }));
       }
-      setLocalRequestStatuses(prev => ({ ...prev, [targetUserId]: 'pending' }));
     } finally {
       setConnectingId(null);
     }
@@ -690,7 +740,7 @@ const RoommateDiscovery: React.FC<Props> = ({
         {/* Hero */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-dark tracking-tight">Find your perfect match</h1>
+            <h1 className="text-3xl font-extrabold text-dark tracking-tight">Find the Sync Roommate</h1>
             <p className="text-slate-500 font-medium mt-1">Personalized roommate recommendations based on your lifestyle.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -1173,28 +1223,26 @@ const RoommateDiscovery: React.FC<Props> = ({
                       View Profile
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); router.push(`/profile/${person.id}?score=${person.score}`); }}
-                      className="text-sm font-bold text-white/80 hover:text-white transition-colors"
-                    >
-                      View Profile
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); handleConnect(person.id); }}
-                      disabled={connectingId === person.id || (localRequestStatuses[person.id] || person.requestStatus) !== null}
+                      onClick={e => { e.stopPropagation(); handleConnect(person.id, person.incomingRequestId); }}
+                      disabled={connectingId === person.id || ((localRequestStatuses[person.id] || person.requestStatus) !== null && !person.incomingRequestId)}
                       className={`px-4 py-2 rounded-full text-sm font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
-                        (localRequestStatuses[person.id] || person.requestStatus) === 'pending'
-                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          : (localRequestStatuses[person.id] || person.requestStatus) === 'accepted'
+                        (localRequestStatuses[person.id] || person.requestStatus) === 'accepted'
                           ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          : person.incomingRequestId && (localRequestStatuses[person.id] || person.requestStatus) !== 'accepted'
+                          ? 'bg-green-500 text-white hover:bg-green-600'
+                          : (localRequestStatuses[person.id] || person.requestStatus) === 'pending'
+                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                           : 'bg-primary/10 text-primary hover:bg-primary hover:text-dark'
                       }`}
                     >
-                      {connectingId === person.id 
-                        ? 'Sending…' 
-                        : (localRequestStatuses[person.id] || person.requestStatus) === 'pending'
-                        ? 'Request Sent'
+                      {connectingId === person.id
+                        ? 'Accepting…'
                         : (localRequestStatuses[person.id] || person.requestStatus) === 'accepted'
                         ? 'Matched'
+                        : person.incomingRequestId && (localRequestStatuses[person.id] || person.requestStatus) !== 'accepted'
+                        ? 'Accept'
+                        : (localRequestStatuses[person.id] || person.requestStatus) === 'pending'
+                        ? 'Request Sent'
                         : 'Connect'}
                     </button>
                   </div>
@@ -1211,7 +1259,10 @@ const RoommateDiscovery: React.FC<Props> = ({
               </div>
               <h4 className="text-lg font-bold text-slate-700">No matches yet</h4>
               <p className="text-sm text-slate-500 mt-2 mb-6">Complete your lifestyle preferences to get matched.</p>
-              <button className="px-6 py-2 bg-dark text-white rounded-full text-sm font-bold hover:bg-slate-800 transition-all">
+              <button
+                onClick={() => router.push('/onboarding')}
+                className="px-6 py-2 bg-dark text-white rounded-full text-sm font-bold hover:bg-slate-800 transition-all"
+              >
                 Complete Profile
               </button>
             </div>
@@ -1380,6 +1431,13 @@ const RoommateDiscovery: React.FC<Props> = ({
       localRequestStatuses={localRequestStatuses}
       selectedPreferenceTags={selectedPreferenceTags}
     />
+
+    {matchConfirmedUser && (
+      <MatchConfirmedModal
+        matchedUser={matchConfirmedUser}
+        onClose={() => setMatchConfirmedUser(null)}
+      />
+    )}
     </>
   );
 };

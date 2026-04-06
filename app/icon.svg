@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Dark background square with rounded corners -->
+  <rect width="32" height="32" rx="8" fill="#101d22"/>
+  <!-- Hexagon / cube icon in primary color, centred and scaled -->
+  <path d="M16 4L6 9.5V20.5L16 26L26 20.5V9.5L16 4Z" stroke="#00f0d1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 26V16" stroke="#00f0d1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 16L6 9.5" stroke="#00f0d1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 16L26 9.5" stroke="#00f0d1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
