@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
             {NAV_ITEMS.map(({ label, href }) => {
               const isActive =
-                pathname === href || pathname.startsWith(href + "/");
+                pathname === href || pathname?.startsWith(href + "/");
               return (
                 <Link
                   key={href}
@@ -194,7 +194,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <nav className="lg:hidden bg-white border-b border-slate-200 px-6 py-4 space-y-1 z-40">
           {NAV_ITEMS.map(({ label, href }) => {
             const isActive =
-              pathname === href || pathname.startsWith(href + "/");
+              pathname === href || pathname?.startsWith(href + "/");
             return (
               <Link
                 key={href}
