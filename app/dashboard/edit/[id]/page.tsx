@@ -44,6 +44,8 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     amenities_ids: currentAmenitiesRes.data?.map(a => a.amenity_id) || [],
     city: listingRes.data.city || '',
     postal_code: listingRes.data.postal_code || '',
+    lat: listingRes.data.lat || undefined,
+    lng: listingRes.data.lng || undefined,
     photos: listingRes.data.photos || [],
   };
 

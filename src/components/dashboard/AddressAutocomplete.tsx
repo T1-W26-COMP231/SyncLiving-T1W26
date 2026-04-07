@@ -88,7 +88,6 @@ export default function AddressAutocomplete({ defaultValue, onAddressSelect }: A
         onChange={handleInput}
         placeholder="Enter property address"
         className="block w-full rounded-xl border-slate-200 bg-slate-50 pl-4 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:border-primary focus:ring-primary sm:text-sm transition-all"
-        name="address"
         autoComplete="off"
         required
       />
