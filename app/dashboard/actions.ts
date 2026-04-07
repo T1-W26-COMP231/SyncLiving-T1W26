@@ -51,8 +51,12 @@ export async function createListing(prevState: any, formData: FormData) {
     house_rules,
     status,
     photos,
-    vacant_start_date: new Date().toISOString().split('T')[0],
   };
+
+  // Only set vacant_start_date on creation
+  if (!id) {
+    listingData.vacant_start_date = new Date().toISOString().split('T')[0];
+  }
 
   // Ensure coords are added as valid PostGIS string
   if (lat && lng && lat !== '' && lng !== '') {

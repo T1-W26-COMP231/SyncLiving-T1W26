@@ -340,18 +340,18 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                           key={type.id}
                           type="button"
                           onClick={() => setSelectedRoomType(type.id)}
-                          className={`flex items-center justify-center gap-2 p-3 rounded-2xl border-2 text-sm font-bold transition-all ${
+                          className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border-2 text-sm font-bold transition-all text-left ${
                             active
                               ? 'border-primary bg-primary/5 text-dark'
                               : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-primary/40'
                           }`}
                         >
-                          {active && (
-                            <div className="size-4 rounded-full bg-primary flex items-center justify-center shrink-0">
-                              <Check size={9} strokeWidth={3} className="text-dark" />
-                            </div>
-                          )}
-                          {type.name}
+                          <div className={`shrink-0 size-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            active ? 'bg-primary border-primary' : 'border-slate-300'
+                          }`}>
+                            {active && <Check size={10} strokeWidth={3} className="text-dark" />}
+                          </div>
+                          <span className="truncate">{type.name}</span>
                         </button>
                       );
                     })}
@@ -380,10 +380,10 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
                               : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-primary/40'
                           }`}
                         >
-                          <div className={`shrink-0 size-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          <div className={`shrink-0 size-5 rounded-lg border-2 flex items-center justify-center transition-colors ${
                             active ? 'bg-primary border-primary' : 'border-slate-300'
                           }`}>
-                            {active && <Check size={10} strokeWidth={3} className="text-dark" />}
+                            {active && <Check size={11} strokeWidth={4} className="text-dark" />}
                           </div>
                           {amenity.name}
                         </button>

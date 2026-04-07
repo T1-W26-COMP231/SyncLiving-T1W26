@@ -43,9 +43,15 @@ export default async function ProviderDashboard() {
   // Map database data to ListingType
   const listings: ListingType[] = (listingsData || []).map(item => {
     const firstPhoto = item.photos && item.photos.length > 0 ? item.photos[0] : null;
-    const imageUrl = firstPhoto 
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${firstPhoto}`
-      : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+    let imageUrl = 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80';
+
+    if (firstPhoto) {
+      if (firstPhoto.startsWith('http')) {
+        imageUrl = firstPhoto;
+      } else {
+        imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/property-images/${firstPhoto}`;
+      }
+    }
 
     return {
       id: item.id,
