@@ -119,6 +119,17 @@ This is the primary table for storing user-specific data, lifestyle preferences,
     *   **Global Access:** When accessing `window.google` or other global objects, use type casting (e.g., `(window as any).google`) to avoid reference errors.
     *   **Supabase Enum Matching:** When defining frontend UI states or form parameters that map directly to database enum fields (e.g. `post_status`), NEVER hardcode custom strings (like `'paused'`) if the database expects something else (like `'archived'`). ALWAYS rely on the generated Supabase types (`src/types/supabase.ts`) to ensure your parameters strictly match the DB schema. If the UI requires a different display label, map it at the presentation layer, but keep the underlying data values consistent with the database.
     *   **Verification:** After making changes, always run `npx tsc --noEmit` to simulate the Vercel build check and ensure zero errors.
+7.  **🧪 Testing Standards:**
+    *   **Mandatory Tests:** You MUST add or update unit tests (using Vitest) whenever you implement new business logic, utility functions (in `src/utils/`), or complex data transformations (in `src/services/`).
+    *   **Test Location:** Place test files adjacent to the source file with a `.test.ts` or `.test.tsx` extension (e.g., `src/utils/validation.ts` -> `src/utils/validation.test.ts`).
+    *   **Verification:** Always run `npm test` after making logic changes to ensure no regressions are introduced and the new code behaves as expected.
+    *   **Mocking Logic:** Use Vitest's `vi.mock()` to isolate units, especially when dealing with external dependencies like Supabase.
+    *   **UI Testing Rules:**
+        1. **Global Mocks:** Rely on `src/test/setup.ts` for automatic mocking of `lucide-react`, `next/navigation`, and `next/link`.
+        2. **Supabase Isolation:** Always mock the Supabase client (`@/utils/supabase/client` or `@/utils/supabase/server`) in component tests to prevent real network calls.
+        3. **Async Awareness:** When testing components that fetch data or use `useEffect`, always use `async/await` with `findBy` or `waitFor` queries. This ensures state updates are captured and prevents `act()` warnings.
+        4. **Test IDs:** Use `data-testid` for identifying elements that are otherwise difficult to select (e.g., icons mocked as spans).
+        5. **Behavioral Focus:** Do not write tests just to verify that React itself works. Focus on behavioral outcomes and business logic: "When input A is provided, does the UI correctly display B?" or "Does clicking this button trigger the correct mocked function?"
 
 ---
 

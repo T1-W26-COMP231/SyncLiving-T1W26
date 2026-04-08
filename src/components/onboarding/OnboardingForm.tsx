@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { updateProfile } from '../../../app/onboarding/actions';
 import { createClient } from '@/utils/supabase/client';
+import { validateAge, validateFullName, validateMoveInDate } from '@/utils/validation';
 import AddressAutocomplete from '../dashboard/AddressAutocomplete';
 import {
   Sun, Moon, Sparkles, Users, VolumeX, Heart, Ban, Star, Leaf,
@@ -400,16 +401,19 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     const errs: Record<string, string> = {};
 
     if (stepNum === 1) {
-      if (!formData.full_name.trim())
-        errs.full_name = 'Full name is required.';
-      if (!formData.age || Number(formData.age) < 18 || Number(formData.age) > 99)
-        errs.age = 'Please enter a valid age (18–99).';
+      const nameErr = validateFullName(formData.full_name);
+      if (nameErr) errs.full_name = nameErr;
+
+      const ageErr = validateAge(formData.age);
+      if (ageErr) errs.age = ageErr;
+
       if (!formData.gender)
         errs.gender = 'Please select your gender.';
       if (!formData.location.trim())
         errs.location = 'Please enter and select your location.';
-      if (!formData.move_in_date)
-        errs.move_in_date = 'Move-in date is required.';
+
+      const dateErr = validateMoveInDate(formData.move_in_date);
+      if (dateErr) errs.move_in_date = dateErr;
     }
 
     if (stepNum === 2) {

@@ -96,7 +96,7 @@ export default function AdminPage() {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-white dark:bg-slate-950 dark:text-white font-sans">
       <Navbar activeTab="Admin" />
-      
+
       <main className="flex flex-1 overflow-hidden">
         {/* Admin Sidebar */}
         <aside className="w-80 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col">
@@ -129,8 +129,8 @@ export default function AdminPage() {
                     key={user.id}
                     onClick={() => setSelectedUserId(user.id)}
                     className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left border ${
-                      selectedUserId === user.id 
-                        ? 'bg-primary/10 border-primary/20' 
+                      selectedUserId === user.id
+                        ? 'bg-primary/10 border-primary/20'
                         : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
@@ -162,7 +162,7 @@ export default function AdminPage() {
             </div>
           ) : userDetails ? (
             <div className="max-w-5xl mx-auto space-y-10">
-              
+
               {/* Profile Header */}
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-8 items-start">
                 <img
@@ -182,7 +182,7 @@ export default function AdminPage() {
                       {userDetails.profile.role}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-50 dark:border-slate-800">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-400 font-bold uppercase">Age</span>
@@ -290,7 +290,7 @@ export default function AdminPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                
+
                 {/* Listings Section */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-black flex items-center gap-2 dark:text-white">

@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import { Sidebar } from './Sidebar';
 import { ChatArea } from './ChatArea';
 import { HouseRules } from './HouseRules';
-import { getMatches, getMessages, sendMessage, getPendingRequests, getSentRequests, respondToMatchRequest, Match, MessageData, PendingRequest, SentRequest } from '../../../app/messages/actions';
+import { getMatches, getMessages, sendMessage, markMessagesAsRead, Match, MessageData } from '../../../app/messages/actions';
 import { createClient } from '@/utils/supabase/client';
 
 interface MessagingPageProps {
@@ -15,8 +15,6 @@ interface MessagingPageProps {
 export default function MessagingPage({ initialConversationId }: MessagingPageProps) {
 
   const [matches, setMatches] = useState<Match[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,14 +26,8 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
   const supabase = supabaseRef.current;
 
   async function refreshData() {
-    const [matchesData, pendingData, sentData] = await Promise.all([
-      getMatches(),
-      getPendingRequests(),
-      getSentRequests()
-    ]);
+    const matchesData = await getMatches();
     setMatches(matchesData);
-    setPendingRequests(pendingData);
-    setSentRequests(sentData);
     return matchesData;
   }
 
@@ -54,26 +46,15 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleRespondToRequest = async (requestId: string, status: 'accepted' | 'declined') => {
-    const result = await respondToMatchRequest(requestId, status);
-    if (result.success) {
-      const updatedMatches = await refreshData();
-      if (status === 'accepted') {
-        // If we just accepted a match, we might want to select it
-        // However, we'd need to find which conversation was just created.
-        // For simplicity, just refreshing is fine for now.
-      }
-    }
-  };
-
   useEffect(() => {
     const currentId = selectedMatchId;
     if (!currentId) return;
 
-    // 1. Initial fetch of messages
+    // 1. Initial fetch of messages + mark them as read
     async function fetchMessages() {
       const data = await getMessages(currentId!);
       setMessages(data);
+      await markMessagesAsRead(currentId!);
     }
     fetchMessages();
 
@@ -95,6 +76,8 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
             if (prev.find((m) => m.id === newMessage.id)) return prev;
             return [...prev, newMessage];
           });
+          // Mark as read immediately since the conversation is open
+          markMessagesAsRead(currentId!);
         }
       )
       .subscribe();
@@ -122,14 +105,10 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background font-sans">
       <Navbar activeTab="Messages" />
       <main className="flex flex-1 overflow-hidden">
-        <Sidebar 
-          matches={matches} 
-          pendingRequests={pendingRequests}
-          sentRequests={sentRequests}
-          selectedMatchId={selectedMatchId} 
-          onSelectMatch={setSelectedMatchId} 
-          onAcceptRequest={(id) => handleRespondToRequest(id, 'accepted')}
-          onDeclineRequest={(id) => handleRespondToRequest(id, 'declined')}
+        <Sidebar
+          matches={matches}
+          selectedMatchId={selectedMatchId}
+          onSelectMatch={setSelectedMatchId}
           loading={loading}
         />
         <ChatArea 

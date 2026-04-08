@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { ProfileConnectButton } from './ProfileConnectButton';
 import { 
   Users, 
   Volume2, 
@@ -34,6 +35,8 @@ interface ProfileDetailsProps {
     preferred_gender?: string;
     photos?: string[];
   };
+  incomingRequestId?: string | null;
+  existingRequestStatus?: string | null;
 }
 
 const DIMENSIONS = [
@@ -78,7 +81,7 @@ const TAG_MAP: Record<string, { label: string; dimension: string }> = {
   'CommunalLiving': { label: 'Communal Living', dimension: 'boundary' },
 };
 
-export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile }) => {
+export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile, incomingRequestId, existingRequestStatus }) => {
   // Enhanced parsing
   const weekdayRoutine: Record<string, string> = {};
   const weekendRoutine: Record<string, string> = {};
@@ -209,7 +212,13 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile }) => {
                 </div>
                 
                 <div className="w-full space-y-3">
-                  <Button className="w-full py-4 text-base shadow-xl shadow-primary/20">Send Match Request</Button>
+                  <ProfileConnectButton
+                    targetUserId={profile.id}
+                    targetUserName={profile.full_name}
+                    targetAvatarUrl={profile.avatar_url ?? null}
+                    incomingRequestId={incomingRequestId}
+                    existingRequestStatus={existingRequestStatus}
+                  />
                   <Button variant="outline" className="w-full py-4 text-base border-slate-200">Save Profile</Button>
                 </div>
               </CardContent>
@@ -244,13 +253,44 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile }) => {
               </CardContent>
             </Card>
 
+            {/* Compatibility Breakdown (Preferences) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-none shadow-sm group">
+                <CardContent className="p-8 flex items-start gap-5">
+                  <div className="bg-[#e5fcf9] p-4 rounded-2xl text-[#00a396] group-hover:rotate-12 transition-transform shadow-inner">
+                    <span className="material-symbols-outlined text-2xl">payments</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Budget</h4>
+                    <p className="text-2xl font-black text-dark tracking-tight">
+                      ${profile.budget_min || 0} – ${profile.budget_max || 'No limit'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm group">
+                <CardContent className="p-8 flex items-start gap-5">
+                  <div className="bg-amber-50 p-4 rounded-2xl text-amber-600 group-hover:-rotate-12 transition-transform shadow-inner">
+                    <span className="material-symbols-outlined text-2xl">calendar_today</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Planned Move-in</h4>
+                    <p className="text-2xl font-black text-dark tracking-tight">
+                      {profile.move_in_date ? new Date(profile.move_in_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Lifestyle & Habits Section */}
             <section className="space-y-6">
               <h3 className="text-2xl font-black text-dark flex items-center gap-2 ml-2">
                 <Calendar size={24} className="text-primary" />
                 Lifestyle & Habits
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {renderRoutineCard('Weekday Routine', <Sun size={24} className="text-amber-500" />, weekdayRoutine, 'bg-primary')}
                 {renderRoutineCard('Weekend Lifestyle', <MoonStar size={24} className="text-purple-500" />, weekendRoutine, 'bg-secondary')}
@@ -274,37 +314,6 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile }) => {
                 </Card>
               )}
             </section>
-
-            {/* Financial & Time Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="border-none shadow-sm group">
-                <CardContent className="p-8 flex items-start gap-5">
-                  <div className="bg-[#e5fcf9] p-4 rounded-2xl text-[#00a396] group-hover:rotate-12 transition-transform shadow-inner">
-                    <span className="material-symbols-outlined text-2xl">payments</span>
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Budget</h4>
-                    <p className="text-2xl font-black text-dark tracking-tight">
-                      ${profile.budget_min || 0} – ${profile.budget_max || 'No limit'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-none shadow-sm group">
-                <CardContent className="p-8 flex items-start gap-5">
-                  <div className="bg-amber-50 p-4 rounded-2xl text-amber-600 group-hover:-rotate-12 transition-transform shadow-inner">
-                    <span className="material-symbols-outlined text-2xl">calendar_today</span>
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Planned Move-in</h4>
-                    <p className="text-2xl font-black text-dark tracking-tight">
-                      {profile.move_in_date ? new Date(profile.move_in_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </div>
       </main>

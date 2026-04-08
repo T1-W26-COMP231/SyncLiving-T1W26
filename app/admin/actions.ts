@@ -41,32 +41,121 @@ export async function getUserFullDetails(userId: string) {
 
   const supabase = await createClient();
 
-  // Fetch everything in parallel
-  const [profileRes, listingsRes, connectionsRes, reviewsGivenRes, reviewsReceivedRes] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('room_listings').select('*').eq('provider_id', userId),
-    supabase.from('user_connections')
-      .select(`
-        *,
-        profiles_1:user_1_id (id, full_name),
-        profiles_2:user_2_id (id, full_name)
-      `)
-      .or(`user_1_id.eq.${userId},user_2_id.eq.${userId}`),
-    supabase.from('reviews')
-      .select('*, reviewee:reviewee_id(full_name)')
-      .eq('reviewer_id', userId),
-    supabase.from('reviews')
-      .select('*, reviewer:reviewer_id(full_name)')
-      .eq('reviewee_id', userId)
-  ]);
+  try {
+    // Fetch everything in parallel
+    const [profileRes, listingsRes, connectionsRes, reviewsGivenRes, reviewsReceivedRes, activityLogsRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).single(),
+      supabase.from('room_listings').select('*').eq('provider_id', userId),
+      supabase.from('user_connections')
+        .select(`
+          *,
+          profiles_1:user_1_id (id, full_name),
+          profiles_2:user_2_id (id, full_name)
+        `)
+        .or(`user_1_id.eq.${userId},user_2_id.eq.${userId}`),
+      supabase.from('reviews')
+        .select('*, reviewee:reviewee_id(full_name)')
+        .eq('reviewer_id', userId),
+      supabase.from('reviews')
+        .select('*, reviewer:reviewer_id(full_name)')
+        .eq('reviewee_id', userId),
+      supabase.from('user_activity_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+    ]);
 
-  return {
-    profile: profileRes.data,
-    listings: listingsRes.data || [],
-    connections: connectionsRes.data || [],
-    reviewsGiven: reviewsGivenRes.data || [],
-    reviewsReceived: reviewsReceivedRes.data || []
-  };
+    // Error handling for each query
+    if (profileRes.error) {
+      console.error('Error fetching profile:', profileRes.error);
+      // If the main profile fails, we can't proceed.
+      throw new Error(`Error fetching profile: ${profileRes.error.message}`);
+    }
+    if (listingsRes.error) console.error('Error fetching listings:', listingsRes.error);
+    if (connectionsRes.error) console.error('Error fetching connections:', connectionsRes.error);
+    if (reviewsGivenRes.error) console.error('Error fetching reviews given:', reviewsGivenRes.error);
+    if (reviewsReceivedRes.error) console.error('Error fetching reviews received:', reviewsReceivedRes.error);
+    if (activityLogsRes.error) console.error('Error fetching activity logs:', activityLogsRes.error);
+
+
+    return {
+      profile: profileRes.data,
+      listings: listingsRes.data || [],
+      connections: connectionsRes.data || [],
+      reviewsGiven: reviewsGivenRes.data || [],
+      reviewsReceived: reviewsReceivedRes.data || [],
+      activityLogs: activityLogsRes.data || []
+    };
+  } catch (error) {
+    console.error('General error in getUserFullDetails:', error);
+    // Re-throw the error to be caught by the page component
+    throw error;
+  }
+}
+
+export interface UserReport {
+  id: string;
+  reportedUser: string;
+  reportedUserId: string;
+  avatarUrl: string | null;
+  reason: string;
+  reporter: string;
+  reporterId: string;
+  status: 'new' | 'investigating' | 'resolved';
+  date: string;
+}
+
+export async function getUserReports(): Promise<UserReport[]> {
+  if (!(await isAdmin())) throw new Error('Unauthorized');
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('user_reports')
+    .select('id, reason, status, description, created_at, reported_user_id, reporter_id')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  const userIds = [...new Set([...data.map(r => r.reported_user_id), ...data.map(r => r.reporter_id)])];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', userIds);
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+
+  return data.map(r => {
+    const reported = profileMap.get(r.reported_user_id);
+    const reporter = profileMap.get(r.reporter_id);
+    return {
+      id: r.id,
+      reportedUserId: r.reported_user_id,
+      reportedUser: reported?.full_name || 'Unknown',
+      avatarUrl: reported?.avatar_url || null,
+      reason: r.reason,
+      reporter: reporter?.full_name || 'Unknown',
+      reporterId: r.reporter_id,
+      status: r.status as 'new' | 'investigating' | 'resolved',
+      date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    };
+  });
+}
+
+export async function updateReportStatus(
+  reportId: string,
+  status: 'new' | 'investigating' | 'resolved',
+) {
+  if (!(await isAdmin())) throw new Error('Unauthorized');
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('user_reports')
+    .update({ status })
+    .eq('id', reportId);
+
+  if (error) throw new Error(error.message);
+  return { success: true };
 }
 
 export async function updateUserStatus(

@@ -12,8 +12,17 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // If user is logged in, redirect them away from the landing page to Discovery
+  // If user is logged in, redirect them away from the landing page
   if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.is_admin) {
+      redirect('/admin/dashboard');
+    }
     redirect('/discovery');
   }
 

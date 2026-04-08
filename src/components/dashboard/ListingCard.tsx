@@ -78,11 +78,18 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
     ] : []; // draft
 
   return (
-    <div className={`flex flex-col md:flex-row bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md ${isPending ? 'opacity-50 pointer-events-none' : ''}`}>
+    <div 
+      onClick={() => router.push(`/listings/${listing.id}`)}
+      className={`flex flex-col md:flex-row bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md cursor-pointer group ${isPending ? 'opacity-50 pointer-events-none' : ''}`}
+    >
 
       {/* Image */}
-      <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0">
-        <img src={displayImage} alt={listing.title} className="w-full h-full object-cover" />
+      <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0 overflow-hidden">
+        <img 
+          src={displayImage} 
+          alt={listing.title} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+        />
         <div className="absolute top-3 left-3">
           <Badge variant={currentStatus}>
             {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
@@ -94,7 +101,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
       <div className="flex-1 p-5 flex flex-col justify-between">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 font-sans">{listing.title}</h3>
+            <h3 className="text-xl font-bold text-gray-900 font-sans group-hover:text-primary transition-colors">{listing.title}</h3>
             <div className="flex items-center text-gray-500 mt-2 text-sm">
               <MapPin size={16} className="mr-1" />
               <span>{listing.location}</span>
@@ -124,6 +131,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
           <div className="ml-auto flex items-center gap-2">
             <Link
               href={`/dashboard/edit/${listing.id}`}
+              onClick={(e) => e.stopPropagation()}
               className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-full flex items-center transition-colors"
             >
               <Edit3 size={16} className="mr-2" />
@@ -134,7 +142,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
             {menuItems.map(({ label, Icon, action, cls }) => (
               <button
                 key={label}
-                onClick={action}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  action();
+                }}
                 disabled={isPending}
                 title={label}
                 className={`p-2 rounded-full hover:bg-slate-100 transition-colors ${cls}`}

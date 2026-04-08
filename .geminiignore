@@ -1,0 +1,35 @@
+# Dependencies
+
+node_modules/
+
+# Next.js Build Output
+
+.next/
+out/
+build/
+
+# IDE & OS files
+
+.vscode/
+.DS_Store
+\*.swp
+
+# Supabase Local Data
+
+supabase/.temp/
+supabase/.branches/
+
+# Environment Variables (Security!)
+
+.env
+.env.\*
+!.env.example
+
+# Large Assets
+
+public/fonts/
+public/images/
+_.png
+_.jpg
+_.jpeg
+_.svg
