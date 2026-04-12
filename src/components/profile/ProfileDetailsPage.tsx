@@ -181,6 +181,29 @@ export default function ProfileDetailsPage({
     (t) => !t.startsWith("wd:") && !t.startsWith("we:"),
   );
 
+  // Parse weekday/weekend schedule tags — format: "wd:dimension:Value" / "we:dimension:Value"
+  function parseScheduleTags(prefix: "wd" | "we") {
+    return (profile.lifestyle_tags ?? [])
+      .filter((t) => t.startsWith(`${prefix}:`))
+      .map((t) => {
+        const [, dim, value] = t.split(":");
+        // Humanize dimension key and camelCase value
+        const dimLabel =
+          dim === "social"   ? "Social Style"    :
+          dim === "acoustic" ? "Noise Level"      :
+          dim === "sanitary" ? "Cleanliness"      :
+          dim === "rhythm"   ? "Sleep Schedule"   :
+          dim === "boundary" ? "Guest Policy"     :
+          dim;
+        // Insert spaces before capital letters: "NightOwl" → "Night Owl"
+        const valueLabel = value?.replace(/([A-Z])/g, " $1").trim() ?? "";
+        return { dim: dimLabel, value: valueLabel };
+      });
+  }
+
+  const weekdayTags = parseScheduleTags("wd");
+  const weekendTags = parseScheduleTags("we");
+
   const conflictDimensions = (profile.compatibility ?? []).filter(
     (c) => c.percentage < CONFLICT_THRESHOLD,
   );
@@ -519,22 +542,69 @@ export default function ProfileDetailsPage({
             )}
 
             {/* Lifestyle Tags — placed below Compatibility Breakdown */}
-            {visibleTags.length > 0 && (
+            {(visibleTags.length > 0 || weekdayTags.length > 0 || weekendTags.length > 0) && (
               <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <span className="text-primary">✨</span> Lifestyle
                 </h2>
-                <div className="flex flex-wrap gap-2">
-                  {visibleTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium flex items-center gap-1.5"
-                    >
-                      <span>{getLifestyleIcon(tag)}</span>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+
+                {/* General lifestyle chips */}
+                {visibleTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {visibleTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1.5 bg-slate-100 rounded-full text-sm font-medium flex items-center gap-1.5"
+                      >
+                        <span>{getLifestyleIcon(tag)}</span>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Weekday / Weekend schedule — two columns */}
+                {(weekdayTags.length > 0 || weekendTags.length > 0) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Weekday column */}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-primary mb-3">
+                        ☀️ Weekday
+                      </p>
+                      {weekdayTags.length > 0 ? (
+                        <ul className="space-y-2">
+                          {weekdayTags.map(({ dim, value }) => (
+                            <li key={dim} className="flex items-start justify-between gap-2 text-xs">
+                              <span className="text-slate-500 font-medium shrink-0">{dim}</span>
+                              <span className="font-semibold text-dark text-right">{value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">Not specified</p>
+                      )}
+                    </div>
+
+                    {/* Weekend column */}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-primary mb-3">
+                        🌙 Weekend
+                      </p>
+                      {weekendTags.length > 0 ? (
+                        <ul className="space-y-2">
+                          {weekendTags.map(({ dim, value }) => (
+                            <li key={dim} className="flex items-start justify-between gap-2 text-xs">
+                              <span className="text-slate-500 font-medium shrink-0">{dim}</span>
+                              <span className="font-semibold text-dark text-right">{value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">Not specified</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
