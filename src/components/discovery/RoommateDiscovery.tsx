@@ -33,6 +33,7 @@ import { MatchConfirmedModal } from "@/components/ui/MatchConfirmedModal";
 import { createClient } from "@/utils/supabase/client";
 import OnboardingForm from "@/components/onboarding/OnboardingForm";
 import { MatchFeedback } from "./MatchFeedback";
+import { RoomListingCard } from "./RoomListingCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type FilterKey = "roommate" | "roommate_with_room" | "room" | "all";
@@ -990,7 +991,7 @@ const RoommateDiscovery: React.FC<Props> = ({
           <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <h1 className="text-3xl font-extrabold text-dark tracking-tight">
-                Find the Sync Roommate
+                Find the Roommate in Sync
               </h1>
               <p className="text-slate-500 font-medium mt-1">
                 Personalized roommate recommendations based on your lifestyle.
@@ -1500,10 +1501,11 @@ const RoommateDiscovery: React.FC<Props> = ({
                               {person.full_name ?? "Anonymous"}
                             </h3>
                             <p className="text-sm text-white/70">
-                              {person.location ??
-                                (person.role === "provider"
+                              {person.location
+                                ? person.location.split(",").slice(0, 2).join(",").trim()
+                                : person.role === "provider"
                                   ? "Provider"
-                                  : "Seeker")}
+                                  : "Seeker"}
                             </p>
                           </div>
                           {budgetLabel && (
@@ -1633,8 +1635,8 @@ const RoommateDiscovery: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Empty state */}
-          {visibleMatches.length === 0 && !error && (
+          {/* Empty state — roommate view only */}
+          {!isRoomView && visibleMatches.length === 0 && !error && (
             <div className="border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
               <div className="size-16 rounded-full bg-slate-200 flex items-center justify-center mb-4">
                 <UserSearch size={32} className="text-slate-400" />
@@ -1658,7 +1660,6 @@ const RoommateDiscovery: React.FC<Props> = ({
           {isRoomView && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
               {visibleListings.map((listing) => {
-                const photo = listing.photos[0] ?? null;
                 const distKm =
                   prefLat !== null &&
                   prefLng !== null &&
@@ -1668,131 +1669,14 @@ const RoommateDiscovery: React.FC<Props> = ({
                     : null;
 
                 return (
-                  <div
+                  <RoomListingCard
                     key={listing.id}
-                    className="relative rounded-xl overflow-hidden border border-slate-200 group hover:shadow-xl transition-all duration-300 h-96"
-                  >
-                    {/* Full-card photo */}
-                    {photo ? (
-                      <img
-                        src={photo}
-                        alt={listing.title}
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
-                        <Building2 size={64} className="text-slate-300" />
-                      </div>
-                    )}
-
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-
-                    {/* Top row: distance + room type */}
-                    <div className="absolute top-3 left-3 right-3 flex justify-between items-start gap-2">
-                      {distKm !== null && (
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-black/30 backdrop-blur-sm text-white shadow shrink-0">
-                          {distKm < 1
-                            ? `${Math.round(distKm * 1000)}m away`
-                            : `${distKm.toFixed(1)}km away`}
-                        </span>
-                      )}
-                      {listing.room_type && (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold shadow ml-auto shrink-0 transition-colors ${
-                            selectedRoomTags.includes(listing.room_type)
-                              ? "bg-primary text-dark"
-                              : "bg-black/30 backdrop-blur-sm text-white"
-                          }`}
-                        >
-                          {listing.room_type}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Bottom overlay content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      {/* Provider info */}
-                      <div className="flex items-center gap-2 mb-2">
-                        {listing.provider_avatar ? (
-                          <img
-                            src={listing.provider_avatar}
-                            alt={listing.provider_name ?? ""}
-                            className="size-6 rounded-full object-cover border border-white/30"
-                          />
-                        ) : (
-                          <UserCircle2 size={20} className="text-white/60" />
-                        )}
-                        <span className="text-xs text-white/70 font-medium">
-                          {listing.provider_name ?? "Provider"}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="text-lg font-bold text-white leading-tight">
-                          {listing.title}
-                        </h3>
-                        <span className="text-primary font-bold text-base ml-2 shrink-0">
-                          ${listing.rental_fee.toLocaleString()}
-                          <span className="text-xs text-white/50 font-normal">
-                            /mo
-                          </span>
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-white/70 mb-2 truncate">
-                        {listing.address}
-                      </p>
-
-                      {/* Amenity chips — preferred tags sorted to front and highlighted */}
-                      {listing.amenities.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {[...listing.amenities]
-                            .sort((a, b) => {
-                              const aSelected = selectedRoomTags.includes(a)
-                                ? 0
-                                : 1;
-                              const bSelected = selectedRoomTags.includes(b)
-                                ? 0
-                                : 1;
-                              return aSelected - bSelected;
-                            })
-                            .slice(0, 4)
-                            .map((a) => {
-                              const isHighlighted =
-                                selectedRoomTags.includes(a);
-                              return (
-                                <span
-                                  key={a}
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                                    isHighlighted
-                                      ? "bg-primary text-dark"
-                                      : "bg-white/20 text-white/80"
-                                  }`}
-                                >
-                                  {a}
-                                </span>
-                              );
-                            })}
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between mt-3">
-                        <button className="text-sm font-bold text-white/80 hover:text-white transition-colors">
-                          View Listing
-                        </button>
-                        <button
-                          onClick={() => handleConnect(listing.provider_id)}
-                          disabled={connectingId === listing.provider_id}
-                          className="px-4 py-2 bg-primary text-dark rounded-full text-sm font-bold hover:brightness-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {connectingId === listing.provider_id
-                            ? "Requesting…"
-                            : "Request"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    listing={listing}
+                    distKm={distKm}
+                    selectedRoomTags={selectedRoomTags}
+                    connectingId={connectingId}
+                    onConnect={handleConnect}
+                  />
                 );
               })}
 
@@ -1814,7 +1698,7 @@ const RoommateDiscovery: React.FC<Props> = ({
           )}
 
           {/* Location Discovery banner */}
-          <div className="rounded-2xl overflow-hidden relative min-h-[300px] flex items-center p-8 mb-8">
+          <div className="rounded-2xl overflow-hidden relative min-h-[300px] flex items-center p-8 mb-8 mt-12">
             <div className="absolute inset-0 bg-slate-900">
               <img
                 src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&q=60&w=1400"
