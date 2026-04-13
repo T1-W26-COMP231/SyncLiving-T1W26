@@ -48,6 +48,7 @@ export default function RoomsPageClient({ initialRooms }: RoomsPageClientProps) 
           selectedRoomTags={[]} // No active tag filtering here for now
           connectingId={connectingId}
           onConnect={handleConnect}
+          hideConnect={true}
         />
       ))}
     </div>

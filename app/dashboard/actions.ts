@@ -147,9 +147,10 @@ export async function deleteListing(id: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
+  // Soft delete by updating status to 'deleted'
   const { error } = await supabase
     .from('room_listings')
-    .delete()
+    .update({ status: 'deleted' })
     .eq('id', id)
     .eq('provider_id', user.id);
 
