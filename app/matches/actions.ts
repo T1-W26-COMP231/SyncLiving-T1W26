@@ -51,10 +51,15 @@ export async function getAcceptedMatches(): Promise<MatchedUser[]> {
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
   const reviewedIds = new Set(reviews?.map(r => r.reviewee_id) || []);
 
-  return data.map(r => {
+  const results: MatchedUser[] = [];
+  const processedUserIds = new Set<string>();
+
+  data.forEach(r => {
     const otherId = r.sender_id === user.id ? r.receiver_id : r.sender_id;
+    if (processedUserIds.has(otherId)) return;
+
     const profile = profileMap.get(otherId);
-    return {
+    results.push({
       requestId: r.id,
       userId: otherId,
       full_name: profile?.full_name ?? null,
@@ -64,8 +69,11 @@ export async function getAcceptedMatches(): Promise<MatchedUser[]> {
       lifestyle_tags: profile?.lifestyle_tags ?? [],
       matched_at: r.updated_at,
       hasReviewed: reviewedIds.has(otherId),
-    };
+    });
+    processedUserIds.add(otherId);
   });
+
+  return results;
 }
 
 /**
@@ -102,10 +110,15 @@ export async function getDeclinedRequests(): Promise<MatchedUser[]> {
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
   const reviewedIds = new Set(reviews?.map(r => r.reviewee_id) || []);
 
-  return data.map(r => {
+  const results: MatchedUser[] = [];
+  const processedUserIds = new Set<string>();
+
+  data.forEach(r => {
     const otherId = r.sender_id === user.id ? r.receiver_id : r.sender_id;
+    if (processedUserIds.has(otherId)) return;
+
     const profile = profileMap.get(otherId);
-    return {
+    results.push({
       requestId: r.id,
       userId: otherId,
       full_name: profile?.full_name ?? null,
@@ -115,8 +128,11 @@ export async function getDeclinedRequests(): Promise<MatchedUser[]> {
       lifestyle_tags: profile?.lifestyle_tags ?? [],
       matched_at: r.updated_at,
       hasReviewed: reviewedIds.has(otherId),
-    };
+    });
+    processedUserIds.add(otherId);
   });
+
+  return results;
 }
 
 export interface ReviewRequest {
