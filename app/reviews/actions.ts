@@ -114,6 +114,7 @@ export async function getExistingReview(
     )
     .eq("reviewer_id", user.id)
     .eq("reviewee_id", revieweeId)
+    .neq("status", "deleted") // Ignore deleted reviews
     .maybeSingle();
 
   if (reviewError || !review) return null;
@@ -200,6 +201,30 @@ export async function submitReview(
   revalidatePath(`/profile/${revieweeId}`);
   
   console.log("--- END submitReview SUCCESS ---");
+  return { success: true };
+}
+
+export async function deleteReview(revieweeId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Unauthorized" };
+
+  // Perform a soft delete by updating status to 'deleted'
+  const { error } = await supabase
+    .from("reviews")
+    .update({ status: "deleted" })
+    .eq("reviewer_id", user.id)
+    .eq("reviewee_id", revieweeId);
+
+  if (error) {
+    console.error("Error soft-deleting review:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/reviews");
+  revalidatePath("/matches");
+  revalidatePath(`/profile/${revieweeId}`);
+
   return { success: true };
 }
 

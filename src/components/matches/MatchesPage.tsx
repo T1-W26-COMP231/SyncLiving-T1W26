@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle, MapPin, Archive, Users, Star, Send, CheckCircle, XCircle, MessageSquare, Heart } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import { MatchedUser, ReviewRequest, sendReviewRequest, respondToReviewRequest } from '../../../app/matches/actions';
+import { deleteReview } from '../../../app/reviews/actions';
 import { ReportUserModal } from './ReportUserModal';
 import { ReviewModal } from './ReviewModal';
 
@@ -23,6 +24,7 @@ export default function MatchesPage({ activeMatches, archivedMatches, incomingRe
   const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const displayed = tab === 'active' ? activeMatches : archivedMatches;
 
@@ -42,6 +44,18 @@ export default function MatchesPage({ activeMatches, archivedMatches, incomingRe
       setReviewRequests(prev => prev.filter(r => r.id !== requestId));
     }
     setRespondingId(null);
+  }
+
+  async function handleDeleteReview(userId: string) {
+    if (!confirm('Are you sure you want to delete this review?')) return;
+    setDeletingId(userId);
+    const result = await deleteReview(userId);
+    if (result.success) {
+      router.refresh();
+    } else {
+      alert(result.error || 'Failed to delete review');
+    }
+    setDeletingId(null);
   }
 
   return (
@@ -120,9 +134,11 @@ export default function MatchesPage({ activeMatches, archivedMatches, incomingRe
                     isArchived={tab === 'archived'}
                     isSentRequest={sentRequests.has(match.userId)}
                     isSendingRequest={sendingRequest === match.userId}
+                    isDeleting={deletingId === match.userId}
                     onReport={() => setReportTarget({ userId: match.userId, name: match.full_name })}
                     onReview={() => setReviewTarget({ userId: match.userId, name: match.full_name, avatarUrl: match.avatar_url })}
                     onReviewRequest={() => handleSendReviewRequest(match.userId)}
+                    onDeleteReview={() => handleDeleteReview(match.userId)}
                     onCardClick={() => router.push(`/profile/${match.userId}`)}
                   />
                 ))}
@@ -233,13 +249,15 @@ interface MatchCardProps {
   isArchived: boolean;
   isSentRequest: boolean;
   isSendingRequest: boolean;
+  isDeleting: boolean;
   onReport: () => void;
   onReview: () => void;
   onReviewRequest: () => void;
+  onDeleteReview: () => void;
   onCardClick: () => void;
 }
 
-function MatchCard({ match, isArchived, isSentRequest, isSendingRequest, onReport, onReview, onReviewRequest, onCardClick }: MatchCardProps) {
+function MatchCard({ match, isArchived, isSentRequest, isSendingRequest, isDeleting, onReport, onReview, onReviewRequest, onDeleteReview, onCardClick }: MatchCardProps) {
   const avatarSrc =
     match.avatar_url ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(match.full_name || 'U')}&background=00f0d1&color=111&size=256`;
@@ -322,6 +340,20 @@ function MatchCard({ match, isArchived, isSentRequest, isSendingRequest, onRepor
                 <>
                   <Send size={13} />
                   Review Request
+                </>
+              )}
+            </button>
+            <button
+              onClick={onDeleteReview}
+              disabled={!match.hasReviewed || isDeleting}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-red-100 text-red-500 text-xs font-bold hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {isDeleting ? (
+                <div className="size-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+              ) : (
+                <>
+                  <XCircle size={13} />
+                  Delete Review
                 </>
               )}
             </button>
