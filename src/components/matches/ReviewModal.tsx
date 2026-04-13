@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Star, Send } from 'lucide-react';
-import { getReviewCriteria, submitReview, ReviewCriterion } from '../../../app/reviews/actions';
+import { getReviewCriteria, submitReview, getExistingReview, ReviewCriterion } from '../../../app/reviews/actions';
 
 interface ReviewModalProps {
   targetUserId: string;
@@ -25,11 +25,27 @@ export function ReviewModal({ targetUserId, targetName, targetAvatarUrl, onClose
     `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=00f0d1&color=111&size=128`;
 
   useEffect(() => {
-    getReviewCriteria().then(data => {
-      setCriteria(data);
-      setLoading(false);
-    });
-  }, []);
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [criteriaData, existingReview] = await Promise.all([
+          getReviewCriteria(),
+          getExistingReview(targetUserId)
+        ]);
+        
+        setCriteria(criteriaData);
+        if (existingReview) {
+          setScores(existingReview.scores);
+          setComment(existingReview.overall_comment);
+        }
+      } catch (err) {
+        console.error('Error loading review data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [targetUserId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

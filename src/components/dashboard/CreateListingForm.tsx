@@ -35,7 +35,7 @@ interface CreateListingFormProps {
     title: string;
     address: string;
     rental_fee: number;
-    house_rules: string;
+    house_rules: string[];
     room_type_id: string;
     amenities_ids: string[];
     city?: string;
@@ -106,9 +106,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
 
   // House rules stored as individual clauses
   const [houseRules, setHouseRules] = useState<string[]>(
-    initialData?.house_rules
-      ? initialData.house_rules.split('\n').filter(r => r.trim())
-      : []
+    initialData?.house_rules || []
   );
   const [houseRuleInput, setHouseRuleInput] = useState('');
 
@@ -191,6 +189,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
         const formData = new FormData(formRef.current);
         formData.set('status', status);
         formData.set('photos', JSON.stringify(finalUrls));
+        // Remove manual description set, relying on the hidden input in the form
         
         startTransition(() => {
           formAction(formData);
@@ -229,7 +228,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
         {/* Persistent values for multi-step FormData collection */}
         <input type="hidden" name="title"         value={listingData.title} />
         <input type="hidden" name="rent"          value={listingData.rental_fee} />
-        <input type="hidden" name="description"   value={houseRules.join('\n')} />
+        <input type="hidden" name="description"   value={JSON.stringify(houseRules)} />
 
         {/* ── Wizard card ──────────────────────────────────────────────────── */}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">

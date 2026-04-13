@@ -39,7 +39,9 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
     title: listingRes.data.title,
     address: listingRes.data.address,
     rental_fee: listingRes.data.rental_fee,
-    house_rules: listingRes.data.house_rules || '',
+    house_rules: Array.isArray(listingRes.data.house_rules) 
+      ? listingRes.data.house_rules 
+      : (listingRes.data.house_rules ? [listingRes.data.house_rules] : []),
     room_type_id: currentRoomTypeRes.data?.room_type_id || '',
     amenities_ids: currentAmenitiesRes.data?.map(a => a.amenity_id) || [],
     city: listingRes.data.city || '',

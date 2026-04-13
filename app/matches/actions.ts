@@ -11,11 +11,12 @@ export interface MatchedUser {
   location: string | null;
   lifestyle_tags: string[];
   matched_at: string;
+  hasReviewed: boolean;
 }
 
 /**
  * Returns all accepted match requests the current user is part of,
- * with the other user's profile data.
+ * with the other user's profile data and review status.
  */
 export async function getAcceptedMatches(): Promise<MatchedUser[]> {
   const supabase = await createClient();
@@ -33,12 +34,22 @@ export async function getAcceptedMatches(): Promise<MatchedUser[]> {
   const otherIds = data.map(r => r.sender_id === user.id ? r.receiver_id : r.sender_id);
   if (otherIds.length === 0) return [];
 
+  // Fetch profiles
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name, avatar_url, role, location, lifestyle_tags')
     .in('id', otherIds);
 
+  // Fetch reviews to check who has been reviewed by current user (ignoring deleted)
+  const { data: reviews } = await supabase
+    .from('reviews')
+    .select('reviewee_id')
+    .eq('reviewer_id', user.id)
+    .in('reviewee_id', otherIds)
+    .neq('status', 'deleted');
+
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+  const reviewedIds = new Set(reviews?.map(r => r.reviewee_id) || []);
 
   return data.map(r => {
     const otherId = r.sender_id === user.id ? r.receiver_id : r.sender_id;
@@ -52,6 +63,7 @@ export async function getAcceptedMatches(): Promise<MatchedUser[]> {
       location: profile?.location ?? null,
       lifestyle_tags: profile?.lifestyle_tags ?? [],
       matched_at: r.updated_at,
+      hasReviewed: reviewedIds.has(otherId),
     };
   });
 }
@@ -80,7 +92,15 @@ export async function getDeclinedRequests(): Promise<MatchedUser[]> {
     .select('id, full_name, avatar_url, role, location, lifestyle_tags')
     .in('id', otherIds);
 
+  const { data: reviews } = await supabase
+    .from('reviews')
+    .select('reviewee_id')
+    .eq('reviewer_id', user.id)
+    .in('reviewee_id', otherIds)
+    .neq('status', 'deleted');
+
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+  const reviewedIds = new Set(reviews?.map(r => r.reviewee_id) || []);
 
   return data.map(r => {
     const otherId = r.sender_id === user.id ? r.receiver_id : r.sender_id;
@@ -94,6 +114,7 @@ export async function getDeclinedRequests(): Promise<MatchedUser[]> {
       location: profile?.location ?? null,
       lifestyle_tags: profile?.lifestyle_tags ?? [],
       matched_at: r.updated_at,
+      hasReviewed: reviewedIds.has(otherId),
     };
   });
 }

@@ -13,7 +13,8 @@ import {
 import { useParams, notFound } from 'next/navigation';
 
 export default function ListingDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const supabase = createClient();
 
   const [listing, setListing] = useState<any>(null);
@@ -228,7 +229,7 @@ export default function ListingDetailsPage() {
               </div>
             </div>
 
-            {/* Description */}
+            {/* House Rules */}
             <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-6">
                 <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
@@ -236,9 +237,18 @@ export default function ListingDetailsPage() {
                 </div>
                 <h2 className="text-xl font-bold text-dark tracking-tight">House Rules</h2>
               </div>
-              <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                {listing.house_rules || "No description provided."}
-              </p>
+              {Array.isArray(listing.house_rules) && listing.house_rules.length > 0 ? (
+                <ul className="space-y-3">
+                  {listing.house_rules.map((rule: string, index: number) => (
+                    <li key={index} className="flex items-start gap-3 text-slate-600 leading-relaxed">
+                      <div className="size-1.5 rounded-full bg-primary mt-2.5 shrink-0" />
+                      <span>{rule}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-slate-500 italic">No specific house rules provided.</p>
+              )}
             </section>
 
             {/* Amenities Grid */}
@@ -261,28 +271,17 @@ export default function ListingDetailsPage() {
               </div>
             </section>
 
-            {/* Map */}
-            <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-              <div className="flex items-center gap-3 mb-6">
+            {/* Location Section */}
+            <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                   <MapPin size={20} />
                 </div>
                 <h2 className="text-xl font-bold text-dark tracking-tight">Location</h2>
               </div>
-              <div className="aspect-video w-full rounded-3xl bg-slate-100 border border-slate-200 relative group overflow-hidden">
-                {listing.lat && listing.lng ? (
-                  <img
-                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${listing.lat},${listing.lng}&zoom=15&size=800x400&markers=color:0x00E5D1%7C${listing.lat},${listing.lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-                    className="w-full h-full object-cover"
-                    alt="Map Location"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-                    <Info size={32} className="mb-2 opacity-20" />
-                    <span className="text-sm font-medium">Map location unavailable</span>
-                  </div>
-                )}
-              </div>
+              <p className="text-slate-600 font-medium text-lg pl-1">
+                {listing.address}, {listing.city} {listing.postal_code}
+              </p>
             </section>
           </div>
 

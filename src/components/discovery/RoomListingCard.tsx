@@ -11,6 +11,7 @@ interface RoomListingCardProps {
   selectedRoomTags: string[];
   connectingId: string | null;
   onConnect: (providerId: string) => void;
+  hideConnect?: boolean;
 }
 
 export const RoomListingCard: React.FC<RoomListingCardProps> = ({
@@ -19,6 +20,7 @@ export const RoomListingCard: React.FC<RoomListingCardProps> = ({
   selectedRoomTags,
   connectingId,
   onConnect,
+  hideConnect = false,
 }) => {
   const photo = listing.photos[0] ?? null;
 
@@ -147,13 +149,15 @@ export const RoomListingCard: React.FC<RoomListingCardProps> = ({
               >
                 View
               </Link>
-              <button
-                onClick={() => onConnect(listing.provider_id)}
-                disabled={connectingId === listing.provider_id}
-                className="px-3 py-1.5 bg-primary text-dark rounded-full text-xs font-bold hover:brightness-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {connectingId === listing.provider_id ? 'Requesting…' : 'Request'}
-              </button>
+              {!hideConnect && (
+                <button
+                  onClick={() => onConnect(listing.provider_id)}
+                  disabled={connectingId === listing.provider_id}
+                  className="px-3 py-1.5 bg-primary text-dark rounded-full text-xs font-bold hover:brightness-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {connectingId === listing.provider_id ? 'Requesting…' : 'Request'}
+                </button>
+              )}
             </div>
           </div>
         </div>

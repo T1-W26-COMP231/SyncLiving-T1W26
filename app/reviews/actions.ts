@@ -114,6 +114,7 @@ export async function getExistingReview(
     )
     .eq("reviewer_id", user.id)
     .eq("reviewee_id", revieweeId)
+    .neq("status", "deleted") // Ignore deleted reviews
     .maybeSingle();
 
   if (reviewError || !review) return null;
@@ -135,6 +136,11 @@ export async function submitReview(
   overallComment: string,
   scores: { criteriaId: string; score: number }[],
 ) {
+  console.log("--- START submitReview ---");
+  console.log("Reviewer:", (await (await createClient()).auth.getUser()).data.user?.id);
+  console.log("Reviewee:", revieweeId);
+  console.log("Scores count:", scores.length);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -142,6 +148,7 @@ export async function submitReview(
 
   if (!user) return { error: "Unauthorized" };
 
+  // 1. Upsert the main review record
   const { data: review, error: reviewError } = await supabase
     .from("reviews")
     .upsert(
@@ -149,6 +156,7 @@ export async function submitReview(
         reviewer_id: user.id,
         reviewee_id: revieweeId,
         overall_comment: overallComment,
+        status: 'active' // Ensure it's active when updated
       },
       { onConflict: "reviewer_id, reviewee_id" },
     )
@@ -160,22 +168,63 @@ export async function submitReview(
     return { error: reviewError.message };
   }
 
+  if (!review) {
+    console.error("Review upsert succeeded but no data returned");
+    return { error: "Failed to retrieve review ID after save" };
+  }
+
+  console.log("Review record created/updated, ID:", review.id);
+
+  // 2. Prepare score data
   const scoreData = scores.map((s) => ({
     review_id: review.id,
     criteria_id: s.criteriaId,
     score: s.score,
   }));
 
-  const { error: scoresError } = await supabase
-    .from("review_scores")
-    .upsert(scoreData, { onConflict: "review_id, criteria_id" });
+  if (scoreData.length > 0) {
+    console.log("Upserting scores...");
+    const { error: scoresError } = await supabase
+      .from("review_scores")
+      .upsert(scoreData, { onConflict: "review_id, criteria_id" });
 
-  if (scoresError) {
-    console.error("Error saving scores:", scoresError);
-    return { error: scoresError.message };
+    if (scoresError) {
+      console.error("Error saving scores:", scoresError);
+      return { error: scoresError.message };
+    }
+    console.log("Scores saved successfully");
+  }
+
+  console.log("Revalidating paths...");
+  revalidatePath("/reviews");
+  revalidatePath("/matches");
+  revalidatePath(`/profile/${revieweeId}`);
+  
+  console.log("--- END submitReview SUCCESS ---");
+  return { success: true };
+}
+
+export async function deleteReview(revieweeId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Unauthorized" };
+
+  // Perform a soft delete by updating status to 'deleted'
+  const { error } = await supabase
+    .from("reviews")
+    .update({ status: "deleted" })
+    .eq("reviewer_id", user.id)
+    .eq("reviewee_id", revieweeId);
+
+  if (error) {
+    console.error("Error soft-deleting review:", error);
+    return { success: false, error: error.message };
   }
 
   revalidatePath("/reviews");
+  revalidatePath("/matches");
+  revalidatePath(`/profile/${revieweeId}`);
+
   return { success: true };
 }
 
