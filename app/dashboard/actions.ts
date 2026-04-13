@@ -18,7 +18,14 @@ export async function createListing(prevState: any, formData: FormData) {
   const title = formData.get('title') as string;
   const address = formData.get('address') as string;
   const rental_fee = parseFloat(formData.get('rent') as string) || 0;
-  const house_rules = formData.get('description') as string;
+  const house_rules_raw = formData.get('description') as string; // Note: 'description' name is kept for backward compatibility in the form, but treated as rules array
+  let house_rules: string[] = [];
+  try {
+    house_rules = house_rules_raw ? JSON.parse(house_rules_raw) : [];
+  } catch (e) {
+    // If it's not JSON (old single text), put it in an array
+    house_rules = house_rules_raw ? [house_rules_raw] : [];
+  }
   const status = formData.get('status') as 'draft' | 'published';
   const room_type_id = formData.get('room_type_id') as string;
   const amenities_ids_raw = formData.get('amenities_ids') as string;
