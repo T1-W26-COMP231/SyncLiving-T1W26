@@ -13,7 +13,8 @@ import {
 import { useParams, notFound } from 'next/navigation';
 
 export default function ListingDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const supabase = createClient();
 
   const [listing, setListing] = useState<any>(null);
