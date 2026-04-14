@@ -20,7 +20,7 @@ export const RoomListingCard: React.FC<RoomListingCardProps> = ({
   selectedRoomTags,
   connectingId,
   onConnect,
-  hideConnect = false,
+  hideConnect = true,
 }) => {
   const photo = listing.photos[0] ?? null;
 

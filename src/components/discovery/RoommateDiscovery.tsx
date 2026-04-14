@@ -425,34 +425,17 @@ const RoommateDiscovery: React.FC<Props> = ({
   ].filter(Boolean).length;
 
   const [feedbackStatus, setFeedbackStatus] = useState<Record<string, number>>(
-    {},
+    () => {
+      const initial: Record<string, number> = {};
+      matches.forEach((m) => {
+        if (m.feedbackRating !== null && m.feedbackRating !== undefined) {
+          initial[m.id] = m.feedbackRating;
+        }
+      });
+      return initial;
+    },
   );
 
-  useEffect(() => {
-    async function fetchFeedback() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("match_feedback")
-        .select("target_id, feedback_rating")
-        .eq("user_id", user.id);
-
-      if (data) {
-        const statusMap: Record<string, number> = {};
-        data.forEach((item) => {
-          statusMap[item.target_id] = item.feedback_rating;
-        });
-        setFeedbackStatus(statusMap);
-      }
-    }
-
-    fetchFeedback();
-  }, []);
-  
   function handleFeedback(targetId: string, rating: number) {
     setFeedbackStatus((prev) => ({
       ...prev,

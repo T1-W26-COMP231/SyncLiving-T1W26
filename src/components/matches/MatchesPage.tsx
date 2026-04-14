@@ -18,6 +18,7 @@ interface MatchesPageProps {
 export default function MatchesPage({ activeMatches, archivedMatches, incomingReviewRequests }: MatchesPageProps) {
   const router = useRouter();
   const [tab, setTab] = useState<'active' | 'archived'>('active');
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'pending' | 'reviewed'>('all');
   const [reportTarget, setReportTarget] = useState<{ userId: string; name: string | null } | null>(null);
   const [reviewTarget, setReviewTarget] = useState<{ userId: string; name: string | null; avatarUrl: string | null } | null>(null);
   const [reviewRequests, setReviewRequests] = useState<ReviewRequest[]>(incomingReviewRequests);
@@ -26,7 +27,13 @@ export default function MatchesPage({ activeMatches, archivedMatches, incomingRe
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const displayed = tab === 'active' ? activeMatches : archivedMatches;
+  const displayed = (tab === 'active' ? activeMatches : archivedMatches).filter(match => {
+    if (tab === 'active') {
+      if (reviewFilter === 'pending') return !match.hasReviewed;
+      if (reviewFilter === 'reviewed') return match.hasReviewed;
+    }
+    return true; // for 'all' or 'archived' tab
+  });
 
   async function handleSendReviewRequest(userId: string) {
     setSendingRequest(userId);
@@ -77,46 +84,68 @@ export default function MatchesPage({ activeMatches, archivedMatches, incomingRe
           {/* Left: Matches */}
           <div className="flex-1 min-w-0 space-y-6">
             {/* Tabs — dashboard-style pill */}
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-full w-fit">
-              {(['active', 'archived'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold transition-all ${
-                    tab === t ? 'bg-white text-dark shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {t === 'active' ? <Users size={15} /> : <Archive size={15} />}
-                  {t === 'active' ? 'Active Matches' : 'Archived'}
-                  {t === 'active' && activeMatches.length > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold bg-primary/10 text-primary">
-                      {activeMatches.length}
-                    </span>
-                  )}
-                  {t === 'archived' && archivedMatches.length > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold bg-slate-200 text-slate-500">
-                      {archivedMatches.length}
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-full w-fit">
+                {(['active', 'archived'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold transition-all ${
+                      tab === t ? 'bg-white text-dark shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {t === 'active' ? <Users size={15} /> : <Archive size={15} />}
+                    {t === 'active' ? 'Active Matches' : 'Archived'}
+                    {t === 'active' && activeMatches.length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold bg-primary/10 text-primary">
+                        {activeMatches.length}
+                      </span>
+                    )}
+                    {t === 'archived' && archivedMatches.length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold bg-slate-200 text-slate-500">
+                        {archivedMatches.length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {tab === 'active' && (
+                <div className="flex items-center gap-2 text-sm">
+                  {(['all', 'pending', 'reviewed'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setReviewFilter(f)}
+                      className={`px-4 py-1.5 rounded-full font-bold capitalize transition-all text-xs ${
+                        reviewFilter === f
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Empty state */}
             {displayed.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
+               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="size-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
                   {tab === 'active' ? <Users size={28} className="text-slate-400" /> : <Archive size={28} className="text-slate-400" />}
                 </div>
                 <p className="text-lg font-bold text-slate-500 mb-1">
-                  {tab === 'active' ? 'No matches yet' : 'No archived matches'}
+                  {tab === 'active' && reviewFilter !== 'all' ? `No ${reviewFilter} reviews` : (tab === 'active' ? 'No matches yet' : 'No archived matches')}
                 </p>
                 <p className="text-sm text-slate-400 mb-6">
-                  {tab === 'active'
-                    ? 'Head to Discovery to connect with potential roommates.'
-                    : 'Declined requests will appear here.'}
+                  {tab === 'active' && reviewFilter !== 'all'
+                    ? 'Try selecting a different filter.'
+                    : (tab === 'active'
+                      ? 'Head to Discovery to connect with potential roommates.'
+                      : 'Declined requests will appear here.')}
                 </p>
-                {tab === 'active' && (
+                {tab === 'active' && reviewFilter === 'all' && (
                   <button
                     onClick={() => router.push('/discovery')}
                     className="px-6 py-2.5 rounded-full bg-primary text-dark font-bold text-sm hover:brightness-105 transition-all"
