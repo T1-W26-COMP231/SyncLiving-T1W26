@@ -81,6 +81,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
   const reviews: ReviewData[] = (reviewRows ?? []).map((r: any) => ({
     id: r.id,
+    reviewer_id: r.reviewer_id,
     reviewer_name: r.reviewer?.full_name ?? 'Anonymous',
     reviewer_avatar: r.reviewer?.avatar_url ?? null,
     duration: '',

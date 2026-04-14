@@ -230,9 +230,12 @@ export async function deleteReview(revieweeId: string): Promise<{ success: boole
 
 export async function reportReview(
   reviewId: string,
+  reviewerId: string,
+  reviewText: string,
 ): Promise<{ success: boolean; error?: string }> {
   console.log("--- START reportReview ---");
   console.log("1. Received reviewId from frontend:", reviewId);
+  console.log("2. Target reviewerId:", reviewerId);
 
   const supabase = await createClient();
 
@@ -246,18 +249,20 @@ export async function reportReview(
     };
   }
 
-  console.log("2. Authenticated User ID:", user.id);
+  console.log("3. Authenticated User ID:", user.id);
 
-  const { data: updatedRows, error } = await supabase
+  // 1. Update the review status
+  const { data: updatedRows, error: updateError } = await supabase
     .from("reviews")
     .update({ status: "reported" })
     .eq("id", reviewId)
     .select();
 
-  if (error) {
+  if (updateError) {
+    console.error("Update error:", updateError);
     return {
       success: false,
-      error: `Failed to report review: ${error.message}`,
+      error: `Failed to report review: ${updateError.message}`,
     };
   }
 
@@ -272,7 +277,20 @@ export async function reportReview(
     };
   }
 
-  console.log("4. Update successful! Revalidating path...");
+  // 2. Insert into user_reports to track as a formal report
+  const { error: reportError } = await supabase.from("user_reports").insert({
+    reporter_id: user.id,
+    reported_user_id: reviewerId,
+    reason: "Inappropriate Content",
+    description: `Flagged malicious review (ID: ${reviewId}). Content: "${reviewText.substring(0, 100)}${reviewText.length > 100 ? "..." : ""}"`,
+  });
+
+  if (reportError) {
+    console.error("Failed to insert into user_reports:", reportError);
+    // We don't return error here because the status was already updated successfully
+  }
+
+  console.log("5. Success! Revalidating path...");
 
   revalidatePath("/profile/[id]", "page");
 

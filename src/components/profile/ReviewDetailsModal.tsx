@@ -48,7 +48,7 @@ export default function ReviewDetailsModal({
     setReportMessage("");
 
     // Call the server action to update the review status to 'reported' in the database
-    const result = await reportReview(review.id);
+    const result = await reportReview(review.id, review.reviewer_id, review.text);
 
     if (result.error) {
       // Display error message if the database update fails
