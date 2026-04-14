@@ -224,7 +224,8 @@ export async function getMatches(): Promise<{
     .select(
       "id, full_name, avatar_url, age, location, lat, lng, role, bio, budget_min, budget_max, lifestyle_tags, preferred_gender, v_wd, v_we",
     )
-    .neq("id", user.id);
+    .neq("id", user.id)
+    .eq("is_admin", false);
 
   if (bufferKm !== null && prefLat !== null && prefLng !== null) {
     const box = latLngBoundingBox(prefLat, prefLng, bufferKm);
