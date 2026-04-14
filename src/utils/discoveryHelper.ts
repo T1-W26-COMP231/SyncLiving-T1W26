@@ -5,7 +5,7 @@ export type FilterKey = "roommate" | "roommate_with_room" | "room" | "all";
 export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "roommate", label: "Roommate" },
-  { key: "roommate_with_room", label: "Roommate with Room" },
+  // { key: "roommate_with_room", label: "Roommate with Room" },
   { key: "room", label: "Room" },
 ];
 
