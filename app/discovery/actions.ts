@@ -30,6 +30,7 @@ export interface MatchedProfile {
   score: number;
   tier: "strong" | "good" | "borderline" | "incompatible";
   conflicts: { type: string; clause: string }[];
+  feedbackRating: number | null;
 }
 
 export interface MatchedListing {
@@ -202,6 +203,13 @@ export async function getMatches(): Promise<{
     .eq('status', 'pending');
   const receivedRequestMap = new Map((receivedRows ?? []).map((r: any) => [r.sender_id, r.id]));
 
+  // Fetch match feedback already provided by the current user
+  const { data: feedbackRows } = await supabase
+    .from("match_feedback")
+    .select("target_id, feedback_rating")
+    .eq("user_id", user.id);
+  const feedbackMap = new Map((feedbackRows ?? []).map((r: any) => [r.target_id, r.feedback_rating]));
+
   // Server-side location pre-filter: bounding box at 2× saved preference distance (capped at 100 km).
   const prefLat: number | null = myProfile.pref_lat ?? null;
   const prefLng: number | null = myProfile.pref_lng ?? null;
@@ -294,6 +302,7 @@ export async function getMatches(): Promise<{
         score: Math.round(result.score),
         tier: result.tier,
         conflicts: result.conflicts,
+        feedbackRating: feedbackMap.get(p.id) ?? null,
       };
     })
     .sort((a, b) => b.score - a.score);
