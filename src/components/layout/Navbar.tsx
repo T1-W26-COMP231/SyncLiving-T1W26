@@ -114,7 +114,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
           <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
             <NavLink label="Listings"   href="/dashboard" active={activeTab === 'Listings'} />
             <NavLink label="Discovery"  href="/discovery"          active={activeTab === 'Discovery'} />
-            <NavLink label="Rooms"      href="/rooms"              active={activeTab === 'Rooms'} />
+            {/* <NavLink label="Rooms"      href="/rooms"              active={activeTab === 'Rooms'} /> */}
             <NavLink label="Reviews"    href="/matches"              active={activeTab === 'Matches' || activeTab === 'Reviews'} />
             <NavLink label="Messages"   href="/messages" badge={unreadCount > 0 ? String(unreadCount) : undefined} active={activeTab === 'Messages'} />
           </nav>
