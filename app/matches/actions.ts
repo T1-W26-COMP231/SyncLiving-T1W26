@@ -14,6 +14,73 @@ export interface MatchedUser {
   hasReviewed: boolean;
 }
 
+export interface UserReview {
+  reviewId: string;
+  revieweeId: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  overall_comment: string | null;
+  average_score: number;
+  created_at: string;
+  scores: { criteria_label: string; score: any }[];
+}
+
+/**
+ * Returns all reviews the current user has given.
+ */
+export async function getMyReviews(): Promise<UserReview[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: reviews, error } = (await supabase
+    .from('reviews')
+    .select(`
+      id,
+      reviewee_id,
+      overall_comment,
+      overall_rating,
+      average_score,
+      created_at,
+      review_scores (
+        score,
+        review_criteria (label)
+      )
+    `)
+    .eq('reviewer_id', user.id)
+    .neq('status', 'deleted')
+    .order('created_at', { ascending: false })) as any;
+
+  if (error || !reviews) return [];
+
+  const revieweeIds = reviews.map((r: any) => r.reviewee_id);
+  if (revieweeIds.length === 0) return [];
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', revieweeIds);
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+
+  return reviews.map((r: any) => {
+    const p = profileMap.get(r.reviewee_id);
+    return {
+      reviewId: r.id,
+      revieweeId: r.reviewee_id,
+      full_name: p?.full_name ?? null,
+      avatar_url: p?.avatar_url ?? null,
+      overall_comment: r.overall_comment,
+      average_score: r.overall_rating ?? Number(r.average_score),
+      created_at: r.created_at || new Date().toISOString(),
+      scores: (r.review_scores as any[] || []).map(s => ({
+        criteria_label: s.review_criteria?.label ?? 'Unknown',
+        score: s.score
+      }))
+    };
+  });
+}
+
 /**
  * Returns all accepted match requests the current user is part of,
  * with the other user's profile data and review status.

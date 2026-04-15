@@ -35,7 +35,7 @@ export interface ReviewData {
   duration: string;
   text: string;
   rating: number;
-  scores?: { score: number; label: string }[];
+  scores?: { score: any; label: string }[];
   status: string;
 }
 
