@@ -40,7 +40,7 @@ export default function WriteReviewForm({ targetUser, criteria, initialData, onS
           if (val !== undefined && val !== null) {
             if (typeof val === 'number' && Number(val) === 5) verifs.push(item.mapping);
             else if (typeof val === 'boolean' && val === true) verifs.push(item.mapping);
-            else if (typeof val === 'string' && (val.toLowerCase() === 'true' || val === '5' || val.toLowerCase() === 'yes')) verifs.push(item.mapping);
+            else if (typeof val === 'string' && (String(val).toLowerCase() === 'true' || String(val) === '5' || String(val).toLowerCase() === 'yes')) verifs.push(item.mapping);
             else if (Array.isArray(val) && val.length > 0) verifs.push(item.mapping);
           }
         }
