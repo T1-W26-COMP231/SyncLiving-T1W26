@@ -28,34 +28,27 @@ export async function checkMessageForSensitiveWords(
   messageText: string,
   senderId: string,
 ) {
-  console.log(`[系統檢查] 收到訊息: "${messageText}"，準備連線資料庫...`);
-
   const supabase = await createClient();
 
-  // 1. ✨ 即時去資料庫抓取最新的敏感詞清單
+  // 1. fetch the list of sensitive keywords from the database. We can cache this for a short period (e.g. 5 minutes) to reduce database load, since the list of keywords probably doesn't change very often. For simplicity, we'll fetch it every time here, but in a real implementation we would want to optimize this.
   const { data: keywords, error } = await supabase
     .from("sensitive_keywords")
     .select("keyword, category");
 
   if (error) {
-    console.error(`[系統錯誤] 抓取敏感詞失敗:`, error);
-    // 如果資料庫壞了，通常我們會選擇「放行」訊息，以免整個聊天室癱瘓
+    // if we can't fetch the keywords, we should probably fail open (not flag) to avoid false positives, but log the error for admins to fix.
     return { flagged: false };
   }
 
-  console.log(`[系統檢查] 成功從資料庫載入 ${keywords?.length || 0} 個敏感詞`);
-
-  // 2. 開始比對邏輯
+  // 2. start checking the message against the keywords. We can optimize this by lowercasing the message once and doing a simple substring check, since we want to catch keywords even if they are part of a larger word (e.g. "badword" in "thisisabadword").
   const lowerText = messageText.toLowerCase();
   const matchedKeyword = (keywords || []).find((kw) =>
     lowerText.includes(kw.keyword.toLowerCase()),
   );
 
-  // 3. 如果抓到敏感詞 🚨
+  // 3. get the matched keyword (if any) and log it. We should also write this to a separate "alerts" table in the database so that admins can review it later. This is important for auditing and improving our keyword list over time.
   if (matchedKeyword) {
-    console.log(`[系統警告] 🚨 抓到敏感詞: ${matchedKeyword.keyword}`);
-
-    // 直接寫入警報系統
+    // insert an alert into the database for admins to review. We can include details like the sender ID, the matched keyword, and a snippet of the message for context.
     await supabase.from("admin_alerts").insert({
       type: "security",
       severity: "high",
@@ -66,8 +59,7 @@ export async function checkMessageForSensitiveWords(
     return { flagged: true, keyword: matchedKeyword.keyword };
   }
 
-  // 4. 如果沒事 ✅
-  console.log(`[系統檢查] ✅ 安全通過，無敏感詞。`);
+  // 4. no keywords matched, return false. We can also log this for debugging purposes, but in a real system we might want to limit the logging of non-flagged messages to avoid cluttering the logs.
   return { flagged: false };
 }
 
@@ -106,12 +98,25 @@ export interface FeedItem {
   id: string;
   displayMessage: string;
   createdAt: string;
-  category: "alert" | "report";
+  category: 'alert' | 'report';
   severity?: string;
+}
+
+export interface UserReport {
+  id: string;
+  reportedUserId: string;
+  reportedUser: string;
+  avatarUrl: string | null;
+  reason: string;
+  reporter: string;
+  reporterId: string;
+  status: string;
+  date: string;
 }
 
 /**
  * Fetches data for the live alerts feed based on category.
+
  */
 export async function getLiveFeedData(
   category: "critical-alerts" | "user-reports",
@@ -420,7 +425,7 @@ export async function getSupportTickets() {
 
 export async function updateUserStatus(
   userId: string,
-  status: string,
+  status: "suspended" | "banned" | "active",
   reason?: string,
   suspendedUntil?: string,
 ) {
