@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from "@/utils/supabase/server";
 // import { createClient as createStandardClient } from "@supabase/supabase-js";
 import { log } from "console";
 import { revalidatePath, unstable_cache } from "next/cache";
@@ -23,8 +23,6 @@ async function isAdmin() {
 
   return !!profile?.is_admin;
 }
-
-
 
 export async function checkMessageForSensitiveWords(
   messageText: string,
@@ -108,46 +106,48 @@ export interface FeedItem {
   id: string;
   displayMessage: string;
   createdAt: string;
-  category: 'alert' | 'report';
+  category: "alert" | "report";
   severity?: string;
 }
 
 /**
  * Fetches data for the live alerts feed based on category.
  */
-export async function getLiveFeedData(category: 'critical-alerts' | 'user-reports'): Promise<FeedItem[]> {
+export async function getLiveFeedData(
+  category: "critical-alerts" | "user-reports",
+): Promise<FeedItem[]> {
   if (!(await isAdmin())) throw new Error("Unauthorized");
   const supabase = await createClient();
 
-  if (category === 'critical-alerts') {
+  if (category === "critical-alerts") {
     const { data, error } = await supabase
-      .from('admin_alerts')
-      .select('id, message, created_at, severity')
-      .eq('severity', 'high')
-      .eq('is_resolved', false)
-      .order('created_at', { ascending: false });
+      .from("admin_alerts")
+      .select("id, message, created_at, severity")
+      .eq("severity", "high")
+      .eq("is_resolved", false)
+      .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (data || []).map(item => ({
+    return (data || []).map((item) => ({
       id: item.id,
       displayMessage: item.message,
       createdAt: item.created_at,
-      category: 'alert',
-      severity: item.severity
+      category: "alert",
+      severity: item.severity,
     }));
   } else {
     const { data, error } = await supabase
-      .from('user_reports')
-      .select('id, reason, description, created_at')
-      .eq('status', 'new')
-      .order('created_at', { ascending: false });
+      .from("user_reports")
+      .select("id, reason, description, created_at")
+      .eq("status", "new")
+      .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (data || []).map(item => ({
+    return (data || []).map((item) => ({
       id: item.id,
-      displayMessage: item.reason || item.description || 'No reason provided',
+      displayMessage: item.reason || item.description || "No reason provided",
       createdAt: item.created_at,
-      category: 'report'
+      category: "report",
     }));
   }
 }
@@ -327,7 +327,7 @@ export async function getTicketDetails(ticketId: string) {
   return {
     id: ticket.id,
     userId: ticket.user_id,
-    userName: (ticket.profiles as any)?.full_name || 'Unknown User',
+    userName: (ticket.profiles as any)?.full_name || "Unknown User",
     userAvatar: (ticket.profiles as any)?.avatar_url,
     subject: ticket.subject,
     description: ticket.description,
@@ -335,37 +335,37 @@ export async function getTicketDetails(ticketId: string) {
     priority: ticket.priority as any,
     createdAt: ticket.created_at,
     updatedAt: ticket.updated_at,
-    messages: (messages || []).map(m => ({
+    messages: (messages || []).map((m) => ({
       id: m.id,
       senderId: m.sender_id,
-      senderName: (m.profiles as any)?.full_name || 'Unknown',
-      senderRole: (m.profiles as any)?.is_admin ? 'admin' : 'user',
+      senderName: (m.profiles as any)?.full_name || "Unknown",
+      senderRole: (m.profiles as any)?.is_admin ? "admin" : "user",
       content: m.content,
-      createdAt: m.created_at
-    }))
+      createdAt: m.created_at,
+    })),
   };
 }
 
 export async function sendTicketResponse(ticketId: string, content: string) {
   if (!(await isAdmin())) throw new Error("Unauthorized");
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("User not found");
 
-  const { error: msgError } = await supabase
-    .from("support_messages")
-    .insert({
-      ticket_id: ticketId,
-      sender_id: user.id,
-      content
-    });
+  const { error: msgError } = await supabase.from("support_messages").insert({
+    ticket_id: ticketId,
+    sender_id: user.id,
+    content,
+  });
 
   if (msgError) throw new Error(msgError.message);
 
   // Update ticket status to in_progress if it was open
   await supabase
     .from("support_tickets")
-    .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+    .update({ status: "in_progress", updated_at: new Date().toISOString() })
     .eq("id", ticketId)
     .eq("status", "open");
 
@@ -379,11 +379,11 @@ export async function closeTicket(ticketId: string) {
 
   const { error } = await supabase
     .from("support_tickets")
-    .update({ status: 'closed', updated_at: new Date().toISOString() })
+    .update({ status: "closed", updated_at: new Date().toISOString() })
     .eq("id", ticketId);
 
   if (error) throw new Error(error.message);
-  
+
   revalidatePath(`/admin/support/${ticketId}`);
   revalidatePath("/admin/support");
   return { success: true };
@@ -404,17 +404,17 @@ export async function getSupportTickets() {
     return [];
   }
 
-  return (data || []).map(t => ({
+  return (data || []).map((t) => ({
     id: t.id,
     userId: t.user_id,
-    userName: (t.profiles as any)?.full_name || 'Unknown User',
+    userName: (t.profiles as any)?.full_name || "Unknown User",
     userAvatar: (t.profiles as any)?.avatar_url,
     subject: t.subject,
     description: t.description,
     status: t.status as any,
     priority: t.priority as any,
     createdAt: t.created_at,
-    updatedAt: t.updated_at
+    updatedAt: t.updated_at,
   }));
 }
 
@@ -437,4 +437,43 @@ export async function updateUserStatus(
     .select();
   if (error) throw new Error(error.message);
   return data[0];
+}
+
+/**
+ * Creates and publishes a platform-wide announcement.
+ * Only accessible by administrators.
+ */
+export async function createAnnouncement(formData: FormData) {
+  if (!(await isAdmin())) return { error: "Unauthorized" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Unauthorized" };
+
+  const title = formData.get("title") as string;
+  const message = formData.get("message") as string;
+
+  if (!title || !message) {
+    return { error: "Title and message are required" };
+  }
+
+  const { error } = await supabase.from("announcements").insert({
+    title,
+    message,
+    created_by: user.id,
+  });
+
+  if (error) {
+    console.error("Error creating announcement:", error);
+    return { error: "Failed to publish" };
+  }
+
+  // Revalidate relevant paths to show the new announcement
+  revalidatePath("/dashboard");
+  revalidatePath("/admin/dashboard");
+
+  return { success: true, message: "Announcement published successfully" };
 }
