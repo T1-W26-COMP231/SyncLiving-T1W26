@@ -1,19 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Star, Send } from 'lucide-react';
+import { X, Star, Send, Check } from 'lucide-react';
 import { getReviewCriteria, submitReview, getExistingReview, ReviewCriterion } from '../../../app/reviews/actions';
 
 interface ReviewModalProps {
   targetUserId: string;
   targetName: string | null;
   targetAvatarUrl: string | null;
+  requestId?: string;
+  onSubmitted?: (requestId: string) => void;
   onClose: () => void;
 }
 
-export function ReviewModal({ targetUserId, targetName, targetAvatarUrl, onClose }: ReviewModalProps) {
+const VERIFICATION_ITEMS = [
+  { label: "Paid bills on time", mapping: "Paid bills on time", category: "Financial Clarity" },
+  { label: "Cleaned kitchen after use", mapping: "Cleaned kitchen after use", category: "Shared Space Chores" },
+  { label: "Handled trash on schedule", mapping: "Handled trash on schedule", category: "Shared Space Chores" },
+  { label: "Respected house rules", mapping: "Respected house rules", category: "Rule Adherence" }
+];
+
+export function ReviewModal({ targetUserId, targetName, targetAvatarUrl, requestId, onSubmitted, onClose }: ReviewModalProps) {
   const [criteria, setCriteria] = useState<ReviewCriterion[]>([]);
-  const [scores, setScores] = useState<Record<string, number>>({});
+  const [starRating, setStarRating] = useState<number>(0);
+  const [selectedVerifications, setSelectedVerifications] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -34,9 +44,19 @@ export function ReviewModal({ targetUserId, targetName, targetAvatarUrl, onClose
         ]);
         
         setCriteria(criteriaData);
+        
         if (existingReview) {
-          setScores(existingReview.scores);
+          setStarRating(existingReview.average_score);
           setComment(existingReview.overall_comment);
+
+          const verifs: string[] = [];
+          VERIFICATION_ITEMS.forEach(item => {
+            const critId = criteriaData.find(c => c.label === item.mapping)?.id;
+            if (critId && existingReview.scores[critId] === 5) {
+              verifs.push(item.mapping);
+            }
+          });
+          setSelectedVerifications(verifs);
         }
       } catch (err) {
         console.error('Error loading review data:', err);
@@ -47,17 +67,51 @@ export function ReviewModal({ targetUserId, targetName, targetAvatarUrl, onClose
     loadData();
   }, [targetUserId]);
 
+  const toggleVerification = (mapping: string) => {
+    setSelectedVerifications(prev => 
+      prev.includes(mapping) 
+        ? prev.filter(m => m !== mapping)
+        : [...prev, mapping]
+    );
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (Object.keys(scores).length < criteria.length) {
-      alert('Please rate all criteria before submitting.');
+    
+    if (starRating === 0) {
+      alert('Please provide an overall rating.');
       return;
     }
+
     setSubmitting(true);
-    const scoreArray = Object.entries(scores).map(([id, score]) => ({ criteriaId: id, score }));
-    const result = await submitReview(targetUserId, comment, scoreArray);
+    
+    const scoreArray: { criteriaId: string; score: number }[] = [];
+    
+    VERIFICATION_ITEMS.forEach(item => {
+      const crit = criteria.find(c => c.label === item.mapping);
+      if (crit) {
+        scoreArray.push({ 
+          criteriaId: crit.id, 
+          score: selectedVerifications.includes(item.mapping) ? 5 : 1 
+        });
+      }
+    });
+
+    const result = await submitReview(targetUserId, comment, scoreArray, starRating);
+    
     if (result.success) {
+      console.log('submitReview result:', result);
       setSuccess(true);
+      // show the saved review id in console for debugging
+      if (result.reviewId) console.log('Review saved with id:', result.reviewId);
+      // If this modal was opened in response to a review request, notify the parent so it can remove that request from the sidebar
+      if (requestId && onSubmitted) {
+        try {
+          onSubmitted(requestId);
+        } catch (e) {
+          console.warn('onSubmitted callback failed', e);
+        }
+      }
       setTimeout(onClose, 2000);
     } else {
       alert(result.error || 'Failed to submit review.');
@@ -65,109 +119,104 @@ export function ReviewModal({ targetUserId, targetName, targetAvatarUrl, onClose
     }
   }
 
+  const categories = Array.from(new Set(VERIFICATION_ITEMS.map(i => i.category)));
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+        
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <img
-              src={avatarSrc}
-              alt={displayName}
-              className="size-10 rounded-full object-cover border-2 border-primary"
-            />
+        <div className="flex items-center justify-between p-8 pb-4">
+          <div className="flex items-center gap-4">
+            <img src={avatarSrc} alt={displayName} className="size-12 rounded-full object-cover border-2 border-primary/20" />
             <div>
-              <p className="text-xs text-slate-400 font-medium">Writing a review for</p>
-              <p className="font-bold text-dark">{displayName}</p>
+              <h2 className="text-xl font-black text-dark leading-none mb-1">Review Living Experience</h2>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Reviewing {displayName}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="size-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-          >
-            <X size={16} />
+          <button onClick={onClose} className="size-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-all">
+            <X size={20} className="text-slate-500" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-8 pt-4">
           {success ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="size-14 rounded-full bg-emerald-100 flex items-center justify-center">
-                <Star size={28} className="text-emerald-500 fill-emerald-500" />
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+              <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center animate-bounce">
+                <Check size={40} className="text-primary" />
               </div>
-              <p className="font-bold text-dark text-lg">Review submitted!</p>
-              <p className="text-slate-500 text-sm text-center">Thank you for helping build a trusted community.</p>
+              <p className="font-black text-dark text-2xl">Review Saved!</p>
             </div>
           ) : loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="size-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <div className="flex items-center justify-center py-20">
+              <div className="size-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Criteria ratings */}
-              <div className="space-y-5">
-                {criteria.map(criterion => (
-                  <div key={criterion.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-bold text-dark">{criterion.label}</p>
-                      {criterion.description && (
-                        <p className="text-[11px] text-slate-400">{criterion.description}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map(star => (
+            <form onSubmit={handleSubmit} className="space-y-8">
+              
+              {/* Star Rating */}
+              <div className="flex flex-col items-center gap-4 p-6 bg-slate-50 rounded-[24px] border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Overall Experience (Mandatory)</p>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} type="button" onClick={() => setStarRating(star)} className="transition-all hover:scale-110">
+                      <Star size={32} className={`${starRating >= star ? 'text-primary fill-primary' : 'text-slate-200 fill-slate-200'}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Verification Checkboxes */}
+              <div className="space-y-6">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Objective Review Items (Optional)</p>
+                {categories.map(cat => (
+                  <div key={cat} className="space-y-3">
+                    <h4 className="text-[11px] font-black text-dark uppercase tracking-wider pl-1">{cat}</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {VERIFICATION_ITEMS.filter(i => i.category === cat).map(item => (
                         <button
-                          key={star}
+                          key={item.mapping}
                           type="button"
-                          onClick={() => setScores(prev => ({ ...prev, [criterion.id]: star }))}
-                          className="transition-transform hover:scale-110"
+                          onClick={() => toggleVerification(item.mapping)}
+                          className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left ${
+                            selectedVerifications.includes(item.mapping)
+                              ? 'bg-primary/5 border-primary text-dark'
+                              : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                          }`}
                         >
-                          <Star
-                            size={28}
-                            className={`transition-colors ${
-                              (scores[criterion.id] ?? 0) >= star
-                                ? 'text-amber-400 fill-amber-400'
-                                : 'text-slate-200 fill-slate-200 hover:text-amber-300 hover:fill-amber-300'
-                            }`}
-                          />
+                          <div className={`size-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                            selectedVerifications.includes(item.mapping) ? 'bg-primary border-primary' : 'border-slate-200'
+                          }`}>
+                            {selectedVerifications.includes(item.mapping) && <Check size={12} className="text-dark stroke-[4]" />}
+                          </div>
+                          <span className="text-sm font-bold">{item.label}</span>
                         </button>
                       ))}
-                      {scores[criterion.id] && (
-                        <span className="ml-2 text-xs text-slate-400 self-center font-semibold">
-                          {scores[criterion.id]}/5
-                        </span>
-                      )}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Comment */}
-              <div>
-                <label className="text-sm font-bold text-dark mb-2 block">Overall Comment</label>
+              {/* Comments */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Detailed Feedback (Optional)</p>
                 <textarea
                   value={comment}
                   onChange={e => setComment(e.target.value)}
-                  placeholder="Share your experience living with this person..."
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  placeholder="Anything else you'd like to share?"
+                  rows={3}
+                  className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-primary/20 text-sm font-medium transition-all resize-none"
                 />
               </div>
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 rounded-2xl bg-primary text-dark font-bold text-sm flex items-center justify-center gap-2 hover:brightness-105 transition-all disabled:opacity-50"
+                className="w-full py-5 rounded-2xl bg-dark text-white font-black text-base shadow-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
-                {submitting ? (
-                  <div className="size-4 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Send size={15} />
-                    Submit Review
-                  </>
-                )}
+                {submitting ? <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Send size={18} /> Submit Review</>}
               </button>
             </form>
           )}

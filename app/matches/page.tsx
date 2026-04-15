@@ -1,4 +1,4 @@
-import { getAcceptedMatches, getDeclinedRequests, getIncomingReviewRequests } from './actions';
+import { getAcceptedMatches, getDeclinedRequests, getIncomingReviewRequests, getMyReviews } from './actions';
 import MatchesPage from '@/components/matches/MatchesPage';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
@@ -10,10 +10,11 @@ export default async function MatchesRoute() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [activeMatches, archivedMatches, incomingReviewRequests] = await Promise.all([
+  const [activeMatches, archivedMatches, incomingReviewRequests, myReviews] = await Promise.all([
     getAcceptedMatches(),
     getDeclinedRequests(),
     getIncomingReviewRequests(),
+    getMyReviews(),
   ]);
 
   return (
@@ -21,6 +22,7 @@ export default async function MatchesRoute() {
       activeMatches={activeMatches}
       archivedMatches={archivedMatches}
       incomingReviewRequests={incomingReviewRequests}
+      myReviews={myReviews}
     />
   );
 }
