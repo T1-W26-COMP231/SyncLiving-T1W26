@@ -1,339 +1,259 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  Users,
-  Flag,
-  Ticket,
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  ShieldAlert,
+import React, { useEffect, useState } from 'react';
+import { 
+  ShieldAlert, 
+  AlertTriangle, 
+  Zap, 
+  MessageSquare, 
+  Activity, 
+  Calendar, 
   Download,
-  Calendar,
-  Megaphone,
-  BarChart2,
-  UserCog,
-  Database,
+  ChevronDown
 } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import { type AdminDashboardOverview, resolveAlert, getLiveFeedData, type FeedItem } from '../../../app/admin/actions';
 
-// ─── Stat card data ─────────────────────────────────────────────────────────
-const STATS = [
-  {
-    label: 'Total Users',
-    value: '12,840',
-    change: '+2.5%',
-    trend: 'up',
-    icon: <Users className="w-5 h-5 text-emerald-600" />,
-    badgeClass: 'bg-emerald-100 text-emerald-600',
-  },
-  {
-    label: 'Flagged Reports',
-    value: '24',
-    change: '-12%',
-    trend: 'down',
-    icon: <Flag className="w-5 h-5 text-rose-600" />,
-    badgeClass: 'bg-rose-100 text-rose-600',
-  },
-  {
-    label: 'Active Tickets',
-    value: '156',
-    change: '-5%',
-    trend: 'down',
-    icon: <Ticket className="w-5 h-5 text-amber-600" />,
-    badgeClass: 'bg-rose-100 text-rose-600',
-  },
-  {
-    label: 'System Health',
-    value: '99.9%',
-    change: 'Stable',
-    trend: 'stable',
-    icon: <Activity className="w-5 h-5 text-slate-600" />,
-    badgeClass: 'bg-slate-100 text-slate-600',
-  },
-];
-
-// ─── Recent reports mock data ────────────────────────────────────────────────
-interface ReportRow {
-  user: string;
-  type: string;
-  date: string;
-  status: 'Pending' | 'Resolved' | 'Investigating';
+interface AdminDashboardProps {
+  initialData: AdminDashboardOverview;
 }
 
-const RECENT_REPORTS: ReportRow[] = [
-  { user: 'Sarah Jenkins', type: 'Harassment', date: 'Oct 24, 2023', status: 'Pending' },
-  { user: 'Michael Chen', type: 'Spam Content', date: 'Oct 24, 2023', status: 'Resolved' },
-  { user: 'David Miller', type: 'Account Theft', date: 'Oct 23, 2023', status: 'Investigating' },
-  { user: 'Emma Wilson', type: 'Inappropriate Media', date: 'Oct 23, 2023', status: 'Resolved' },
-];
+export default function AdminDashboard({ initialData }: AdminDashboardProps) {
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<'critical-alerts' | 'user-reports'>('critical-alerts');
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    pendingMessageReports: initialData.pendingMessageReports,
+    activeAlerts: initialData.unresolvedAlerts.length
+  });
 
-// ─── Status badge helper ─────────────────────────────────────────────────────
-const STATUS_CLASSES: Record<ReportRow['status'], string> = {
-  Pending: 'bg-amber-100 text-amber-600',
-  Resolved: 'bg-emerald-100 text-emerald-600',
-  Investigating: 'bg-rose-100 text-rose-600',
-};
+  // Fetch feed items when category changes
+  useEffect(() => {
+    async function loadFeed() {
+      setIsLoading(true);
+      try {
+        const data = await getLiveFeedData(selectedCategory);
+        setFeedItems(data);
+      } catch (err) {
+        console.error('Failed to load feed:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadFeed();
+  }, [selectedCategory]);
 
-// ─── User growth chart data (simple CSS bars) ────────────────────────────────
-const CHART_DATA = [
-  { month: 'May', value: 55 },
-  { month: 'Jun', value: 65 },
-  { month: 'Jul', value: 60 },
-  { month: 'Aug', value: 75 },
-  { month: 'Sep', value: 85 },
-  { month: 'Oct', value: 100 },
-];
+  /**
+   * Realtime Implementation
+   * Listening for events to update the feed instantly.
+   */
+  useEffect(() => {
+    const supabase = createClient();
+    
+    // Listen for admin alerts
+    const alertsChannel = supabase
+      .channel('admin-alerts-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'admin_alerts' },
+        (payload) => {
+          const newAlert = payload.new as any;
+          if (newAlert.severity === 'high' && selectedCategory === 'critical-alerts') {
+            setFeedItems((prev) => [{
+              id: newAlert.id,
+              displayMessage: newAlert.message,
+              createdAt: newAlert.created_at,
+              category: 'alert',
+              severity: newAlert.severity
+            }, ...prev]);
+          }
+          if (!newAlert.is_resolved) {
+            setStats((prev) => ({ ...prev, activeAlerts: prev.activeAlerts + 1 }));
+          }
+        }
+      )
+      .subscribe();
 
-// ─── System activity entries ─────────────────────────────────────────────────
-const SYSTEM_ACTIVITY = [
-  { text: 'API v2.4 Deployment', sub: 'Completed 2 hours ago', done: true },
-  { text: 'New Security Patch', sub: 'Scheduled for 11 PM UTC', done: true },
-  { text: 'Daily Report Generated', sub: 'Sent to stakeholders', done: false },
-];
+    // Listen for user reports
+    const reportsChannel = supabase
+      .channel('user-reports-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'user_reports' },
+        (payload) => {
+          const newReport = payload.new as any;
+          if (newReport.status === 'new' && selectedCategory === 'user-reports') {
+            setFeedItems((prev) => [{
+              id: newReport.id,
+              displayMessage: newReport.reason || 'No reason provided',
+              createdAt: newReport.created_at,
+              category: 'report'
+            }, ...prev]);
+          }
+          setStats((prev) => ({ ...prev, pendingMessageReports: prev.pendingMessageReports + 1 }));
+        }
+      )
+      .subscribe();
 
-// ─── Quick actions ────────────────────────────────────────────────────────────
-const QUICK_ACTIONS = [
-  { icon: <Megaphone className="w-5 h-5" />, label: 'Publish Announcement' },
-  { icon: <BarChart2 className="w-5 h-5" />, label: 'View Global Stats' },
-  { icon: <UserCog className="w-5 h-5" />, label: 'Manage Roles' },
-  { icon: <Database className="w-5 h-5" />, label: 'Backup Database' },
-];
+    return () => {
+      supabase.removeChannel(alertsChannel);
+      supabase.removeChannel(reportsChannel);
+    };
+  }, [selectedCategory]);
 
-export default function AdminDashboard() {
-  const [dismissedCritical, setDismissedCritical] = useState(false);
-  const [dismissedHigh, setDismissedHigh] = useState(false);
+  async function handleResolveAlert(id: string) {
+    if (!confirm('Mark this alert as resolved?')) return;
+    try {
+      await resolveAlert(id);
+      setFeedItems((prev) => prev.filter((a) => a.id !== id));
+      if (selectedCategory === 'critical-alerts') {
+        setStats((prev) => ({ ...prev, activeAlerts: prev.activeAlerts - 1 }));
+      }
+    } catch (err) {
+      alert('Failed to resolve alert: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  }
+
+  const severityStyles: Record<string, string> = {
+    low: 'bg-blue-100 text-blue-700 border-blue-200',
+    medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    high: 'bg-orange-100 text-orange-700 border-orange-200',
+    critical: 'bg-red-100 text-red-700 border-red-300 animate-pulse font-bold',
+  };
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
-      {/* Page header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
-          <p className="text-slate-500">Real-time system monitoring and management</p>
+          <h1 className="text-2xl font-bold tracking-tight">System Overview</h1>
+          <p className="text-slate-500">Real-time monitoring and security alerts</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-full text-sm font-semibold bg-white shadow-sm hover:bg-slate-50 transition-colors">
-            <Calendar className="w-4 h-4" />
-            Last 24 Hours
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-full text-sm font-semibold bg-white hover:bg-slate-50 transition-colors shadow-sm">
+            <Calendar size={16} /> Last 24 Hours
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-admin-primary text-white rounded-full text-sm font-bold shadow-lg shadow-admin-primary/20 hover:opacity-90 transition-all">
-            <Download className="w-4 h-4" />
-            Export Data
+          <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-full text-sm font-bold hover:opacity-90 transition-all shadow-md">
+            <Download size={16} /> Export
           </button>
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {STATS.map((stat) => (
-          <div key={stat.label} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-slate-500 text-sm font-semibold uppercase tracking-wider">{stat.label}</span>
-              <span className={`text-xs font-bold px-2 py-1 rounded-xl ${stat.badgeClass}`}>
-                {stat.trend === 'up' ? (
-                  <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{stat.change}</span>
-                ) : stat.trend === 'down' ? (
-                  <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3" />{stat.change}</span>
-                ) : (
-                  stat.change
-                )}
-              </span>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatCard
+          title="New Reports"
+          value={stats.pendingMessageReports}
+          icon={<MessageSquare className="text-rose-600" />}
+          badgeClass="bg-rose-50 text-rose-600"
+        />
+        <StatCard
+          title="Active Alerts"
+          value={stats.activeAlerts}
+          icon={<ShieldAlert className="text-orange-600" />}
+          badgeClass="bg-orange-50 text-orange-600"
+        />
+        <StatCard
+          title="System Health"
+          value="99.9%"
+          icon={<Activity className="text-emerald-600" />}
+          badgeClass="bg-emerald-50 text-emerald-600"
+          change="Stable"
+        />
+      </div>
+
+      {/* Alerts Feed */}
+      <section className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <ShieldAlert className="text-rose-500" />
+            Live Alerts Feed
+          </h3>
+          
+          <div className="relative inline-block text-left">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as any)}
+              className="appearance-none bg-white border border-slate-200 rounded-lg px-4 py-2 pr-10 text-sm font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-sm cursor-pointer transition-all"
+            >
+              <option value="critical-alerts">Critical Alerts</option>
+              <option value="user-reports">User Reports</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+              <ChevronDown size={16} />
             </div>
-            <p className="text-3xl font-black">{stat.value}</p>
           </div>
-        ))}
-      </div>
-
-      {/* User Growth Chart */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-        <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-admin-primary" />
-          User Growth (Last 6 Months)
-        </h3>
-        <div className="flex items-end gap-3 h-36">
-          {CHART_DATA.map((item) => (
-            <div key={item.month} className="flex-1 flex flex-col items-center gap-2">
-              <div className="w-full flex items-end justify-center" style={{ height: '100px' }}>
-                <div
-                  className="w-full bg-admin-primary rounded-t-md transition-all duration-500 hover:opacity-80"
-                  style={{ height: `${item.value}%` }}
-                />
-              </div>
-              <span className="text-xs text-slate-500 font-medium">{item.month}</span>
-            </div>
-          ))}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Priority Alerts + Recent Reports */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Priority Alerts */}
-          <section>
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-rose-500" />
-              Priority Alerts
-            </h3>
-            <div className="space-y-4">
-              {!dismissedCritical && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-5 flex items-start gap-4">
-                  <div className="size-12 rounded-xl bg-rose-500 flex items-center justify-center text-white shrink-0">
-                    <ShieldAlert className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-rose-900">Server Latency Spike: Region US-East</h4>
-                      <span className="text-xs font-bold px-2 py-1 bg-rose-200 text-rose-700 rounded-xl ml-2 shrink-0">
-                        CRITICAL
+        <div className="grid gap-4">
+          {isLoading ? (
+            <div className="bg-white border rounded-xl p-12 text-center text-slate-400 font-medium animate-pulse">
+              Loading feed data...
+            </div>
+          ) : feedItems.length === 0 ? (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-8 text-center text-emerald-700 font-medium">
+              ✓ No active {selectedCategory.replace('-', ' ')} detected.
+            </div>
+          ) : (
+            feedItems.map((item) => (
+              <div 
+                key={item.id} 
+                className={`bg-white border rounded-xl p-5 flex items-start gap-4 shadow-sm transition-all hover:shadow-md ${item.severity ? severityStyles[item.severity].split(' ')[2] : 'border-slate-200'}`}
+              >
+                <div className={`p-3 rounded-lg shrink-0 ${item.category === 'alert' ? 'bg-orange-100 text-orange-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {item.category === 'alert' ? <ShieldAlert size={18} /> : <MessageSquare size={18} />}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-bold text-slate-900 leading-snug">{item.displayMessage}</h4>
+                    {item.severity && (
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ml-4 ${severityStyles[item.severity]}`}>
+                        {item.severity}
                       </span>
-                    </div>
-                    <p className="text-sm text-rose-800/80 mt-1">
-                      Region US-East experiencing over 200ms delay affecting 15% of active users. Automatic load balancing initiated.
-                    </p>
-                    <div className="mt-4 flex gap-3">
-                      <button className="px-4 py-1.5 bg-rose-600 text-white rounded-full text-xs font-bold hover:bg-rose-700 transition-colors">
-                        Investigate
-                      </button>
-                      <button
-                        onClick={() => setDismissedCritical(true)}
-                        className="px-4 py-1.5 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-colors"
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Received at {new Date(item.createdAt).toLocaleString()}
+                  </p>
+                  <div className="mt-4 flex gap-3">
+                    <button className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">
+                      Investigate
+                    </button>
+                    {item.category === 'alert' && (
+                      <button 
+                        onClick={() => handleResolveAlert(item.id)}
+                        className="px-4 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
                       >
-                        Dismiss
+                        Resolve
                       </button>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )}
-
-              {!dismissedHigh && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-4">
-                  <div className="size-12 rounded-xl bg-amber-500 flex items-center justify-center text-white shrink-0">
-                    <ShieldAlert className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-amber-900">Security: Unusual Login Pattern</h4>
-                      <span className="text-xs font-bold px-2 py-1 bg-amber-200 text-amber-700 rounded-xl ml-2 shrink-0">
-                        HIGH
-                      </span>
-                    </div>
-                    <p className="text-sm text-amber-800/80 mt-1">
-                      Detected 50+ failed login attempts within 2 minutes from unique IPs in the Stockholm region.
-                    </p>
-                    <div className="mt-4 flex gap-3">
-                      <button className="px-4 py-1.5 bg-amber-600 text-white rounded-full text-xs font-bold hover:bg-amber-700 transition-colors">
-                        Review Logs
-                      </button>
-                      <button
-                        onClick={() => setDismissedHigh(true)}
-                        className="px-4 py-1.5 border border-amber-300 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition-colors"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {dismissedCritical && dismissedHigh && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-center text-emerald-600 font-medium text-sm">
-                  ✓ All alerts cleared. System is operating normally.
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Recent Reports Table */}
-          <section>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Recent Reports</h3>
-              <a href="/admin/reports" className="text-sm font-bold hover:underline text-admin-primary">
-                View All
-              </a>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">User</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Type</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Date</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {RECENT_REPORTS.map((row) => (
-                    <tr key={row.user + row.date} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="size-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold">
-                            {row.user[0]}
-                          </div>
-                          <span className="text-sm font-semibold">{row.user}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">{row.type}</td>
-                      <td className="px-6 py-4 text-sm text-slate-500">{row.date}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span
-                          className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${STATUS_CLASSES[row.status]}`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-
-        {/* Right: Quick Actions + System Activity */}
-        <div className="space-y-8">
-          <section>
-            <h3 className="text-xl font-bold mb-4">Quick Actions</h3>
-            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
-              {QUICK_ACTIONS.map((action) => (
-                <button
-                  key={action.label}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-admin-primary hover:text-white transition-all group"
-                >
-                  <span className="text-admin-primary group-hover:text-white transition-colors">
-                    {action.icon}
-                  </span>
-                  <span className="text-sm font-bold">{action.label}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-xl font-bold mb-4">System Activity</h3>
-            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-              <div className="space-y-6">
-                {SYSTEM_ACTIVITY.map((item, idx) => (
-                  <div key={idx} className="flex gap-4">
-                    <div className="relative shrink-0">
-                      <div
-                        className={`size-2 rounded-full mt-1.5 ${item.done ? 'bg-admin-primary' : 'bg-slate-300'}`}
-                      />
-                      {idx < SYSTEM_ACTIVITY.length - 1 && (
-                        <div className="absolute top-4 left-[3px] w-[1px] h-full bg-slate-200" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{item.text}</p>
-                      <p className="text-xs text-slate-500">{item.sub}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
-            </div>
-          </section>
+            ))
+          )}
         </div>
+      </section>
+    </div>
+  );
+}
+
+function StatCard({ title, value, icon, badgeClass, change }: { title: string, value: string | number, icon: React.ReactNode, badgeClass: string, change?: string }) {
+  return (
+    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
+      <div className="flex justify-between items-start mb-4">
+        <span className="text-slate-500 text-[11px] font-bold uppercase tracking-widest">{title}</span>
+        <div className={`p-2 rounded-lg ${badgeClass}`}>
+          {icon}
+        </div>
+      </div>
+      <div className="flex items-end justify-between">
+        <p className="text-3xl font-black text-slate-900">{value}</p>
+        {change && (
+           <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${badgeClass}`}>
+             {change}
+           </span>
+        )}
       </div>
     </div>
   );
