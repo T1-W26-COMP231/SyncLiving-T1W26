@@ -14,10 +14,12 @@ interface MessagingPageProps {
 
 export default function MessagingPage({ initialConversationId }: MessagingPageProps) {
 
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches]             = useState<Match[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<MessageData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [messages, setMessages]           = useState<MessageData[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [ruleStats, setRuleStats]         = useState<{ accepted: number; total: number } | undefined>();
 
   // Stable client reference — createClient() must not be called on every render
   // or it will create a new instance each time, causing the realtime subscription
@@ -33,7 +35,12 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
 
   useEffect(() => {
     async function init() {
-      const data = await refreshData();
+      // Fetch current user identity alongside matches
+      const [data, { data: { user } }] = await Promise.all([
+        refreshData(),
+        supabase.auth.getUser(),
+      ]);
+      if (user) setCurrentUserId(user.id);
       // Pre-select from URL param if present, otherwise fall back to first conversation
       if (initialConversationId && data.some(m => m.id === initialConversationId)) {
         setSelectedMatchId(initialConversationId);
@@ -110,13 +117,18 @@ export default function MessagingPage({ initialConversationId }: MessagingPagePr
           selectedMatchId={selectedMatchId}
           onSelectMatch={setSelectedMatchId}
           loading={loading}
+          ruleStats={ruleStats}
         />
-        <ChatArea 
-          messages={messages} 
+        <ChatArea
+          messages={messages}
           onSendMessage={handleSendMessage}
           selectedMatch={selectedMatch}
         />
-        <HouseRules />
+        <HouseRules
+          conversationId={selectedMatchId}
+          currentUserId={currentUserId}
+          onStatsChange={(accepted, total) => setRuleStats({ accepted, total })}
+        />
       </main>
     </div>
   );

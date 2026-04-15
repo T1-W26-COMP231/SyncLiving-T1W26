@@ -5,7 +5,7 @@ export type FilterKey = "roommate" | "roommate_with_room" | "room" | "all";
 export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "roommate", label: "Roommate" },
-  // { key: "roommate_with_room", label: "Roommate with Room" },
+  { key: "roommate_with_room", label: "Roommate with Room" },
   { key: "room", label: "Room" },
 ];
 
@@ -117,7 +117,7 @@ export const BINARY_TAGS = [
   "Pet Allowed",
   "Non-Smoker",
   "LGBTQ+ Friendly",
-  "Vegan Friendly",
+  "Vegan",
 ];
 export function getBinaryTags(tags: string[]): string[] {
   return tags.filter((t) => BINARY_TAGS.includes(t));
@@ -178,6 +178,6 @@ export const QUICK_FILTER_TAGS = [
   { tag: "Pet Allowed", label: "Pet Allowed" },
   { tag: "Non-Smoker", label: "Non-Smoker" },
   { tag: "LGBTQ+ Friendly", label: "LGBTQ+ Friendly" },
-  { tag: "Vegan Friendly", label: "Vegan Friendly" },
+  { tag: "Vegan", label: "Vegan" },
   { tag: "__same_gender__", label: "Same Gender" },
 ];

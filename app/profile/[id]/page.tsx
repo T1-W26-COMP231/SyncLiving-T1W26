@@ -189,5 +189,5 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     space_listing: spaceListing,
   };
 
-  return <ProfileDetailsPage profile={profile} initialRequestStatus={initialRequestStatus} />;
+  return <ProfileDetailsPage profile={profile} initialRequestStatus={initialRequestStatus} currentUserId={user?.id ?? null} />;
 }

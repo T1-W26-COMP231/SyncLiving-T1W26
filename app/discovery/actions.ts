@@ -130,7 +130,7 @@ export async function getMatches(): Promise<{
   const { data: myProfile, error: myErr } = await supabase
     .from("profiles")
     .select(
-      "v_wd, v_we, role, pref_budget_min, pref_budget_max, preferred_gender, lifestyle_tags, age_min, age_max, pref_lat, pref_lng, pref_max_distance, pref_reference_location",
+      "v_wd, v_we, role, pref_budget_min, pref_budget_max, preferred_gender, lifestyle_tags, pref_lifestyle_tags, age_min, age_max, pref_lat, pref_lng, pref_max_distance, pref_reference_location",
     )
     .eq("id", user.id)
     .single();
@@ -163,16 +163,16 @@ export async function getMatches(): Promise<{
   const myVWd = toVec(myProfile.v_wd);
   const myVWe = toVec(myProfile.v_we);
 
-  // Binary preference tags saved by the Settings modal into profiles.lifestyle_tags
+  // Binary preference tags saved by the Settings modal into profiles.pref_lifestyle_tags
   const BINARY_PREF_KEYS = [
     "Pet Allowed",
     "Pet Friendly",
     "Non-Smoker",
     "LGBTQ+ Friendly",
     "Same Gender Only",
-    "Vegan Friendly",
+    "Vegan",
   ];
-  const userBinaryPrefs: string[] = (myProfile.lifestyle_tags ?? []).filter(
+  const userBinaryPrefs: string[] = (myProfile.pref_lifestyle_tags ?? []).filter(
     (t: string) => BINARY_PREF_KEYS.includes(t),
   );
 

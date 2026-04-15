@@ -91,7 +91,10 @@ const RoommateDiscovery: React.FC<Props> = ({
   );
   const [showSaved, setShowSaved] = useState(false);
   const [showIncompatible, setShowIncompatible] = useState(false);
-  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
+  // Pre-set preferences from settings become active deal-breaker filters immediately
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>(() =>
+    userBinaryPrefs.map((t) => (t === "Same Gender Only" ? "__same_gender__" : t)),
+  );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(
     () => new Set(matches.filter((m) => m.isSaved).map((m) => m.id)),
@@ -160,9 +163,12 @@ const RoommateDiscovery: React.FC<Props> = ({
   // Two-stage preference tag filters (roommate view):
   //   selectedPreferenceTags — tags clicked in advanced panel → chips in filter bar + highlighted in cards
   //   activeTagFilters       — chips clicked → deal-breaker filter (already declared above)
+  // Map DB tag names to internal filter keys (e.g. "Same Gender Only" → "__same_gender__")
   const [selectedPreferenceTags, setSelectedPreferenceTags] = useState<
     string[]
-  >(() => [...userBinaryPrefs]);
+  >(() =>
+    userBinaryPrefs.map((t) => (t === "Same Gender Only" ? "__same_gender__" : t)),
+  );
 
   // Two-stage room tag filters:
   //   selectedRoomTags  — tags clicked in the advanced panel → chips appear in filter bar (no filtering yet)
@@ -188,17 +194,7 @@ const RoommateDiscovery: React.FC<Props> = ({
 
   // ─── Filter helpers ──────────────────────────────────────────────────────────
   function toggleFilter(key: FilterKey) {
-    if (key === "all") {
-      setActiveFilters(["all"]);
-      return;
-    }
-    setActiveFilters((prev) => {
-      const withoutAll = prev.filter((f) => f !== "all");
-      const next = withoutAll.includes(key)
-        ? withoutAll.filter((f) => f !== key)
-        : [...withoutAll, key];
-      return next.length === 0 ? ["all"] : next;
-    });
+    setActiveFilters([key]);
   }
 
   const [connectingId, setConnectingId] = useState<string | null>(null);
