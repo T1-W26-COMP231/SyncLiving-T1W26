@@ -299,6 +299,125 @@ export async function updateReportStatus(reportId: string, status: string) {
   return { success: true };
 }
 
+export async function getTicketDetails(ticketId: string) {
+  if (!(await isAdmin())) throw new Error("Unauthorized");
+  const supabase = await createClient();
+
+  const { data: ticket, error: ticketError } = await supabase
+    .from("support_tickets")
+    .select("*, profiles:user_id(full_name, avatar_url)")
+    .eq("id", ticketId)
+    .single();
+
+  if (ticketError || !ticket) {
+    console.error("Error fetching ticket details:", ticketError);
+    return null;
+  }
+
+  const { data: messages, error: messagesError } = await supabase
+    .from("support_messages")
+    .select("*, profiles:sender_id(full_name, is_admin)")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: true });
+
+  if (messagesError) {
+    console.error("Error fetching ticket messages:", messagesError);
+  }
+
+  return {
+    id: ticket.id,
+    userId: ticket.user_id,
+    userName: (ticket.profiles as any)?.full_name || 'Unknown User',
+    userAvatar: (ticket.profiles as any)?.avatar_url,
+    subject: ticket.subject,
+    description: ticket.description,
+    status: ticket.status as any,
+    priority: ticket.priority as any,
+    createdAt: ticket.created_at,
+    updatedAt: ticket.updated_at,
+    messages: (messages || []).map(m => ({
+      id: m.id,
+      senderId: m.sender_id,
+      senderName: (m.profiles as any)?.full_name || 'Unknown',
+      senderRole: (m.profiles as any)?.is_admin ? 'admin' : 'user',
+      content: m.content,
+      createdAt: m.created_at
+    }))
+  };
+}
+
+export async function sendTicketResponse(ticketId: string, content: string) {
+  if (!(await isAdmin())) throw new Error("Unauthorized");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("User not found");
+
+  const { error: msgError } = await supabase
+    .from("support_messages")
+    .insert({
+      ticket_id: ticketId,
+      sender_id: user.id,
+      content
+    });
+
+  if (msgError) throw new Error(msgError.message);
+
+  // Update ticket status to in_progress if it was open
+  await supabase
+    .from("support_tickets")
+    .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+    .eq("id", ticketId)
+    .eq("status", "open");
+
+  revalidatePath(`/admin/support/${ticketId}`);
+  return { success: true };
+}
+
+export async function closeTicket(ticketId: string) {
+  if (!(await isAdmin())) throw new Error("Unauthorized");
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("support_tickets")
+    .update({ status: 'closed', updated_at: new Date().toISOString() })
+    .eq("id", ticketId);
+
+  if (error) throw new Error(error.message);
+  
+  revalidatePath(`/admin/support/${ticketId}`);
+  revalidatePath("/admin/support");
+  return { success: true };
+}
+
+export async function getSupportTickets() {
+  if (!(await isAdmin())) throw new Error("Unauthorized");
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("support_tickets")
+    .select("*, profiles:user_id(full_name, avatar_url)")
+    .neq("status", "closed")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching support tickets:", error);
+    return [];
+  }
+
+  return (data || []).map(t => ({
+    id: t.id,
+    userId: t.user_id,
+    userName: (t.profiles as any)?.full_name || 'Unknown User',
+    userAvatar: (t.profiles as any)?.avatar_url,
+    subject: t.subject,
+    description: t.description,
+    status: t.status as any,
+    priority: t.priority as any,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at
+  }));
+}
+
 export async function updateUserStatus(
   userId: string,
   status: string,
