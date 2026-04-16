@@ -1,0 +1,59 @@
+name: CI Smoke
+
+on:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      PREVIEW_URL: ${{ secrets.PREVIEW_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: DB smoke script
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret is missing. Add DATABASE_URL in repo settings to enable DB smoke in CI." >&2
+            exit 1
+          fi
+          node scripts/db-smoke.js
+
+      - name: Resolve-report smoke via preview URL
+        if: env.PREVIEW_URL != ''
+        run: |
+          set -euo pipefail
+
+          VALID_PAYLOAD='{"reportId":"7bd2530e-7fb0-4c91-90c5-87dab74c56f1","resolverId":"783f8150-03c5-4169-90ec-74ed4de9755c","resolutionNote":"Resolved via CI smoke"}'
+
+          valid_status=$(curl -sS -o /tmp/valid.json -w "%{http_code}" -X POST "${PREVIEW_URL}/api/admin/resolve-report" -H "Content-Type: application/json" --data-raw "$VALID_PAYLOAD")
+          echo "valid_status=$valid_status"
+          cat /tmp/valid.json
+          if [ "$valid_status" != "200" ]; then
+            echo "Expected 200 for valid payload, got $valid_status" >&2
+            exit 1
+          fi
+
+          invalid_status=$(curl -sS -o /tmp/invalid.json -w "%{http_code}" -X POST "${PREVIEW_URL}/api/admin/resolve-report" -H "Content-Type: application/json" --data-raw '{invalid-json}')
+          echo "invalid_status=$invalid_status"
+          cat /tmp/invalid.json
+          if [ "$invalid_status" != "400" ]; then
+            echo "Expected 400 for invalid JSON, got $invalid_status" >&2
+            exit 1
+          fi
+
+      - name: Unit test fallback when preview unavailable
+        if: env.PREVIEW_URL == ''
+        run: |
+          npm test
