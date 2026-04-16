@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Match } from '../../../app/messages/actions';
-import { MessageSquare, Gavel, History } from 'lucide-react';
+import { MessageSquare, Gavel } from 'lucide-react';
 
 interface SidebarProps {
   matches: Match[];
@@ -10,6 +10,8 @@ interface SidebarProps {
   onSelectMatch: (id: string) => void;
   loading: boolean;
   ruleStats?: { accepted: number; total: number };
+  showHouseRules: boolean;
+  onHouseRulesToggle: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -18,24 +20,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectMatch,
   loading,
   ruleStats,
+  showHouseRules,
+  onHouseRulesToggle,
 }) => {
   return (
     <aside className="w-64 border-r border-primary/10 bg-white dark:bg-slate-900 flex-col hidden lg:flex overflow-y-auto">
       <div className="p-4 flex flex-col gap-2">
         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2">Workspace</div>
         <nav className="flex flex-col gap-1">
-          <a className="flex items-center gap-3 px-3 py-2 rounded-xl bg-primary/10 text-primary font-semibold" href="#">
+          <button
+            onClick={() => showHouseRules && onHouseRulesToggle()}
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-left w-full ${
+              !showHouseRules
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+            }`}
+          >
             <MessageSquare size={18} />
             <span>Chat & Activity</span>
-          </a>
-          <a className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400" href="#">
+          </button>
+          <button
+            onClick={onHouseRulesToggle}
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-left w-full ${
+              showHouseRules
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+            }`}
+          >
             <Gavel size={18} />
-            <span>Active Rules</span>
-          </a>
-          <a className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400" href="#">
-            <History size={18} />
-            <span>Change Log</span>
-          </a>
+            <span>House Rules</span>
+            {ruleStats && ruleStats.total > 0 && (
+              <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                showHouseRules ? 'bg-primary/20 text-primary' : 'bg-slate-200 text-slate-500'
+              }`}>
+                {ruleStats.accepted}/{ruleStats.total}
+              </span>
+            )}
+          </button>
         </nav>
 
         <div className="mt-6 flex flex-col gap-2">

@@ -17,6 +17,7 @@ interface RuleItemProps {
   rule: RuleData;
   currentUserId: string;
   conversationId: string;
+  isFinalized: boolean;
   onRuleUpdated: () => void;
 }
 
@@ -24,6 +25,7 @@ export const RuleItem: React.FC<RuleItemProps> = ({
   rule,
   currentUserId,
   conversationId,
+  isFinalized,
   onRuleUpdated,
 }) => {
   const isProposer = rule.proposer_id === currentUserId;
@@ -260,9 +262,17 @@ export const RuleItem: React.FC<RuleItemProps> = ({
                     className="size-5 rounded-full object-cover flex-shrink-0 mt-0.5"
                   />
                   <div>
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
-                      {comment.author_name ?? 'User'}
-                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                        {comment.author_name ?? 'User'}
+                      </span>
+                      <span className="text-[9px] text-slate-400">
+                        {new Date(comment.created_at).toLocaleString(undefined, {
+                          month: 'short', day: 'numeric',
+                          hour: 'numeric', minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                       {comment.content}
                     </p>
@@ -272,23 +282,29 @@ export const RuleItem: React.FC<RuleItemProps> = ({
             </div>
           )}
 
-          {/* Add comment */}
-          <div className="flex gap-2">
-            <input
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
-              placeholder="Add a comment…"
-              className="flex-1 text-[11px] px-2 py-1.5 rounded-lg border border-primary/20 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-            <button
-              onClick={handleAddComment}
-              disabled={addingComment || !commentText.trim()}
-              className="text-[10px] font-bold text-primary px-2 py-1.5 rounded-lg hover:bg-primary/10 disabled:opacity-50 transition-colors"
-            >
-              {addingComment ? '…' : 'Post'}
-            </button>
-          </div>
+          {/* Add comment — locked when agreement is finalized (Test 2) */}
+          {isFinalized ? (
+            <p className="text-[9px] text-slate-400 italic text-center">
+              Comments locked — agreement is finalized.
+            </p>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                placeholder="Add a comment…"
+                className="flex-1 text-[11px] px-2 py-1.5 rounded-lg border border-primary/20 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-primary/40"
+              />
+              <button
+                onClick={handleAddComment}
+                disabled={addingComment || !commentText.trim()}
+                className="text-[10px] font-bold text-primary px-2 py-1.5 rounded-lg hover:bg-primary/10 disabled:opacity-50 transition-colors"
+              >
+                {addingComment ? '…' : 'Post'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

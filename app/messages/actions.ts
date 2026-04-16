@@ -827,3 +827,54 @@ export async function signAgreement(
   revalidatePath('/messages');
   return { finalized: willFinalize };
 }
+
+/**
+ * Re-opens a finalized agreement, resetting both signatures so rules can be edited again.
+ * Either participant can trigger this (Test 3: re-open to make changes).
+ */
+export async function reopenAgreement(
+  conversationId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: convRaw, error: convErr } = await supabase
+    .from('conversations')
+    .select('provider_id, seeker_id')
+    .eq('id', conversationId)
+    .single();
+  if (convErr || !convRaw) return { error: 'Conversation not found' };
+  const conv = convRaw as unknown as { provider_id: string; seeker_id: string };
+  if (user.id !== conv.provider_id && user.id !== conv.seeker_id) {
+    return { error: 'Not a participant' };
+  }
+
+  const { error: updateErr } = await supabase
+    .from('conversations')
+    .update({ provider_signed: false, seeker_signed: false, is_finalized: false, finalized_at: null })
+    .eq('id', conversationId);
+  if (updateErr) return { error: updateErr.message };
+
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single();
+  const name = myProfile?.full_name ?? 'Someone';
+
+  await insertActionMessage(
+    supabase,
+    conversationId,
+    user.id,
+    `${name} re-opened the agreement for editing.`,
+    {
+      title: '🔓 Agreement Re-opened',
+      description: 'Signatures have been reset. Rules can now be edited or added again.',
+      actionLabel: 'View Rules',
+    },
+  );
+
+  revalidatePath('/messages');
+  return {};
+}

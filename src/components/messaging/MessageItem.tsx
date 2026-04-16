@@ -18,31 +18,29 @@ interface MessageItemProps {
   };
   sender?: User;
   isMe?: boolean;
+  onViewRule?: () => void;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({ message, sender, isMe }) => {
+export const MessageItem: React.FC<MessageItemProps> = ({ message, sender, isMe, onViewRule }) => {
   const timestamp = message.timestamp || (message.created_at ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
 
   if (message.type === 'action' && message.actionData) {
     return (
-      <div className="flex items-start gap-3 max-w-2xl">
-        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-          <NotebookPen size={18} className="text-primary" />
+      <div className={`flex items-start gap-3 max-w-sm ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
+        <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+          <NotebookPen size={14} className="text-primary" />
         </div>
         <div className="flex flex-1 flex-col gap-2">
-          <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl">
-            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">
+          <div className="bg-primary/5 border border-primary/20 px-3 py-2 rounded-xl">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 mb-0.5">
               {message.actionData.title}
             </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400 italic mb-3">
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 italic mb-2">
               &quot;{message.actionData.description}&quot;
             </p>
-            <div className="flex gap-2">
-              <Button size="sm">
+            <div className={`flex gap-2 ${isMe ? 'justify-end' : ''}`}>
+              <Button size="sm" onClick={onViewRule}>
                 {message.actionData.actionLabel}
-              </Button>
-              <Button variant="outline" size="sm">
-                Dismiss
               </Button>
             </div>
           </div>

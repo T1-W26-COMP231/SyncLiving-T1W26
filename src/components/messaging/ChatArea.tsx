@@ -10,12 +10,14 @@ interface ChatAreaProps {
   messages: MessageData[];
   onSendMessage: (content: string) => void;
   selectedMatch?: Match;
+  onViewRule: () => void;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({ 
-  messages, 
-  onSendMessage, 
-  selectedMatch 
+export const ChatArea: React.FC<ChatAreaProps> = ({
+  messages,
+  onSendMessage,
+  selectedMatch,
+  onViewRule,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -62,6 +64,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 message={msg}
                 sender={msg.sender_id === otherUser?.id ? otherUser : undefined}
                 isMe={msg.sender_id !== otherUser?.id}
+                onViewRule={onViewRule}
               />
             ))}
             <div ref={messagesEndRef} />
