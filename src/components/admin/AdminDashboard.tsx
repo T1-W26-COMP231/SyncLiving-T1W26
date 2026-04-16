@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   ShieldAlert, 
-  AlertTriangle, 
-  Zap, 
   MessageSquare, 
   Activity, 
   Calendar, 
@@ -19,12 +18,13 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ initialData }: AdminDashboardProps) {
+  const router = useRouter();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<'critical-alerts' | 'user-reports'>('critical-alerts');
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
-    pendingMessageReports: initialData.pendingMessageReports,
-    activeAlerts: initialData.unresolvedAlerts.length
+    newUserReports: initialData.newUserReports,
+    openAlerts: initialData.unresolvedAlerts.length
   });
 
   // Fetch feed items when category changes
@@ -68,7 +68,7 @@ export default function AdminDashboard({ initialData }: AdminDashboardProps) {
             }, ...prev]);
           }
           if (!newAlert.is_resolved) {
-            setStats((prev) => ({ ...prev, activeAlerts: prev.activeAlerts + 1 }));
+            setStats((prev) => ({ ...prev, openAlerts: prev.openAlerts + 1 }));
           }
         }
       )
@@ -90,7 +90,7 @@ export default function AdminDashboard({ initialData }: AdminDashboardProps) {
               category: 'report'
             }, ...prev]);
           }
-          setStats((prev) => ({ ...prev, pendingMessageReports: prev.pendingMessageReports + 1 }));
+          setStats((prev) => ({ ...prev, newUserReports: prev.newUserReports + 1 }));
         }
       )
       .subscribe();
@@ -107,11 +107,20 @@ export default function AdminDashboard({ initialData }: AdminDashboardProps) {
       await resolveAlert(id);
       setFeedItems((prev) => prev.filter((a) => a.id !== id));
       if (selectedCategory === 'critical-alerts') {
-        setStats((prev) => ({ ...prev, activeAlerts: prev.activeAlerts - 1 }));
+        setStats((prev) => ({ ...prev, openAlerts: Math.max(prev.openAlerts - 1, 0) }));
       }
     } catch (err) {
       alert('Failed to resolve alert: ' + (err instanceof Error ? err.message : String(err)));
     }
+  }
+
+  function handleViewDetails(item: FeedItem) {
+    if (item.category === 'report') {
+      router.push(`/admin/reports/${item.id}`);
+      return;
+    }
+
+    router.push('/admin/reports');
   }
 
   const severityStyles: Record<string, string> = {
@@ -143,22 +152,22 @@ export default function AdminDashboard({ initialData }: AdminDashboardProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="New Reports"
-          value={stats.pendingMessageReports}
+          value={stats.newUserReports}
           icon={<MessageSquare className="text-rose-600" />}
           badgeClass="bg-rose-50 text-rose-600"
         />
         <StatCard
-          title="Active Alerts"
-          value={stats.activeAlerts}
+          title="Open Alerts"
+          value={stats.openAlerts}
           icon={<ShieldAlert className="text-orange-600" />}
           badgeClass="bg-orange-50 text-orange-600"
         />
         <StatCard
           title="System Health"
-          value="99.9%"
+          value="N/A"
           icon={<Activity className="text-emerald-600" />}
           badgeClass="bg-emerald-50 text-emerald-600"
-          change="Stable"
+          change="Placeholder"
         />
       </div>
 
@@ -203,9 +212,9 @@ export default function AdminDashboard({ initialData }: AdminDashboardProps) {
                 <div className={`p-3 rounded-lg shrink-0 ${item.category === 'alert' ? 'bg-orange-100 text-orange-700' : 'bg-rose-100 text-rose-700'}`}>
                   {item.category === 'alert' ? <ShieldAlert size={18} /> : <MessageSquare size={18} />}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <h4 className="font-bold text-slate-900 leading-snug">{item.displayMessage}</h4>
+                    <h4 className="font-bold text-slate-900 leading-snug break-words">{item.displayMessage}</h4>
                     {item.severity && (
                       <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-md border shrink-0 ml-4 ${severityStyles[item.severity]}`}>
                         {item.severity}
@@ -215,19 +224,22 @@ export default function AdminDashboard({ initialData }: AdminDashboardProps) {
                   <p className="text-xs text-slate-500 mt-1">
                     Received at {new Date(item.createdAt).toLocaleString()}
                   </p>
-                  <div className="mt-4 flex gap-3">
-                    <button className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">
-                      Investigate
+                </div>
+                <div className="shrink-0 self-start flex items-center gap-2">
+                  <button
+                    onClick={() => handleViewDetails(item)}
+                    className="px-3 py-1.5 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold whitespace-nowrap hover:bg-slate-50 transition-colors"
+                  >
+                    Details
+                  </button>
+                  {item.category === 'alert' && (
+                    <button
+                      onClick={() => handleResolveAlert(item.id)}
+                      className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold whitespace-nowrap hover:bg-slate-800 transition-colors"
+                    >
+                      Resolve
                     </button>
-                    {item.category === 'alert' && (
-                      <button 
-                        onClick={() => handleResolveAlert(item.id)}
-                        className="px-4 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
-                      >
-                        Resolve
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             ))
