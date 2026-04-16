@@ -108,7 +108,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Right actions */}
           <div className="flex items-center gap-4 shrink-0">
-
             {/* Notifications */}
             <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
               <Bell size={20} />

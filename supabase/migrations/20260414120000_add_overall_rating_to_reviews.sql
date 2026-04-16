@@ -1,6 +1,9 @@
 -- Migration: Add overall_rating to reviews and simplify scoring
 -- Description: Adds a direct overall_rating column and removes the automatic averaging trigger.
 
+-- Clear any stale migration tracking record so db reset never hits a duplicate key conflict
+DELETE FROM supabase_migrations.schema_migrations WHERE version = '20260414120000';
+
 -- 1. Add overall_rating column to public.reviews
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS overall_rating INTEGER CONSTRAINT overall_rating_range CHECK (overall_rating >= 1 AND overall_rating <= 5);
 

@@ -158,10 +158,10 @@ export default function ReportsSafety() {
   const newCount = reports.filter((r) => r.status === "new").length;
 
   return (
-    <div className="p-6 md:p-8 max-w-[1200px] mx-auto space-y-8">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       {/* Page Header + Tabs */}
       <div>
-        <h1 className="text-2xl font-bold mb-6 tracking-tight">
+        <h1 className="text-3xl font-black text-slate-900 mb-6 tracking-tight">
           Misconduct &amp; Safety
         </h1>
         <div className="flex border-b border-slate-200 gap-8">

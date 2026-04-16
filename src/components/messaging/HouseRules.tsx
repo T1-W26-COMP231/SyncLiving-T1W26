@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Plus, Handshake, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/utils/supabase/client';
@@ -37,6 +37,12 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
   // Stable supabase client reference — avoids tearing down realtime on each render
   const supabaseRef = useRef(createClient());
 
+  // Keep a stable ref to onStatsChange so refreshRules doesn't depend on the
+  // prop reference (which callers often pass as an inline arrow function,
+  // causing an infinite re-render loop if included in useCallback deps).
+  const onStatsChangeRef = useRef(onStatsChange);
+  useLayoutEffect(() => { onStatsChangeRef.current = onStatsChange; });
+
   const refreshRules = useCallback(async () => {
     if (!conversationId) return;
     const [rulesData, details] = await Promise.all([
@@ -46,8 +52,8 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
     setRules(rulesData);
     setConvDetails(details);
     const accepted = rulesData.filter(r => r.status === 'accepted').length;
-    onStatsChange?.(accepted, rulesData.length);
-  }, [conversationId, onStatsChange]);
+    onStatsChangeRef.current?.(accepted, rulesData.length);
+  }, [conversationId]);
 
   // Initial fetch + real-time subscription whenever the conversation changes
   useEffect(() => {

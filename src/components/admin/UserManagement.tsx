@@ -174,11 +174,11 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-8">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">User Management</h1>
           <p className="text-slate-500">
             Search, monitor, and moderate SyncLiving ecosystem participants.
           </p>
