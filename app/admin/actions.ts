@@ -84,7 +84,7 @@ export async function flagMessage(
 }
 
 export interface AdminDashboardOverview {
-  newUserReports: number;
+  pendingMessageReports: number;
   unresolvedAlerts: {
     id: string;
     type: "security" | "system" | "performance";
@@ -112,30 +112,6 @@ export interface UserReport {
   reporterId: string;
   status: string;
   date: string;
-}
-
-export interface UserReportDetail extends UserReport {
-  description: string | null;
-  resolutionNote: string | null;
-  resolvedAt: string | null;
-  resolvedBy: string | null;
-}
-
-export interface ModerationReview {
-  id: string;
-  stars: number;
-  listing: string;
-  author: string;
-  text: string;
-  flagReason: string;
-}
-
-export interface ReportTimelineItem {
-  id: string;
-  createdAt: string;
-  event: string;
-  note: string;
-  actorName: string;
 }
 
 /**
@@ -191,11 +167,11 @@ export async function getAdminDashboardOverview(): Promise<AdminDashboardOvervie
 
   const supabase = await createClient();
 
-  const [newReportsRes, alertsRes] = await Promise.all([
+  const [msgReportsRes, alertsRes] = await Promise.all([
     supabase
-      .from("user_reports")
+      .from("message_reports")
       .select("id", { count: "exact", head: true })
-      .eq("status", "new"),
+      .eq("status", "pending"),
     supabase
       .from("admin_alerts")
       .select("*")
@@ -204,7 +180,7 @@ export async function getAdminDashboardOverview(): Promise<AdminDashboardOvervie
   ]);
 
   return {
-    newUserReports: newReportsRes.count || 0,
+    pendingMessageReports: msgReportsRes.count || 0,
     unresolvedAlerts: (alertsRes.data || []) as any,
   };
 }
@@ -320,305 +296,11 @@ export async function getUserReports() {
 export async function updateReportStatus(reportId: string, status: string) {
   if (!(await isAdmin())) throw new Error("Unauthorized");
   const supabase = await createClient();
-
-  if (status !== "investigating") {
-    throw new Error("Unsupported status transition");
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-
-  const { data: existing, error: fetchError } = await supabase
-    .from("user_reports")
-    .select("id, status")
-    .eq("id", reportId)
-    .single();
-
-  if (fetchError || !existing) {
-    throw new Error("Report not found");
-  }
-
-  if (existing.status === "resolved") {
-    throw new Error("Resolved reports are locked");
-  }
-
   const { error } = await supabase
     .from("user_reports")
     .update({ status })
     .eq("id", reportId);
-
   if (error) throw new Error(error.message);
-
-  await supabase.from("user_activity_logs").insert({
-    user_id: user.id,
-    actor_id: user.id,
-    action_type: "report_investigating",
-    action: "report_investigating",
-    object_type: "user_report",
-    object_id: reportId,
-    metadata: {
-      note: "Marked as investigating",
-    },
-  });
-
-  revalidatePath("/admin/reports");
-  revalidatePath(`/admin/reports/${reportId}`);
-
-  return { success: true };
-}
-
-export async function getUserReportById(
-  reportId: string,
-): Promise<UserReportDetail | null> {
-  if (!(await isAdmin())) throw new Error("Unauthorized");
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("user_reports")
-    .select("*")
-    .eq("id", reportId)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url")
-    .in("id", [data.reported_user_id, data.reporter_id]);
-
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const row = data as any;
-
-  return {
-    id: row.id,
-    reportedUserId: row.reported_user_id,
-    reportedUser: profileMap.get(row.reported_user_id)?.full_name || "Unknown",
-    avatarUrl: profileMap.get(row.reported_user_id)?.avatar_url || null,
-    reason: row.reason,
-    reporter: profileMap.get(row.reporter_id)?.full_name || "Unknown",
-    reporterId: row.reporter_id,
-    status: row.status,
-    date: new Date(row.created_at).toLocaleDateString(),
-    description: row.description ?? null,
-    resolutionNote: row.resolution_note ?? null,
-    resolvedAt: row.resolved_at ?? null,
-    resolvedBy: row.resolved_by ?? null,
-  };
-}
-
-export async function getReportTimeline(
-  reportId: string,
-): Promise<ReportTimelineItem[]> {
-  if (!(await isAdmin())) throw new Error("Unauthorized");
-
-  const supabase = await createClient();
-  const { data, error } = await (supabase as any)
-    .from("user_activity_logs")
-    .select("id, created_at, action_type, metadata, actor_id")
-    .eq("object_type", "user_report")
-    .eq("object_id", reportId)
-    .order("created_at", { ascending: false })
-    .limit(30);
-
-  if (error || !data) {
-    return [];
-  }
-
-  const actorIds = [
-    ...new Set(
-      data
-        .map((row: any) => row.actor_id)
-        .filter((id: string | null) => !!id),
-    ),
-  ] as string[];
-
-  let actorNameMap = new Map<string, string>();
-  if (actorIds.length > 0) {
-    const { data: actors } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", actorIds);
-
-    actorNameMap = new Map(
-      (actors ?? []).map((actor) => [actor.id, actor.full_name || "Admin"]),
-    );
-  }
-
-  const labelMap: Record<string, string> = {
-    report_resolved: "Report Resolved",
-    report_investigating: "Marked as Investigating",
-    report_created: "Report Submitted",
-  };
-
-  return data.map((row: any) => {
-    const metadata = (row.metadata ?? {}) as { note?: string };
-    return {
-      id: String(row.id),
-      createdAt: row.created_at,
-      event: labelMap[row.action_type] || row.action_type || "Activity",
-      note: metadata.note || "",
-      actorName: row.actor_id ? actorNameMap.get(row.actor_id) || "Admin" : "System",
-    };
-  });
-}
-
-export async function resolveUserReport(
-  reportId: string,
-  status: "investigating" | "resolved",
-  resolutionNote: string,
-) {
-  if (!(await isAdmin())) throw new Error("Unauthorized");
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-
-  const { data: existing, error: fetchError } = await supabase
-    .from("user_reports")
-    .select("id, reporter_id, status")
-    .eq("id", reportId)
-    .single();
-
-  if (fetchError || !existing) {
-    throw new Error("Report not found");
-  }
-
-  if (existing.status === "resolved") {
-    throw new Error("Resolved reports are locked");
-  }
-
-  const updatePayload: Record<string, any> = {
-    status,
-  };
-
-  if (status === "resolved") {
-    updatePayload.resolution_note = resolutionNote || "Resolved by administrator";
-    updatePayload.resolved_at = new Date().toISOString();
-    updatePayload.resolved_by = user.id;
-  }
-
-  const { error: updateError } = await (supabase as any)
-    .from("user_reports")
-    .update(updatePayload)
-    .eq("id", reportId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  // Audit trail for moderator actions.
-  await supabase.from("user_activity_logs").insert({
-    user_id: user.id,
-    actor_id: user.id,
-    action_type: status === "resolved" ? "report_resolved" : "report_investigating",
-    action: status === "resolved" ? "report_resolved" : "report_investigating",
-    object_type: "user_report",
-    object_id: reportId,
-    metadata:
-      status === "resolved"
-        ? {
-            note: resolutionNote || "Resolved by administrator",
-          }
-        : {
-            note: "Marked as investigating",
-          },
-  });
-
-  if (status === "resolved") {
-    await (supabase as any).from("user_notifications").insert({
-      user_id: existing.reporter_id,
-      type: "report_resolution",
-      title: "Your misconduct report has been resolved",
-      message: resolutionNote || "An administrator has reviewed and resolved your report.",
-      related_object_type: "user_report",
-      related_object_id: reportId,
-    });
-  }
-
-  revalidatePath("/admin/reports");
-  revalidatePath(`/admin/reports/${reportId}`);
-
-  return { success: true };
-}
-
-export async function getFlaggedReviewsForModeration(): Promise<ModerationReview[]> {
-  if (!(await isAdmin())) throw new Error("Unauthorized");
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("id, overall_comment, overall_rating, average_score, reviewer_id, reviewee_id, status")
-    .eq("status", "reported")
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  if (error || !data) {
-    return [];
-  }
-
-  const profileIds = [
-    ...new Set(data.flatMap((row: any) => [row.reviewer_id, row.reviewee_id])),
-  ];
-
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .in("id", profileIds);
-
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
-
-  return data.map((row: any) => ({
-    id: row.id,
-    stars: row.overall_rating ?? Math.round(Number(row.average_score) || 0),
-    listing: "N/A",
-    author: profileMap.get(row.reviewer_id) || "Unknown",
-    text: row.overall_comment || "No review text provided",
-    flagReason: "Reported by user",
-  }));
-}
-
-export async function moderateReviewStatus(
-  reviewId: string,
-  status: "active" | "deleted",
-) {
-  if (!(await isAdmin())) throw new Error("Unauthorized");
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-
-  const { error } = await supabase
-    .from("reviews")
-    .update({ status })
-    .eq("id", reviewId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  await supabase.from("user_activity_logs").insert({
-    user_id: user.id,
-    actor_id: user.id,
-    action_type: status === "deleted" ? "review_removed" : "review_restored",
-    action: status === "deleted" ? "review_removed" : "review_restored",
-    object_type: "review",
-    object_id: reviewId,
-    metadata: {
-      status,
-    },
-  });
-
-  revalidatePath("/admin/reports");
-  revalidatePath("/profile/[id]", "page");
-  revalidatePath("/matches");
   return { success: true };
 }
 

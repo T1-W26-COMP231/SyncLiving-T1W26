@@ -190,7 +190,6 @@ classDiagram
         +string reviewer_id
         +string reviewee_id
         +string overall_comment
-        +number overall_rating
         +number average_score
         +string status
         +string created_at
@@ -244,21 +243,6 @@ classDiagram
         +string reason
         +string description
         +string status
-        +string resolution_note
-        +string resolved_at
-        +string resolved_by
-        +string created_at
-    }
-
-    class user_notifications {
-        +string id
-        +string user_id
-        +string type
-        +string title
-        +string message
-        +string related_object_type
-        +string related_object_id
-        +boolean is_read
         +string created_at
     }
 
@@ -355,8 +339,6 @@ classDiagram
     profiles "1" --> "0..*" user_connections : user_2_id
     profiles "1" --> "0..*" user_reports : reporter_id
     profiles "1" --> "0..*" user_reports : reported_user_id
-    profiles "1" --> "0..*" user_reports : resolved_by
-    profiles "1" --> "0..*" user_notifications : user_id
     profiles "1" --> "0..*" user_activity_logs : user_id
     profiles "1" --> "0..*" profile_photos : profile_id
 

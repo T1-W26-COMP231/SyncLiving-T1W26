@@ -1,35 +1,25 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import Navbar from "@/components/layout/Navbar";
-import { Sidebar } from "./Sidebar";
-import { ChatArea } from "./ChatArea";
-import { HouseRules } from "./HouseRules";
-import {
-  getMatches,
-  getMessages,
-  sendMessage,
-  markMessagesAsRead,
-  Match,
-  MessageData,
-} from "../../../app/messages/actions";
-import { createClient } from "@/utils/supabase/client";
+import React, { useState, useEffect, useRef } from 'react';
+import Navbar from '@/components/layout/Navbar';
+import { Sidebar } from './Sidebar';
+import { ChatArea } from './ChatArea';
+import { HouseRules } from './HouseRules';
+import { getMatches, getMessages, sendMessage, markMessagesAsRead, Match, MessageData } from '../../../app/messages/actions';
+import { createClient } from '@/utils/supabase/client';
 
 interface MessagingPageProps {
   initialConversationId?: string;
 }
 
-export default function MessagingPage({
-  initialConversationId,
-}: MessagingPageProps) {
-  const [matches, setMatches] = useState<Match[]>([]);
+export default function MessagingPage({ initialConversationId }: MessagingPageProps) {
+
+  const [matches, setMatches]             = useState<Match[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<MessageData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
-  const [ruleStats, setRuleStats] = useState<
-    { accepted: number; total: number } | undefined
-  >();
+  const [messages, setMessages]           = useState<MessageData[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [ruleStats, setRuleStats]         = useState<{ accepted: number; total: number } | undefined>();
 
   // Stable client reference — createClient() must not be called on every render
   // or it will create a new instance each time, causing the realtime subscription
@@ -46,18 +36,13 @@ export default function MessagingPage({
   useEffect(() => {
     async function init() {
       // Fetch current user identity alongside matches
-      const [
-        data,
-        {
-          data: { user },
-        },
-      ] = await Promise.all([refreshData(), supabase.auth.getUser()]);
+      const [data, { data: { user } }] = await Promise.all([
+        refreshData(),
+        supabase.auth.getUser(),
+      ]);
       if (user) setCurrentUserId(user.id);
       // Pre-select from URL param if present, otherwise fall back to first conversation
-      if (
-        initialConversationId &&
-        data.some((m) => m.id === initialConversationId)
-      ) {
+      if (initialConversationId && data.some(m => m.id === initialConversationId)) {
         setSelectedMatchId(initialConversationId);
       } else if (data.length > 0) {
         setSelectedMatchId(data[0].id);
@@ -65,7 +50,7 @@ export default function MessagingPage({
       setLoading(false);
     }
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -84,11 +69,11 @@ export default function MessagingPage({
     const channel = supabase
       .channel(`realtime:messages:${currentId}`)
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
           filter: `conversation_id=eq.${currentId}`,
         },
         (payload) => {
@@ -100,7 +85,7 @@ export default function MessagingPage({
           });
           // Mark as read immediately since the conversation is open
           markMessagesAsRead(currentId!);
-        },
+        }
       )
       .subscribe();
 
@@ -115,18 +100,11 @@ export default function MessagingPage({
       const newMessage = await sendMessage(selectedMatchId, content);
       // Optimistically add the message immediately; realtime subscription
       // will also fire but the dedup check prevents it from being added twice.
-      setMessages((prev) =>
-        prev.find((m) => m.id === newMessage.id) ? prev : [...prev, newMessage],
-      );
+      setMessages(prev => prev.find(m => m.id === newMessage.id) ? prev : [...prev, newMessage]);
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error('Failed to send message:', err);
     }
   };
-
-  // This callback is passed down to the HouseRules component, which calls it whenever the user accepts or rejects a rule.
-  const handleStatsChange = useCallback((accepted: number, total: number) => {
-    setRuleStats({ accepted, total });
-  }, []);
 
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
 
@@ -149,7 +127,7 @@ export default function MessagingPage({
         <HouseRules
           conversationId={selectedMatchId}
           currentUserId={currentUserId}
-          onStatsChange={handleStatsChange}
+          onStatsChange={(accepted, total) => setRuleStats({ accepted, total })}
         />
       </main>
     </div>
