@@ -46,11 +46,31 @@ Automated alerts and extensive tracking of user actions for audit purposes.
 
 ### **`public.user_reports` & `public.message_reports`**
 Explicit user reports submitted for moderation, either for profiles/listings or specific chat messages.
+- **Columns:** `id` (PK), `reporter_id`, `reported_user_id`, `reason` (Enum), `description`, `status` (new/investigating/resolved), `resolution_note`, `resolved_at`, `resolved_by`, `created_at`.
+
+### **`public.reviews`**
+User-to-user reviews that can be moderated by admins.
+- **Columns:** `id` (PK), `reviewer_id`, `reviewee_id`, `overall_comment`, `overall_rating`, `average_score`, `status` (active/reported/hidden/deleted), `created_at`.
+
+### **`public.user_notifications`**
+In-app notifications used for moderation outcomes.
+- **Columns:** `id` (PK), `user_id`, `type`, `title`, `message`, `related_object_type`, `related_object_id`, `is_read`, `created_at`.
+
+### **`public.user_activity_logs`**
+Audit trail for important user and admin actions.
+- **Columns:** `id` (PK), `user_id`, `action_type`, `metadata`, `created_at`.
+- **Moderation events:** `report_investigating`, `report_resolved`, `review_removed`, `review_restored`.
 
 ### **`public.sensitive_keywords`**
 Keywords that trigger security alerts when detected in user-generated content.
 
-## 4. RLS Policies (Crucial)
+## 4. Moderation Workflow Mapping (Tables 34-36)
+
+- **Table 34 (Reviewing Reports):** reads from `user_reports`, filters by `status`.
+- **Table 35 (Investigate + Resolve):** updates `user_reports.status`, `resolution_note`, `resolved_at`, `resolved_by`; writes timeline events in `user_activity_logs`; inserts reporter updates into `user_notifications`.
+- **Table 36 (Content Standards):** updates `reviews.status` to `deleted` via soft remove; writes `review_removed` into `user_activity_logs`; public pages hide `deleted` reviews.
+
+## 5. RLS Policies (Crucial)
 **Rule:** Every new table MUST have Row Level Security enabled.
 
 ### **General Access Patterns:**
@@ -60,12 +80,14 @@ Keywords that trigger security alerts when detected in user-generated content.
   - Can only `SELECT/INSERT` messages in conversations where they are a participant.
   - Can only `INSERT` reports, match requests, or support tickets.
   - Can only `SELECT` global active data (like active room listings or announcements).
+  - Can only `INSERT` reports or match requests (cannot update or delete others').
+  - Can only `SELECT` their own rows in `user_notifications`.
 
-## 5. Geographic Data
+## 6. Geographic Data
 SyncLiving uses **PostGIS** (`geography` type) for location-based search.
 - Use `ST_DWithin` for distance-based filtering.
 - Coordinates are stored as `Point(longitude, latitude)`.
 
-## 6. Type Generation
+## 7. Type Generation
 Run the following command after any migration:
 `npx supabase gen types typescript --local > src/types/supabase.ts`
