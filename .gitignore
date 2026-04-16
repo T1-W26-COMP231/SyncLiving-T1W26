@@ -48,3 +48,8 @@ next-env.d.ts
 /supabase/snippets
 
 learn.sql
+# local test artifacts
+artifacts/
+
+# local environment
+.env.local
