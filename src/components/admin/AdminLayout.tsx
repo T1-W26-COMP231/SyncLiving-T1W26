@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Search, Menu, X, ChevronDown, LogOut } from "lucide-react";
+import { Bell, Menu, X, ChevronDown, LogOut } from "lucide-react";
 import SyncLivingLogo from "@/components/ui/SyncLivingLogo";
 import { logout } from "../../../app/auth/actions";
 import { createClient } from "@/utils/supabase/client";
@@ -83,7 +83,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
+          <nav className="hidden lg:flex items-center gap-7 flex-1 justify-center min-w-0">
             {NAV_ITEMS.map(({ label, href }) => {
               const isActive =
                 pathname === href || pathname?.startsWith(href + "/");
@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <Link
                   key={href}
                   href={href}
-                  className={`relative py-2 px-1 text-sm font-bold transition-colors ${
+                  className={`relative py-2 px-1 text-sm font-bold transition-colors whitespace-nowrap ${
                     isActive
                       ? "text-admin-primary"
                       : "text-slate-500 hover:text-foreground"
@@ -107,19 +107,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* Right actions */}
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <div className="relative hidden md:block">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={15}
-              />
-              <input
-                type="text"
-                placeholder="Quick search..."
-                className="pl-9 pr-4 py-1.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-admin-primary/30 w-48 outline-none transition-all"
-              />
-            </div>
+          <div className="flex items-center gap-4 shrink-0">
 
             {/* Notifications */}
             <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
