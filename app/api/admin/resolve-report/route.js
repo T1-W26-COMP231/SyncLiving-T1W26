@@ -2,9 +2,6 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
-// Note: Local auth bypass may be enabled via SKIP_AUTH in middleware for development only.
-// Remove/disable that bypass before merging to shared branches.
-
 if (!process.env.DATABASE_URL) {
   console.error('resolve-report startup check: DATABASE_URL is missing. Set it in .env.local and restart the dev server.');
 }
