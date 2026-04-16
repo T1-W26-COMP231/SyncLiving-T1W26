@@ -209,6 +209,7 @@ function FieldLabel({ children, optional, required }: { children: React.ReactNod
 const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, onClose }) => {
   const router   = useRouter();
   const supabase = createClient();
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
   const [step,    setStep]    = useState(1);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(true);
@@ -292,7 +293,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   });
 
   // ── Binary preference tags ───────────────────────────────────────────────────
-  const BINARY_TAGS = ['Pet Allowed', 'Non-Smoker', 'LGBTQ+ Friendly', 'Vegan Friendly'] as const;
+  const BINARY_TAGS = ['Pet Allowed', 'Non-Smoker', 'LGBTQ+ Friendly', 'Vegan'] as const;
   const [binaryTags, setBinaryTags] = useState<string[]>(
     (initialData?.lifestyle_tags || []).filter((t: string) => BINARY_TAGS.includes(t as any))
   );
@@ -442,6 +443,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
     }
     setErrors({});
     setStep(s => s + 1);
+    // Scroll to top of the scrollable body (modal) or the page (full-page mode)
+    scrollBodyRef.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
   };
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -496,6 +500,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       // 3. Build FCRM prefixed lifestyle tags
       const wdTags = DIM_ORDER.filter(d => weekdayTags[d]).map(d => `wd:${d}:${weekdayTags[d]}`);
       const weTags = DIM_ORDER.filter(d => weekendTags[d]).map(d => `we:${d}:${weekendTags[d]}`);
+      // Binary tags describe the user's own traits and are stored in lifestyle_tags.
+      // Roommate preference tags are stored separately in pref_lifestyle_tags (via SettingsModal).
       const lifestyle_tags = [...wdTags, ...weTags, ...binaryTags];
 
       // Build numeric feature vectors
@@ -600,7 +606,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
       </div>
 
       {/* ── Scrollable body ─────────────────────────────────────────────── */}
-      <div className={`flex-1 px-8 pb-4 space-y-8 ${isModal ? 'overflow-y-auto' : ''}`}>
+      <div ref={scrollBodyRef} className={`flex-1 px-8 pb-4 space-y-8 ${isModal ? 'overflow-y-auto' : ''}`}>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* STEP 1 — About You                                             */}
@@ -864,13 +870,13 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
             </section>
 
             <section>
-              <SectionLabel Icon={Tag} label="Additional" optional />
+              <SectionLabel Icon={Tag} label="Other" optional />
               <div className="flex flex-wrap gap-2">
                 {[
                   { tag: 'Pet Allowed',     Icon: Heart, label: 'Pet Allowed'     },
                   { tag: 'Non-Smoker',      Icon: Ban,   label: 'Non-Smoker'      },
                   { tag: 'LGBTQ+ Friendly', Icon: Star,  label: 'LGBTQ+ Friendly' },
-                  { tag: 'Vegan Friendly',  Icon: Leaf,  label: 'Vegan Friendly'  },
+                  { tag: 'Vegan',           Icon: Leaf,  label: 'Vegan'           },
                 ].map(({ tag, Icon, label }) => {
                   const active = binaryTags.includes(tag);
                   return (
@@ -1213,6 +1219,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   return (
     <>
       <Script
+        id="google-maps"
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
         strategy="afterInteractive"
       />

@@ -114,8 +114,10 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
           <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
             <NavLink label="Listings"   href="/dashboard" active={activeTab === 'Listings'} />
             <NavLink label="Discovery"  href="/discovery"          active={activeTab === 'Discovery'} />
+            {/* <NavLink label="Rooms"      href="/rooms"              active={activeTab === 'Rooms'} /> */}
             <NavLink label="Reviews"    href="/matches"              active={activeTab === 'Matches' || activeTab === 'Reviews'} />
             <NavLink label="Messages"   href="/messages" badge={unreadCount > 0 ? String(unreadCount) : undefined} active={activeTab === 'Messages'} />
+            <NavLink label="Support"    href="/support"             active={activeTab === 'Support'} />
           </nav>
 
           {/* Right Actions */}
@@ -137,9 +139,17 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
                 onClick={() => setDropdownOpen(prev => !prev)}
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <div className="size-9 rounded-full bg-primary flex items-center justify-center font-bold text-dark text-xs border-2 border-white shadow-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={userName}
+                    className="size-9 rounded-full object-cover border-2 border-white shadow-sm"
+                  />
+                ) : (
+                  <div className="size-9 rounded-full bg-primary flex items-center justify-center font-bold text-dark text-xs border-2 border-white shadow-sm">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="hidden sm:block text-left">
                   <p className="text-xs font-bold text-dark group-hover:text-primary transition-colors">{userName}</p>
                   <p className="text-[10px] text-slate-500 font-semibold">My Account</p>

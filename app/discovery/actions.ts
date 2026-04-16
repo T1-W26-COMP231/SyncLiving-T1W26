@@ -30,6 +30,7 @@ export interface MatchedProfile {
   score: number;
   tier: "strong" | "good" | "borderline" | "incompatible";
   conflicts: { type: string; clause: string }[];
+  feedbackRating: number | null;
 }
 
 export interface MatchedListing {
@@ -129,7 +130,7 @@ export async function getMatches(): Promise<{
   const { data: myProfile, error: myErr } = await supabase
     .from("profiles")
     .select(
-      "v_wd, v_we, role, pref_budget_min, pref_budget_max, preferred_gender, lifestyle_tags, age_min, age_max, pref_lat, pref_lng, pref_max_distance, pref_reference_location",
+      "v_wd, v_we, role, pref_budget_min, pref_budget_max, preferred_gender, lifestyle_tags, pref_lifestyle_tags, age_min, age_max, pref_lat, pref_lng, pref_max_distance, pref_reference_location",
     )
     .eq("id", user.id)
     .single();
@@ -162,16 +163,16 @@ export async function getMatches(): Promise<{
   const myVWd = toVec(myProfile.v_wd);
   const myVWe = toVec(myProfile.v_we);
 
-  // Binary preference tags saved by the Settings modal into profiles.lifestyle_tags
+  // Binary preference tags saved by the Settings modal into profiles.pref_lifestyle_tags
   const BINARY_PREF_KEYS = [
     "Pet Allowed",
     "Pet Friendly",
     "Non-Smoker",
     "LGBTQ+ Friendly",
     "Same Gender Only",
-    "Vegan Friendly",
+    "Vegan",
   ];
-  const userBinaryPrefs: string[] = (myProfile.lifestyle_tags ?? []).filter(
+  const userBinaryPrefs: string[] = (myProfile.pref_lifestyle_tags ?? []).filter(
     (t: string) => BINARY_PREF_KEYS.includes(t),
   );
 
@@ -202,6 +203,13 @@ export async function getMatches(): Promise<{
     .eq('status', 'pending');
   const receivedRequestMap = new Map((receivedRows ?? []).map((r: any) => [r.sender_id, r.id]));
 
+  // Fetch match feedback already provided by the current user
+  const { data: feedbackRows } = await supabase
+    .from("match_feedback")
+    .select("target_id, feedback_rating")
+    .eq("user_id", user.id);
+  const feedbackMap = new Map((feedbackRows ?? []).map((r: any) => [r.target_id, r.feedback_rating]));
+
   // Server-side location pre-filter: bounding box at 2× saved preference distance (capped at 100 km).
   const prefLat: number | null = myProfile.pref_lat ?? null;
   const prefLng: number | null = myProfile.pref_lng ?? null;
@@ -216,7 +224,8 @@ export async function getMatches(): Promise<{
     .select(
       "id, full_name, avatar_url, age, location, lat, lng, role, bio, budget_min, budget_max, lifestyle_tags, preferred_gender, v_wd, v_we",
     )
-    .neq("id", user.id);
+    .neq("id", user.id)
+    .eq("is_admin", false);
 
   if (bufferKm !== null && prefLat !== null && prefLng !== null) {
     const box = latLngBoundingBox(prefLat, prefLng, bufferKm);
@@ -294,6 +303,7 @@ export async function getMatches(): Promise<{
         score: Math.round(result.score),
         tier: result.tier,
         conflicts: result.conflicts,
+        feedbackRating: feedbackMap.get(p.id) ?? null,
       };
     })
     .sort((a, b) => b.score - a.score);

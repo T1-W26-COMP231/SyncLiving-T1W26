@@ -35,7 +35,7 @@ interface CreateListingFormProps {
     title: string;
     address: string;
     rental_fee: number;
-    house_rules: string;
+    house_rules: string[];
     room_type_id: string;
     amenities_ids: string[];
     city?: string;
@@ -100,10 +100,15 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
   const [submitStatus,      setSubmitStatus]      = useState<'draft' | 'published'>('draft');
 
   const [listingData, setListingData] = useState({
-    title:       initialData?.title       || '',
-    rental_fee:  initialData?.rental_fee  || '',
-    house_rules: initialData?.house_rules || '',
+    title:      initialData?.title      || '',
+    rental_fee: initialData?.rental_fee || '',
   });
+
+  // House rules stored as individual clauses
+  const [houseRules, setHouseRules] = useState<string[]>(
+    initialData?.house_rules || []
+  );
+  const [houseRuleInput, setHouseRuleInput] = useState('');
 
   // Location from Google Maps autocomplete
   const [location, setLocation] = useState({
@@ -184,6 +189,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
         const formData = new FormData(formRef.current);
         formData.set('status', status);
         formData.set('photos', JSON.stringify(finalUrls));
+        // Remove manual description set, relying on the hidden input in the form
         
         startTransition(() => {
           formAction(formData);
@@ -201,7 +207,8 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
   const formContent = (
     <>
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+        id="google-maps"
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
         strategy="afterInteractive"
       />
 
@@ -221,7 +228,7 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
         {/* Persistent values for multi-step FormData collection */}
         <input type="hidden" name="title"         value={listingData.title} />
         <input type="hidden" name="rent"          value={listingData.rental_fee} />
-        <input type="hidden" name="description"   value={listingData.house_rules} />
+        <input type="hidden" name="description"   value={JSON.stringify(houseRules)} />
 
         {/* ── Wizard card ──────────────────────────────────────────────────── */}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
@@ -397,14 +404,58 @@ export default function CreateListingForm({ roomTypes, amenities, isModal, onClo
             {step === 3 && (
               <section>
                 <SectionLabel Icon={ScrollText} label="House Rules & Description" />
-                <textarea
-                  name="description"
-                  rows={8}
-                  value={listingData.house_rules}
-                  onChange={e => setListingData(p => ({ ...p, house_rules: e.target.value }))}
-                  placeholder="Describe house rules, living expectations, nearby transport, and any other details that help potential roommates decide..."
-                  className={`${inputCls} resize-none`}
-                />
+
+                {/* Clause list */}
+                {houseRules.length > 0 && (
+                  <ul className="mb-3 space-y-2">
+                    {houseRules.map((rule, i) => (
+                      <li key={i} className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-dark">
+                        <span className="flex-1 leading-snug">{rule}</span>
+                        <button
+                          type="button"
+                          onClick={() => setHouseRules(prev => prev.filter((_, idx) => idx !== i))}
+                          className="shrink-0 text-slate-300 hover:text-red-400 transition-colors mt-0.5"
+                        >
+                          <X size={14} strokeWidth={3} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Input + add button */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={houseRuleInput}
+                    onChange={e => setHouseRuleInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const trimmed = houseRuleInput.trim();
+                        if (trimmed) {
+                          setHouseRules(prev => [...prev, trimmed]);
+                          setHouseRuleInput('');
+                        }
+                      }
+                    }}
+                    placeholder="e.g. No smoking inside the unit"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmed = houseRuleInput.trim();
+                      if (trimmed) {
+                        setHouseRules(prev => [...prev, trimmed]);
+                        setHouseRuleInput('');
+                      }
+                    }}
+                    className="shrink-0 size-[46px] flex items-center justify-center rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus size={18} strokeWidth={2.5} />
+                  </button>
+                </div>
               </section>
             )}
 

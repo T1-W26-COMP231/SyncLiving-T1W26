@@ -66,6 +66,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
       profile={formattedProfile}
       incomingRequestId={incomingRequestId}
       existingRequestStatus={existingRequestStatus}
+      currentUserId={user?.id ?? null}
     />
   );
 }

@@ -37,6 +37,7 @@ interface ProfileDetailsProps {
   };
   incomingRequestId?: string | null;
   existingRequestStatus?: string | null;
+  currentUserId?: string | null;
 }
 
 const DIMENSIONS = [
@@ -81,7 +82,7 @@ const TAG_MAP: Record<string, { label: string; dimension: string }> = {
   'CommunalLiving': { label: 'Communal Living', dimension: 'boundary' },
 };
 
-export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile, incomingRequestId, existingRequestStatus }) => {
+export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile, incomingRequestId, existingRequestStatus, currentUserId }) => {
   // Enhanced parsing
   const weekdayRoutine: Record<string, string> = {};
   const weekendRoutine: Record<string, string> = {};
@@ -218,6 +219,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ profile, incomin
                     targetAvatarUrl={profile.avatar_url ?? null}
                     incomingRequestId={incomingRequestId}
                     existingRequestStatus={existingRequestStatus}
+                    isOwnProfile={!!currentUserId && currentUserId === profile.id}
                   />
                   <Button variant="outline" className="w-full py-4 text-base border-slate-200">Save Profile</Button>
                 </div>

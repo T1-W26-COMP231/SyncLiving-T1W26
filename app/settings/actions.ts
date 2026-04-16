@@ -8,7 +8,7 @@ export async function updatePreferences(data: {
   budget_min?: number;
   budget_max?: number;
   move_in_date?: string;
-  lifestyle_tags?: string[];
+  pref_lifestyle_tags?: string[];
 }) {
   const supabase = await createClient();
 
@@ -20,12 +20,12 @@ export async function updatePreferences(data: {
     updated_at: new Date().toISOString(),
   };
 
-  if (data.age_min !== undefined)      updates.age_min        = data.age_min;
-  if (data.age_max !== undefined)      updates.age_max        = data.age_max;
-  if (data.budget_min !== undefined)   updates.pref_budget_min = data.budget_min;
-  if (data.budget_max !== undefined)   updates.pref_budget_max = data.budget_max;
-  if (data.move_in_date !== undefined) updates.move_in_date   = data.move_in_date;
-  if (data.lifestyle_tags !== undefined) updates.lifestyle_tags = data.lifestyle_tags;
+  if (data.age_min !== undefined)             updates.age_min             = data.age_min;
+  if (data.age_max !== undefined)             updates.age_max             = data.age_max;
+  if (data.budget_min !== undefined)          updates.pref_budget_min     = data.budget_min;
+  if (data.budget_max !== undefined)          updates.pref_budget_max     = data.budget_max;
+  if (data.move_in_date !== undefined)        updates.move_in_date        = data.move_in_date;
+  if (data.pref_lifestyle_tags !== undefined) updates.pref_lifestyle_tags = data.pref_lifestyle_tags;
 
   const { error } = await supabase.from('profiles').upsert(updates as any);
 

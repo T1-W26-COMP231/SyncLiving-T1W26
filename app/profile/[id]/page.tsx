@@ -60,6 +60,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     .select(`
       id,
       overall_comment,
+      overall_rating,
       average_score,
       status,
       reviewer_id,
@@ -81,10 +82,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
   const reviews: ReviewData[] = (reviewRows ?? []).map((r: any) => ({
     id: r.id,
+    reviewer_id: r.reviewer_id,
     reviewer_name: r.reviewer?.full_name ?? 'Anonymous',
     reviewer_avatar: r.reviewer?.avatar_url ?? null,
     duration: '',
-    rating: r.average_score ? Number(r.average_score) : 5,
+    rating: r.overall_rating ?? (r.average_score ? Number(r.average_score) : 5),
     text: r.overall_comment ?? '',
     scores: r.scores?.map((s: any) => ({
       score: s.score,
@@ -188,5 +190,5 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     space_listing: spaceListing,
   };
 
-  return <ProfileDetailsPage profile={profile} initialRequestStatus={initialRequestStatus} />;
+  return <ProfileDetailsPage profile={profile} initialRequestStatus={initialRequestStatus} currentUserId={user?.id ?? null} />;
 }

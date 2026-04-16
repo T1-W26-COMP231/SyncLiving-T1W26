@@ -29,12 +29,13 @@ export interface ProfileData {
 
 export interface ReviewData {
   id: string;
+  reviewer_id: string;
   reviewer_name: string;
   reviewer_avatar?: string | null;
   duration: string;
   text: string;
   rating: number;
-  scores?: { score: number; label: string }[];
+  scores?: { score: any; label: string }[];
   status: string;
 }
 
