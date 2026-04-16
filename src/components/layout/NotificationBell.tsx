@@ -13,11 +13,22 @@ interface AcceptedNotification {
   avatar_url: string | null;
 }
 
+interface UserNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  related_object_type: string | null;
+  related_object_id: string | null;
+  created_at: string;
+}
+
 export const NotificationBell: React.FC = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [acceptedNotifications, setAcceptedNotifications] = useState<AcceptedNotification[]>([]);
+  const [systemNotifications, setSystemNotifications] = useState<UserNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [matchedUser, setMatchedUser] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
@@ -28,8 +39,19 @@ export const NotificationBell: React.FC = () => {
     setPendingRequests(pending);
   }
 
+  async function refreshSystemNotifications() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('user_notifications')
+      .select('id, type, title, message, related_object_type, related_object_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    setSystemNotifications((data ?? []) as UserNotification[]);
+  }
+
   useEffect(() => {
-    refresh().finally(() => setLoading(false));
+    Promise.all([refresh(), refreshSystemNotifications()]).finally(() => setLoading(false));
   }, []);
 
   // Real-time: incoming new requests + accepted sent requests
@@ -78,6 +100,20 @@ export const NotificationBell: React.FC = () => {
               { id: updated.id, full_name: profile?.full_name ?? null, avatar_url: profile?.avatar_url ?? null },
               ...prev,
             ]);
+          }
+        )
+        // New moderation or system notification for me.
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const inserted = payload.new as UserNotification;
+            setSystemNotifications(prev => [inserted, ...prev].slice(0, 20));
           }
         )
         .subscribe();
@@ -129,7 +165,11 @@ export const NotificationBell: React.FC = () => {
     setAcceptedNotifications(prev => prev.filter(n => n.id !== id));
   }
 
-  const totalCount = pendingRequests.length + acceptedNotifications.length;
+  function dismissSystemNotification(id: string) {
+    setSystemNotifications(prev => prev.filter(n => n.id !== id));
+  }
+
+  const totalCount = pendingRequests.length + acceptedNotifications.length + systemNotifications.length;
 
   return (
     <>
@@ -189,6 +229,38 @@ export const NotificationBell: React.FC = () => {
                             </p>
                             <p className="text-[11px] text-primary font-medium">accepted your request!</p>
                           </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Admin/system notifications */}
+                {systemNotifications.length > 0 && (
+                  <div className="px-4 pt-3 pb-1">
+                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2">
+                      Updates
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {systemNotifications.map(notif => (
+                        <button
+                          key={notif.id}
+                          onClick={() => {
+                            dismissSystemNotification(notif.id);
+                            setOpen(false);
+                            if (notif.related_object_type === 'user_report' && notif.related_object_id) {
+                              router.push('/support');
+                              return;
+                            }
+                            router.push('/messages');
+                          }}
+                          className="w-full p-3 rounded-xl bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-colors text-left"
+                        >
+                          <p className="text-xs font-bold text-slate-800 truncate">{notif.title}</p>
+                          <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{notif.message}</p>
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            {new Date(notif.created_at).toLocaleString()}
+                          </p>
                         </button>
                       ))}
                     </div>
