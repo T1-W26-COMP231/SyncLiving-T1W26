@@ -9,13 +9,15 @@ interface SidebarProps {
   selectedMatchId: string | null;
   onSelectMatch: (id: string) => void;
   loading: boolean;
+  ruleStats?: { accepted: number; total: number };
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   matches,
   selectedMatchId,
   onSelectMatch,
-  loading
+  loading,
+  ruleStats,
 }) => {
   return (
     <aside className="w-64 border-r border-primary/10 bg-white dark:bg-slate-900 flex-col hidden lg:flex overflow-y-auto">
@@ -78,9 +80,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="bg-primary/5 rounded-xl p-4">
           <p className="text-xs font-bold text-primary mb-2">AGREEMENT PROGRESS</p>
           <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-2">
-            <div className="bg-primary h-2 rounded-full w-2/3" style={{ width: '66.6%' }}></div>
+            <div
+              className="bg-primary h-2 rounded-full transition-all duration-500"
+              style={{
+                width: ruleStats && ruleStats.total > 0
+                  ? `${Math.round((ruleStats.accepted / ruleStats.total) * 100)}%`
+                  : '0%',
+              }}
+            />
           </div>
-          <p className="text-[10px] text-slate-500">6 of 9 rules accepted</p>
+          <p className="text-[10px] text-slate-500">
+            {ruleStats && ruleStats.total > 0
+              ? `${ruleStats.accepted} of ${ruleStats.total} rules accepted`
+              : 'No rules yet'}
+          </p>
         </div>
       </div>
     </aside>

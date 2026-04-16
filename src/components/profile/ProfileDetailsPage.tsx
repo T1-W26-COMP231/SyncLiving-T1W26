@@ -17,12 +17,15 @@ import {
   AlertTriangle,
   UserX,
   Flag,
+  Pencil,
 } from "lucide-react";
 import SyncLivingLogo from "@/components/ui/SyncLivingLogo";
 import { sendMatchRequest } from "../../../app/discovery/actions";
 import { unmatchUser, reportUser } from "../../../app/matches/actions";
 import ReviewDetailsModal from "./ReviewDetailsModal";
 import { ReportUserModal } from "../matches/ReportUserModal";
+import OnboardingForm from "@/components/onboarding/OnboardingForm";
+import { createClient } from "@/utils/supabase/client";
 
 import {
   type ProfileData,
@@ -33,6 +36,7 @@ import {
 interface ProfileDetailsPageProps {
   profile: ProfileData;
   initialRequestStatus?: "pending" | "accepted" | "declined" | null;
+  currentUserId?: string | null;
 }
 
 // Render star rating as a row of filled/empty stars
@@ -119,6 +123,7 @@ const VERIFICATION_MAPPING: Record<string, { label: string; icon: string }> = {
 export default function ProfileDetailsPage({
   profile,
   initialRequestStatus = null,
+  currentUserId = null,
 }: ProfileDetailsPageProps) {
   const [requestStatus, setRequestStatus] = useState<
     "pending" | "accepted" | "declined" | null
@@ -129,8 +134,53 @@ export default function ProfileDetailsPage({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isUnmatching, setIsUnmatching] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editProfileData, setEditProfileData] = useState<any>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+      router.refresh();
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setAvatarUploading(false);
+      // Reset input so the same file can be re-selected if needed
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }
+
+  async function handleEditProfile() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url, bio, age, preferred_gender, location, lat, lng, role, budget_min, budget_max, move_in_date, age_min, age_max, lifestyle_tags')
+      .eq('id', user.id)
+      .single();
+    if (profileData) {
+      setEditProfileData({ ...profileData, latitude: profileData.lat, longitude: profileData.lng });
+      setShowEditProfile(true);
+    }
+  }
 
   // Close menu on outside click
   useEffect(() => {
@@ -296,7 +346,30 @@ export default function ProfileDetailsPage({
                     </div>
                   )}
                 </div>
-                <div className="absolute bottom-1 right-1 bg-green-500 border-2 border-white size-4 rounded-full" />
+                {currentUserId === profile.id ? (
+                  <>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={avatarUploading}
+                      className="absolute bottom-1 right-1 size-7 rounded-full bg-primary border-2 border-white flex items-center justify-center hover:brightness-105 transition-all shadow-sm disabled:opacity-60"
+                      title="Change profile photo"
+                    >
+                      {avatarUploading
+                        ? <div className="size-3 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
+                        : <Pencil size={12} className="text-dark" />
+                      }
+                    </button>
+                  </>
+                ) : (
+                  <div className="absolute bottom-1 right-1 bg-green-500 border-2 border-white size-4 rounded-full" />
+                )}
               </div>
 
               <div className="mt-4 text-center">
@@ -331,26 +404,36 @@ export default function ProfileDetailsPage({
 
               {/* Action Buttons */}
               <div className="w-full mt-8 space-y-3">
-                <button
-                  onClick={handleConnect}
-                  disabled={isConnecting || requestStatus !== null}
-                  className={`w-full font-bold py-3 rounded-full transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                    requestStatus === "pending"
-                      ? "bg-amber-100 text-amber-700"
-                      : requestStatus === "accepted"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-primary text-white hover:opacity-90"
-                  }`}
-                >
-                  <Send className="w-4 h-4" />
-                  {isConnecting
-                    ? "Sending…"
-                    : requestStatus === "pending"
-                      ? "Request Sent"
-                      : requestStatus === "accepted"
-                        ? "Matched!"
-                        : "Send Connection Request"}
-                </button>
+                {currentUserId === profile.id ? (
+                  <button
+                    onClick={handleEditProfile}
+                    className="w-full font-bold py-3 rounded-full transition-all flex items-center justify-center gap-2 bg-primary text-dark hover:brightness-105"
+                  >
+                    <Pencil size={15} />
+                    Edit Profile
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnect}
+                    disabled={isConnecting || requestStatus !== null}
+                    className={`w-full font-bold py-3 rounded-full transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                      requestStatus === "pending"
+                        ? "bg-amber-100 text-amber-700"
+                        : requestStatus === "accepted"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-primary text-white hover:opacity-90"
+                    }`}
+                  >
+                    <Send className="w-4 h-4" />
+                    {isConnecting
+                      ? "Sending…"
+                      : requestStatus === "pending"
+                        ? "Request Sent"
+                        : requestStatus === "accepted"
+                          ? "Matched!"
+                          : "Send Connection Request"}
+                  </button>
+                )}
                 <button
                   disabled={requestStatus !== "accepted"}
                   className="w-full bg-slate-100 text-foreground font-bold py-3 rounded-full hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -807,6 +890,18 @@ export default function ProfileDetailsPage({
           reportedUserId={profile.id}
           reportedUserName={profile.full_name}
           onClose={() => setShowReportModal(false)}
+        />
+      )}
+
+      {showEditProfile && (
+        <OnboardingForm
+          initialData={editProfileData}
+          isModal
+          onClose={() => {
+            setShowEditProfile(false);
+            setEditProfileData(null);
+            router.refresh();
+          }}
         />
       )}
     </div>

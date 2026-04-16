@@ -125,17 +125,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'roommate' | 'room'>('roommate');
 
   // ── Roommate tab state ──────────────────────────────────────────────────────
-  const tags: string[] = initialProfile?.lifestyle_tags || [];
+  // Preference tags are stored separately from the user's own lifestyle traits
+  const prefTags: string[] = initialProfile?.pref_lifestyle_tags || [];
   const [ageMin,     setAgeMin]     = useState<number>(initialProfile?.age_min     || 18);
   const [ageMax,     setAgeMax]     = useState<number>(initialProfile?.age_max     || 45);
   const [budgetMin,  setBudgetMin]  = useState<number>(initialProfile?.pref_budget_min  || 800);
   const [budgetMax,  setBudgetMax]  = useState<number>(initialProfile?.pref_budget_max  || 2500);
   const [moveInDate, setMoveInDate] = useState<string>(initialProfile?.move_in_date || '');
-  const [pets,       setPets]       = useState<boolean>(tags.includes('Pet Allowed') || tags.includes('Pet Friendly'));
-  const [smoking,    setSmoking]    = useState<boolean>(tags.includes('Non-Smoker'));
-  const [lgbt,       setLgbt]       = useState<boolean>(tags.includes('LGBTQ+ Friendly'));
-  const [sameGender, setSameGender] = useState<boolean>(tags.includes('Same Gender Only'));
-  const [vegan,      setVegan]      = useState<boolean>(tags.includes('Vegan Friendly'));
+  const [pets,       setPets]       = useState<boolean>(prefTags.includes('Pet Allowed') || prefTags.includes('Pet Friendly'));
+  const [smoking,    setSmoking]    = useState<boolean>(prefTags.includes('Non-Smoker'));
+  const [lgbt,       setLgbt]       = useState<boolean>(prefTags.includes('LGBTQ+ Friendly'));
+  const [sameGender, setSameGender] = useState<boolean>(prefTags.includes('Same Gender Only'));
+  const [vegan,      setVegan]      = useState<boolean>(prefTags.includes('Vegan'));
 
   // ── Room tab state ──────────────────────────────────────────────────────────
   // Parse initial pref_location_coords
@@ -193,16 +194,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleSave = async () => {
     setLoading(true);
     try {
-      const otherTags = tags.filter(
-        t => !['Pet Allowed', 'Pet Friendly', 'Non-Smoker', 'LGBTQ+ Friendly', 'Same Gender Only', 'Vegan Friendly'].includes(t)
-      );
-      const newTags = [
-        ...otherTags,
+      const newPrefTags = [
         ...(pets       ? ['Pet Allowed']     : []),
         ...(smoking    ? ['Non-Smoker']      : []),
         ...(lgbt       ? ['LGBTQ+ Friendly'] : []),
         ...(sameGender ? ['Same Gender Only'] : []),
-        ...(vegan      ? ['Vegan Friendly']  : []),
+        ...(vegan      ? ['Vegan']           : []),
       ];
 
       // Fallback geocoding: if the autocomplete didn't fire but location text exists,
@@ -225,12 +222,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
       const [roommateResult, roomResult] = await Promise.all([
         updatePreferences({
-          age_min:        ageMin,
-          age_max:        ageMax,
-          budget_min:     budgetMin,
-          budget_max:     budgetMax,
-          move_in_date:   moveInDate,
-          lifestyle_tags: newTags,
+          age_min:             ageMin,
+          age_max:             ageMax,
+          budget_min:          budgetMin,
+          budget_max:          budgetMax,
+          move_in_date:        moveInDate,
+          pref_lifestyle_tags: newPrefTags,
         }),
         updateRoomPreferences({
           amenity_ids:        selectedAmenities,
@@ -448,7 +445,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <Leaf size={16} className="text-green-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-dark">Vegan Friendly</p>
+                        <p className="text-sm font-semibold text-dark">Vegan</p>
                         <p className="text-xs text-slate-400">Prefer a vegan or plant-based household</p>
                       </div>
                     </div>

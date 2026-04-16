@@ -43,6 +43,45 @@ export interface MessageData {
   content: string;
   created_at: string;
   is_read: boolean;
+  type?: 'text' | 'action';
+  metadata?: Record<string, any> | null;
+  // Derived from metadata.actionData for MessageItem rendering
+  actionData?: {
+    title: string;
+    description: string;
+    actionLabel: string;
+  };
+}
+
+export interface RuleData {
+  id: string;
+  conversation_id: string;
+  proposer_id: string;
+  title: string;
+  description: string;
+  status: 'drafting' | 'pending' | 'accepted';
+  created_at: string;
+  updated_at: string;
+  comments_count: number;
+}
+
+export interface RuleComment {
+  id: string;
+  rule_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  author_name: string | null;
+  author_avatar: string | null;
+}
+
+export interface ConversationDetails {
+  id: string;
+  provider_id: string;
+  seeker_id: string;
+  is_finalized: boolean;
+  provider_signed: boolean;
+  seeker_signed: boolean;
 }
 
 interface ConversationWithProfiles {
@@ -328,7 +367,11 @@ export async function getMessages(conversationId: string) {
     return [];
   }
 
-  return data as MessageData[];
+  // Derive actionData from metadata so MessageItem can render action cards
+  return (data as any[]).map(msg => ({
+    ...msg,
+    actionData: msg.metadata?.actionData ?? undefined,
+  })) as MessageData[];
 }
 
 /**
@@ -402,4 +445,385 @@ export async function sendMessage(conversationId: string, content: string) {
   checkMessageForSensitiveWords(content, user.id);
 
   return data as MessageData;
+}
+
+// ─── Rule helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Inserts an action-type message into the conversation chat.
+ * Used to notify both parties when a rule status changes.
+ */
+async function insertActionMessage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  conversationId: string,
+  senderId: string,
+  content: string,
+  actionData: { title: string; description: string; actionLabel: string },
+  ruleId?: string,
+) {
+  await supabase.from('messages').insert({
+    conversation_id: conversationId,
+    sender_id: senderId,
+    content,
+    type: 'action',
+    metadata: { actionData, ...(ruleId ? { rule_id: ruleId } : {}) },
+  });
+}
+
+// ─── Rule actions ─────────────────────────────────────────────────────────────
+
+/**
+ * Fetches all rules for a conversation.
+ * Drafting rules are returned for all participants — visibility filtering
+ * (hide other party's drafts) is handled client-side.
+ */
+export async function getRules(conversationId: string): Promise<RuleData[]> {
+  const supabase = await createClient();
+  const { data: rules, error } = await supabase
+    .from('conversation_rules')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true });
+
+  if (error || !rules) return [];
+
+  // Fetch comment counts in a single query
+  const { data: commentRows } = await supabase
+    .from('rule_comments')
+    .select('rule_id')
+    .in('rule_id', rules.map(r => r.id));
+
+  const countMap = (commentRows ?? []).reduce<Record<string, number>>((acc, row) => {
+    acc[row.rule_id] = (acc[row.rule_id] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return rules.map(r => ({ ...r, comments_count: countMap[r.id] ?? 0 })) as RuleData[];
+}
+
+/**
+ * Fetches conversation details including signing state.
+ */
+export async function getConversationDetails(conversationId: string): Promise<ConversationDetails | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('id, provider_id, seeker_id, is_finalized, provider_signed, seeker_signed')
+    .eq('id', conversationId)
+    .single();
+
+  if (error || !data) return null;
+  // Cast via unknown because generated types lag behind the migration that adds provider_signed/seeker_signed
+  return data as unknown as ConversationDetails;
+}
+
+/**
+ * Creates a new rule in drafting status (private to proposer).
+ */
+export async function proposeRule(
+  conversationId: string,
+  title: string,
+  description: string,
+): Promise<{ data?: RuleData; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data, error } = await supabase
+    .from('conversation_rules')
+    .insert({ conversation_id: conversationId, proposer_id: user.id, title, description, status: 'drafting' })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  return { data: { ...data, comments_count: 0 } as RuleData };
+}
+
+/**
+ * Updates the title/description of a drafting rule.
+ */
+export async function updateRule(
+  ruleId: string,
+  title: string,
+  description: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('conversation_rules')
+    .update({ title, description, updated_at: new Date().toISOString() })
+    .eq('id', ruleId)
+    .eq('proposer_id', user.id)
+    .eq('status', 'drafting');
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Submits a drafting rule for review: drafting → pending.
+ * Sends an action message so the other party is notified in the chat.
+ */
+export async function submitRuleForReview(
+  ruleId: string,
+  conversationId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: rule, error: fetchErr } = await supabase
+    .from('conversation_rules')
+    .select('title, description')
+    .eq('id', ruleId)
+    .single();
+  if (fetchErr || !rule) return { error: 'Rule not found' };
+
+  const { error } = await supabase
+    .from('conversation_rules')
+    .update({ status: 'pending', updated_at: new Date().toISOString() })
+    .eq('id', ruleId)
+    .eq('proposer_id', user.id);
+  if (error) return { error: error.message };
+
+  await insertActionMessage(
+    supabase,
+    conversationId,
+    user.id,
+    `Proposed a rule for review: "${rule.title}"`,
+    {
+      title: `📋 New Rule: ${rule.title}`,
+      description: rule.description,
+      actionLabel: 'View Rule',
+    },
+    ruleId,
+  );
+
+  revalidatePath('/messages');
+  return {};
+}
+
+/**
+ * Accepts a pending rule: pending → accepted.
+ * Sends an action message confirming acceptance.
+ */
+export async function acceptRule(
+  ruleId: string,
+  conversationId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: rule, error: fetchErr } = await supabase
+    .from('conversation_rules')
+    .select('title')
+    .eq('id', ruleId)
+    .single();
+  if (fetchErr || !rule) return { error: 'Rule not found' };
+
+  const { error } = await supabase
+    .from('conversation_rules')
+    .update({ status: 'accepted', updated_at: new Date().toISOString() })
+    .eq('id', ruleId);
+  if (error) return { error: error.message };
+
+  await insertActionMessage(
+    supabase,
+    conversationId,
+    user.id,
+    `Accepted the rule: "${rule.title}"`,
+    {
+      title: `✅ Rule Accepted`,
+      description: `"${rule.title}" has been accepted by both parties.`,
+      actionLabel: 'View Rule',
+    },
+    ruleId,
+  );
+
+  revalidatePath('/messages');
+  return {};
+}
+
+/**
+ * Sends a pending rule back for revision: pending → drafting.
+ * Sends an action message notifying the proposer.
+ */
+export async function sendRuleBack(
+  ruleId: string,
+  conversationId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: rule, error: fetchErr } = await supabase
+    .from('conversation_rules')
+    .select('title')
+    .eq('id', ruleId)
+    .single();
+  if (fetchErr || !rule) return { error: 'Rule not found' };
+
+  const { error } = await supabase
+    .from('conversation_rules')
+    .update({ status: 'drafting', updated_at: new Date().toISOString() })
+    .eq('id', ruleId);
+  if (error) return { error: error.message };
+
+  await insertActionMessage(
+    supabase,
+    conversationId,
+    user.id,
+    `Sent the rule back for revision: "${rule.title}"`,
+    {
+      title: `📝 Rule Sent Back`,
+      description: `"${rule.title}" needs revision before it can be accepted.`,
+      actionLabel: 'View Rule',
+    },
+    ruleId,
+  );
+
+  revalidatePath('/messages');
+  return {};
+}
+
+/**
+ * Adds a comment to a rule.
+ */
+export async function addRuleComment(
+  ruleId: string,
+  content: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('rule_comments')
+    .insert({ rule_id: ruleId, author_id: user.id, content });
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Fetches all comments for a rule with author profile info.
+ */
+export async function getRuleComments(ruleId: string): Promise<RuleComment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('rule_comments')
+    .select('id, rule_id, author_id, content, created_at')
+    .eq('rule_id', ruleId)
+    .order('created_at', { ascending: true });
+
+  if (error || !data) return [];
+
+  // Fetch author profiles
+  const authorIds = [...new Set(data.map(c => c.author_id))];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', authorIds);
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+
+  return data.map(c => ({
+    ...c,
+    author_name: profileMap.get(c.author_id)?.full_name ?? null,
+    author_avatar: profileMap.get(c.author_id)?.avatar_url ?? null,
+  }));
+}
+
+/**
+ * Signs the agreement for the current user (Digital Handshake).
+ * When both parties have signed, the conversation is marked as finalized.
+ */
+export async function signAgreement(
+  conversationId: string,
+): Promise<{ finalized?: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: convRaw, error: convErr } = await supabase
+    .from('conversations')
+    .select('provider_id, seeker_id, provider_signed, seeker_signed, is_finalized')
+    .eq('id', conversationId)
+    .single();
+  if (convErr || !convRaw) return { error: 'Conversation not found' };
+  // Cast via unknown because generated types lag behind the migration that adds provider_signed/seeker_signed
+  const conv = convRaw as unknown as {
+    provider_id: string;
+    seeker_id: string;
+    provider_signed: boolean;
+    seeker_signed: boolean;
+    is_finalized: boolean;
+  };
+  if (conv.is_finalized) return { finalized: true };
+
+  const isProvider = conv.provider_id === user.id;
+  const signedField = isProvider ? 'provider_signed' : 'seeker_signed';
+  const otherSigned = isProvider ? conv.seeker_signed : conv.provider_signed;
+
+  // Check all rules are accepted before allowing signing
+  const { data: rules } = await supabase
+    .from('conversation_rules')
+    .select('status')
+    .eq('conversation_id', conversationId);
+
+  const allAccepted = (rules ?? []).length > 0 && (rules ?? []).every(r => r.status === 'accepted');
+  if (!allAccepted) return { error: 'All rules must be accepted before signing.' };
+
+  const updatePayload: Record<string, any> = { [signedField]: true };
+  const willFinalize = otherSigned;
+  if (willFinalize) {
+    updatePayload.is_finalized = true;
+    updatePayload.finalized_at = new Date().toISOString();
+  }
+
+  const { error: updateErr } = await supabase
+    .from('conversations')
+    .update(updatePayload)
+    .eq('id', conversationId);
+  if (updateErr) return { error: updateErr.message };
+
+  // Fetch current user name for the message
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single();
+  const name = myProfile?.full_name ?? 'Someone';
+
+  if (willFinalize) {
+    await insertActionMessage(
+      supabase,
+      conversationId,
+      user.id,
+      'The agreement has been finalized.',
+      {
+        title: '🎉 Agreement Finalized!',
+        description: 'All rules are now binding for both parties.',
+        actionLabel: 'View Agreement',
+      },
+    );
+  } else {
+    await insertActionMessage(
+      supabase,
+      conversationId,
+      user.id,
+      `${name} has signed the agreement.`,
+      {
+        title: '🤝 Agreement Signed',
+        description: `${name} has signed — waiting for the other party to sign.`,
+        actionLabel: 'View Rules',
+      },
+    );
+  }
+
+  revalidatePath('/messages');
+  return { finalized: willFinalize };
 }
