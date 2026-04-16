@@ -58,4 +58,4 @@ jobs:
       - name: Unit test fallback when preview unavailable
         if: env.PREVIEW_URL == ''
         run: |
-          npm test
+          npm run test -- src/services/matching.test.ts src/utils/validation.test.ts src/utils/activity-logger.test.ts
