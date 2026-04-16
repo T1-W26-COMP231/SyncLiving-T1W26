@@ -416,7 +416,7 @@ export async function getReportTimeline(
   if (!(await isAdmin())) throw new Error("Unauthorized");
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("user_activity_logs")
     .select("id, created_at, action_type, metadata, actor_id")
     .eq("object_type", "user_report")
