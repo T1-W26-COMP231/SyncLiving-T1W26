@@ -30,27 +30,29 @@ export default async function ReportDetailPage({ params, searchParams }: PagePro
     );
   }
 
+  const reportId = report.id;
+
   async function markInvestigating() {
     "use server";
     try {
-      await resolveUserReport(report.id, "investigating", "Marked as investigating by administrator");
+      await resolveUserReport(reportId, "investigating", "Marked as investigating by administrator");
     } catch {
-      redirect(`/admin/reports/${report.id}?error=investigating_failed`);
+      redirect(`/admin/reports/${reportId}?error=investigating_failed`);
     }
 
-    redirect(`/admin/reports/${report.id}?updated=investigating`);
+    redirect(`/admin/reports/${reportId}?updated=investigating`);
   }
 
   async function resolveWithNote(formData: FormData) {
     "use server";
     const resolutionNote = String(formData.get("resolutionNote") || "").trim();
     try {
-      await resolveUserReport(report.id, "resolved", resolutionNote);
+      await resolveUserReport(reportId, "resolved", resolutionNote);
     } catch {
-      redirect(`/admin/reports/${report.id}?error=resolve_failed`);
+      redirect(`/admin/reports/${reportId}?error=resolve_failed`);
     }
 
-    redirect(`/admin/reports/${report.id}?updated=resolved`);
+    redirect(`/admin/reports/${reportId}?updated=resolved`);
   }
 
   return (
