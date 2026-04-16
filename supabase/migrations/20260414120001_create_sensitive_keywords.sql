@@ -79,9 +79,3 @@ CREATE POLICY "Allow authenticated to read keywords"
 ON public.sensitive_keywords FOR SELECT 
 TO authenticated 
 USING (true);
-
--- 7. Create admin_alerts table for storing alerts triggered by sensitive keywords
-CREATE POLICY "Allow authenticated to insert alerts" 
-ON public.admin_alerts FOR INSERT 
-TO authenticated 
-WITH CHECK (true);
