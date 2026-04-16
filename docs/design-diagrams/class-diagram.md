@@ -266,10 +266,6 @@ classDiagram
         +number id
         +string user_id
         +string action_type
-        +string action
-        +string actor_id
-        +string object_type
-        +string object_id
         +Json metadata
         +string created_at
     }
