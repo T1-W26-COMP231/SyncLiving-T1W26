@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { logActivity } from '@/utils/activity-logger';
 import { revalidatePath } from 'next/cache';
+import { checkMessageForSensitiveWords } from '../admin/actions';
 
 export interface MatchProfile {
   id: string;
@@ -439,6 +440,9 @@ export async function sendMessage(conversationId: string, content: string) {
     console.error('Error sending message:', error);
     throw error;
   }
+
+  // Fire-and-forget security check
+  checkMessageForSensitiveWords(content, user.id);
 
   return data as MessageData;
 }

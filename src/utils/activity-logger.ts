@@ -14,7 +14,8 @@ export async function logActivity(
     | "match_request_sent"
     | "match_request_responded"
     | "login"
-    | "match_feedback_submitted",
+    | "match_feedback_submitted"
+    | "support_ticket_created",
   metadata: Record<string, any> = {},
 ) {
   const supabase = await createClient();

@@ -1,390 +1,326 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  CheckCircle,
-  UserPlus,
-  Bold,
-  Italic,
-  Paperclip,
-  Smile,
+import { 
+  Search, 
+  Filter, 
+  MessageSquare, 
+  User, 
+  Clock, 
+  CheckCircle2, 
+  AlertCircle,
   Send,
-  Megaphone,
-  Link2,
-  List,
-  Code2,
-  Rocket,
+  MoreVertical,
+  ChevronRight,
+  ShieldCheck,
+  Archive
 } from 'lucide-react';
+import { SupportTicket, SupportMessage, TicketStatus, TicketPriority } from '../../../app/admin/support/types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'admin' | 'system';
-  text: string;
-  time: string;
-  initials: string;
-}
-
-// ─── Mock conversation ────────────────────────────────────────────────────────
-const INITIAL_MESSAGES: ChatMessage[] = [
+// Mock Data
+const MOCK_TICKETS: SupportTicket[] = [
   {
-    id: '1',
-    sender: 'system',
-    text: 'Today, 10:45 AM',
-    time: '',
-    initials: '',
+    id: 'TKT-1001',
+    userId: 'user_1',
+    userName: 'Sarah Jenkins',
+    subject: 'Cannot upload profile picture',
+    description: 'I keep getting an "Error 500" when trying to upload my avatar. I tried both PNG and JPG formats.',
+    status: 'open',
+    priority: 'medium',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
+    messages: [
+      {
+        id: 'msg_1',
+        senderName: 'Sarah Jenkins',
+        senderRole: 'user',
+        content: 'I keep getting an "Error 500" when trying to upload my avatar. I tried both PNG and JPG formats.',
+        createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+      }
+    ]
   },
   {
-    id: '2',
-    sender: 'user',
-    initials: 'SS',
-    text: "Hi, I'm trying to upgrade my account but every time I click 'Confirm Payment' it says 'An error occurred'. I've tried two different cards. Can you help?",
-    time: '10:46 AM',
+    id: 'TKT-1002',
+    userId: 'user_2',
+    userName: 'Michael Chen',
+    subject: 'Report: Suspicious Listing',
+    description: 'The listing at 123 Maple St seems like a scam. They asked for a wire transfer before viewing.',
+    status: 'in_progress',
+    priority: 'high',
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), // 5 hours ago
+    messages: [
+      {
+        id: 'msg_2',
+        senderName: 'Michael Chen',
+        senderRole: 'user',
+        content: 'The listing at 123 Maple St seems like a scam. They asked for a wire transfer before viewing.',
+        createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+      },
+      {
+        id: 'msg_3',
+        senderName: 'Admin Alex',
+        senderRole: 'admin',
+        content: 'Thank you for reporting this. We are investigating the user now. Did they send you any specific contact info?',
+        createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+      }
+    ]
   },
   {
-    id: '3',
-    sender: 'system',
-    text: 'Admin Agent (You) joined the conversation.',
-    time: '',
-    initials: '',
-  },
-  {
-    id: '4',
-    sender: 'admin',
-    initials: 'ME',
-    text: "Hello Sarah! I'm sorry to hear you're having trouble. Let me check our payment processor logs for your account. One moment please.",
-    time: '10:48 AM',
-  },
-  {
-    id: '5',
-    sender: 'user',
-    initials: 'SS',
-    text: "Thanks! I'm using a Visa card ending in 4242.",
-    time: '10:49 AM',
-  },
+    id: 'TKT-1003',
+    userId: 'user_3',
+    userName: 'Elena Rodriguez',
+    subject: 'Update email address',
+    description: 'I want to change my login email to my professional one.',
+    status: 'closed',
+    priority: 'low',
+    createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    messages: [
+      {
+        id: 'msg_4',
+        senderName: 'Elena Rodriguez',
+        senderRole: 'user',
+        content: 'I want to change my login email to my professional one.',
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+      }
+    ]
+  }
 ];
-
-// ─── Broadcast history ────────────────────────────────────────────────────────
-const RECENT_BROADCASTS = [
-  { title: 'New Platform Rules Update', meta: 'Published 2 days ago • Reach: 14.2k', live: true },
-  { title: 'Winter Holidays Event', meta: 'Published 1 week ago • Reach: 11.8k', live: false },
-];
-
-type AudienceTarget = 'All Users' | 'Seekers' | 'Providers';
 
 export default function SupportTickets() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [tickets, setTickets] = useState<SupportTicket[]>(MOCK_TICKETS);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(MOCK_TICKETS[0].id);
   const [replyText, setReplyText] = useState('');
-  const [resolved, setResolved] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
 
-  // Broadcast form state
-  const [broadcastTitle, setBroadcastTitle] = useState('');
-  const [broadcastContent, setBroadcastContent] = useState('');
-  const [audience, setAudience] = useState<AudienceTarget>('All Users');
-  const [sendPush, setSendPush] = useState(false);
-  const [sendEmail, setSendEmail] = useState(false);
-  const [broadcasts, setBroadcasts] = useState(RECENT_BROADCASTS);
-  const [published, setPublished] = useState(false);
+  const selectedTicket = tickets.find(t => t.id === selectedTicketId);
+  const filteredTickets = tickets.filter(t => filterStatus === 'all' || t.status === filterStatus);
 
-  function sendMessage() {
-    const trimmed = replyText.trim();
-    if (!trimmed) return;
-    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    setMessages((prev) => [
-      ...prev,
-      { id: String(Date.now()), sender: 'admin', initials: 'ME', text: trimmed, time: now },
-    ]);
+  const handleSendMessage = () => {
+    if (!replyText.trim() || !selectedTicketId) return;
+
+    const newMessage: SupportMessage = {
+      id: `msg_${Date.now()}`,
+      senderName: 'Admin', // In real app, get from auth
+      senderRole: 'admin',
+      content: replyText,
+      createdAt: new Date().toISOString(),
+    };
+
+    setTickets(prev => prev.map(t => 
+      t.id === selectedTicketId 
+        ? { ...t, status: 'in_progress' as const, messages: [...t.messages, newMessage] } 
+        : t
+    ));
     setReplyText('');
-  }
+  };
 
-  function handlePublish() {
-    if (!broadcastTitle.trim()) return;
-    setBroadcasts((prev) => [
-      { title: broadcastTitle, meta: `Published just now • Audience: ${audience}`, live: true },
-      ...prev,
-    ]);
-    setBroadcastTitle('');
-    setBroadcastContent('');
-    setPublished(true);
-    setTimeout(() => setPublished(false), 3000);
-  }
+  const handleCloseTicket = () => {
+    if (!selectedTicketId || !confirm('Are you sure you want to close this ticket?')) return;
+    
+    setTickets(prev => prev.map(t => 
+      t.id === selectedTicketId ? { ...t, status: 'closed' as const } : t
+    ));
+  };
+
+  const statusColors = {
+    open: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+    in_progress: 'text-amber-600 bg-amber-50 border-amber-100',
+    closed: 'text-slate-500 bg-slate-50 border-slate-100',
+  };
+
+  const priorityColors = {
+    low: 'text-slate-500',
+    medium: 'text-amber-600',
+    high: 'text-rose-600 font-bold',
+  };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
-      {/* Page Header */}
-      <div className="px-6 py-5 bg-white border-b border-slate-200 shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight">Support &amp; Broadcast</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Respond to user tickets and publish platform announcements.</p>
+    <div className="flex h-[calc(100vh-65px)] bg-slate-50 overflow-hidden">
+      {/* ── Left Sidebar: Ticket List ── */}
+      <div className="w-80 lg:w-96 border-r border-slate-200 bg-white flex flex-col shrink-0">
+        <div className="p-4 border-b border-slate-100 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-slate-800 text-lg">Support Inbox</h2>
+            <span className="bg-admin-primary text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+              {tickets.filter(t => t.status !== 'closed').length} ACTIVE
+            </span>
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input 
+              type="text" 
+              placeholder="Search tickets..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-xs focus:ring-2 focus:ring-admin-primary/20 outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            {(['all', 'open', 'in_progress', 'closed'] as const).map(s => (
+              <button 
+                key={s}
+                onClick={() => setFilterStatus(s)}
+                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                  filterStatus === s 
+                    ? 'bg-slate-900 text-white border-slate-900' 
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                }`}
+              >
+                {s.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+          {filteredTickets.map(ticket => (
+            <button
+              key={ticket.id}
+              onClick={() => setSelectedTicketId(ticket.id)}
+              className={`w-full text-left p-4 transition-all hover:bg-slate-50 relative ${
+                selectedTicketId === ticket.id ? 'bg-admin-primary/5 border-l-4 border-admin-primary' : ''
+              }`}
+            >
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{ticket.id}</span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <h4 className={`text-sm font-bold truncate mb-1 ${selectedTicketId === ticket.id ? 'text-admin-primary' : 'text-slate-800'}`}>
+                {ticket.subject}
+              </h4>
+              <p className="text-xs text-slate-500 line-clamp-1 mb-3">{ticket.description}</p>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="size-5 rounded-full bg-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600">
+                    {ticket.userName.charAt(0)}
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-600">{ticket.userName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <span className={`text-[9px] px-1.5 py-0.5 rounded border uppercase font-black tracking-tighter ${statusColors[ticket.status]}`}>
+                    {ticket.status}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Center Panel: Active Ticket Conversation */}
-        <section className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
-          {/* Chat Header */}
-          <div className="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-admin-primary/20 flex items-center justify-center text-admin-primary font-bold text-sm">
-                SS
-              </div>
-              <div>
-                <h4 className="text-sm font-bold leading-none">Sarah Smith</h4>
-                <span className="text-[11px] text-slate-400">
-                  sarah.smith@example.com • User since Jan 2024
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors">
-                <UserPlus className="w-4 h-4" /> Assign
-              </button>
-              {!resolved ? (
-                <button
-                  onClick={() => setResolved(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-admin-primary text-white text-xs font-bold hover:opacity-90 transition-opacity"
-                >
-                  <CheckCircle className="w-4 h-4" /> Resolve &amp; Close
-                </button>
-              ) : (
-                <span className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-600 text-xs font-bold">
-                  <CheckCircle className="w-4 h-4" /> Resolved
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {messages.map((msg) => {
-              // System date separator
-              if (msg.sender === 'system' && msg.id === '1') {
-                return (
-                  <div key={msg.id} className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full">
-                      {msg.text}
+      {/* ── Right Content: Ticket Detail ── */}
+      <div className="flex-1 flex flex-col bg-white">
+        {selectedTicket ? (
+          <>
+            {/* Ticket Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-admin-primary/10 rounded-2xl text-admin-primary">
+                  <MessageSquare size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-black text-slate-900">{selectedTicket.subject}</h2>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border uppercase font-black tracking-widest ${statusColors[selectedTicket.status]}`}>
+                      {selectedTicket.status}
                     </span>
                   </div>
-                );
-              }
-              // System join notice
-              if (msg.sender === 'system') {
-                return (
-                  <div key={msg.id} className="flex justify-center">
-                    <div className="bg-admin-primary/5 text-admin-primary text-[11px] font-medium px-4 py-1.5 rounded-xl border border-admin-primary/20 italic">
-                      {msg.text}
-                    </div>
-                  </div>
-                );
-              }
-              // Admin message (right-aligned)
-              if (msg.sender === 'admin') {
-                return (
-                  <div key={msg.id} className="flex gap-3 max-w-[80%] ml-auto flex-row-reverse">
-                    <div className="size-8 rounded-full bg-admin-primary shrink-0 flex items-center justify-center text-white text-[10px] font-bold">
-                      {msg.initials}
-                    </div>
-                    <div className="bg-admin-primary text-white p-4 rounded-xl rounded-tr-none shadow-sm">
-                      <p className="text-sm leading-relaxed">{msg.text}</p>
-                      <span className="text-[10px] mt-2 block opacity-80">{msg.time}</span>
-                    </div>
-                  </div>
-                );
-              }
-              // User message (left-aligned)
-              return (
-                <div key={msg.id} className="flex gap-3 max-w-[80%]">
-                  <div className="size-8 rounded-full bg-slate-200 shrink-0 flex items-center justify-center text-slate-500 text-xs font-bold">
-                    {msg.initials}
-                  </div>
-                  <div className="bg-white p-4 rounded-xl rounded-tl-none border border-slate-200 shadow-sm">
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                    <span className="text-[10px] text-slate-400 mt-2 block">{msg.time}</span>
+                  <div className="flex items-center gap-4 mt-1 text-slate-500">
+                    <span className="text-xs flex items-center gap-1 font-medium">
+                      <User size={12} /> {selectedTicket.userName}
+                    </span>
+                    <span className="text-xs flex items-center gap-1 font-medium">
+                      <Clock size={12} /> Received on {new Date(selectedTicket.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className={`text-xs flex items-center gap-1 font-bold ${priorityColors[selectedTicket.priority]}`}>
+                      <AlertCircle size={12} /> {selectedTicket.priority.toUpperCase()} PRIORITY
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {selectedTicket.status !== 'closed' && (
+                  <button 
+                    onClick={handleCloseTicket}
+                    className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all"
+                  >
+                    <CheckCircle2 size={16} /> Mark as Closed
+                  </button>
+                )}
+                <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
+                  <MoreVertical size={20} />
+                </button>
+              </div>
+            </div>
 
-          {/* Response field */}
-          {!resolved && (
-            <div className="p-4 bg-white border-t border-slate-200">
-              <div className="rounded-xl border border-slate-200 p-2 focus-within:ring-2 focus-within:ring-admin-primary/20 focus-within:border-admin-primary transition-all">
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendMessage();
-                  }}
-                  className="w-full border-none bg-transparent focus:ring-0 focus:outline-none text-sm resize-none h-24 placeholder:text-slate-400"
-                  placeholder="Type your response here... (Ctrl+Enter to send)"
-                />
-                <div className="flex items-center justify-between border-t border-slate-100 pt-2 px-1">
-                  <div className="flex gap-1">
-                    <button className="p-1.5 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Bold className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Italic className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Paperclip className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Smile className="w-4 h-4" />
+            {/* Chat History */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/50">
+              {selectedTicket.messages.map((msg, idx) => (
+                <div 
+                  key={msg.id} 
+                  className={`flex flex-col ${msg.senderRole === 'admin' ? 'items-end' : 'items-start'}`}
+                >
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {msg.senderName} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {msg.senderRole === 'admin' && <ShieldCheck size={12} className="text-admin-primary" />}
+                  </div>
+                  <div className={`max-w-2xl px-5 py-4 rounded-3xl shadow-sm text-sm leading-relaxed ${
+                    msg.senderRole === 'admin' 
+                      ? 'bg-admin-primary text-white rounded-tr-none' 
+                      : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Reply Input */}
+            <div className="p-6 border-t border-slate-100 bg-white">
+              {selectedTicket.status === 'closed' ? (
+                <div className="flex items-center justify-center gap-3 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400">
+                  <Archive size={18} />
+                  <p className="text-sm font-bold">This ticket is closed. Re-open to send new messages.</p>
+                </div>
+              ) : (
+                <div className="flex items-end gap-4">
+                  <div className="flex-1 relative">
+                    <textarea 
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Type your response to the user..."
+                      className="w-full p-4 pr-12 bg-slate-100 border-none rounded-3xl text-sm focus:ring-2 focus:ring-admin-primary/20 outline-none transition-all resize-none min-h-[100px]"
+                    />
+                    <button className="absolute right-4 bottom-4 p-2 text-slate-400 hover:text-admin-primary transition-colors">
+                      <Filter size={18} />
                     </button>
                   </div>
-                  <button
-                    onClick={sendMessage}
+                  <button 
+                    onClick={handleSendMessage}
                     disabled={!replyText.trim()}
-                    className="bg-admin-primary text-white text-xs font-bold px-5 py-2 rounded-full hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-admin-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mb-1 p-4 bg-admin-primary text-white rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-admin-primary/20 disabled:opacity-50 disabled:shadow-none"
                   >
-                    Send Message <Send className="w-3.5 h-3.5" />
+                    <Send size={20} />
                   </button>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </section>
-
-        {/* Right Panel: Broadcast Center */}
-        <aside className="w-96 border-l border-slate-200 bg-white flex flex-col shrink-0 overflow-y-auto">
-          <div className="p-6">
-            {/* Broadcast Center header */}
-            <div className="flex items-center gap-2 mb-6">
-              <Megaphone className="w-5 h-5 text-admin-primary" />
-              <h3 className="font-bold text-lg">Broadcast Center</h3>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4">
+            <div className="p-6 bg-slate-50 rounded-full">
+              <MessageSquare size={48} />
             </div>
-
-            <div className="space-y-5">
-              {/* Title */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Announcement Title
-                </label>
-                <input
-                  type="text"
-                  value={broadcastTitle}
-                  onChange={(e) => setBroadcastTitle(e.target.value)}
-                  placeholder="e.g. Scheduled Maintenance"
-                  className="w-full rounded-xl border border-slate-200 bg-transparent text-sm focus:border-admin-primary focus:ring-1 focus:ring-admin-primary/20 focus:outline-none px-3 py-2"
-                />
-              </div>
-
-              {/* Audience */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Target Audience
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['All Users', 'Seekers', 'Providers'] as AudienceTarget[]).map((a) => (
-                    <button
-                      key={a}
-                      onClick={() => setAudience(a)}
-                      className={`py-2 text-[11px] font-bold rounded-full border transition-colors ${
-                        audience === a
-                          ? 'border-admin-primary bg-admin-primary text-white'
-                          : 'border-slate-200 text-slate-500 hover:border-admin-primary'
-                      }`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Content
-                </label>
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <div className="bg-slate-50 px-2 py-1 border-b border-slate-200 flex gap-1">
-                    <button className="p-1 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Bold className="w-4 h-4" />
-                    </button>
-                    <button className="p-1 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Italic className="w-4 h-4" />
-                    </button>
-                    <button className="p-1 text-slate-400 hover:text-admin-primary transition-colors">
-                      <List className="w-4 h-4" />
-                    </button>
-                    <button className="p-1 text-slate-400 hover:text-admin-primary transition-colors">
-                      <Link2 className="w-4 h-4" />
-                    </button>
-                    <button className="p-1 text-slate-400 hover:text-admin-primary transition-colors ml-auto">
-                      <Code2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <textarea
-                    value={broadcastContent}
-                    onChange={(e) => setBroadcastContent(e.target.value)}
-                    className="w-full border-none bg-transparent focus:ring-0 focus:outline-none text-sm h-48 resize-none placeholder:text-slate-400 p-3"
-                    placeholder="Write announcement details..."
-                  />
-                </div>
-              </div>
-
-              {/* Options */}
-              <div className="pt-4 space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={sendPush}
-                    onChange={(e) => setSendPush(e.target.checked)}
-                    className="rounded-xl text-admin-primary focus:ring-admin-primary/20 size-4 cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-slate-600">Send push notification</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={sendEmail}
-                    onChange={(e) => setSendEmail(e.target.checked)}
-                    className="rounded-xl text-admin-primary focus:ring-admin-primary/20 size-4 cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-slate-600">Send as high-priority email</span>
-                </label>
-              </div>
-
-              {/* Publish / Draft */}
-              <div className="pt-6 border-t border-slate-100">
-                <button
-                  onClick={handlePublish}
-                  disabled={!broadcastTitle.trim()}
-                  className="w-full bg-admin-primary text-white font-bold py-3 rounded-full shadow-lg shadow-admin-primary/30 hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Rocket className="w-4 h-4" />
-                  {published ? 'Published!' : 'Publish Now'}
-                </button>
-                <button className="w-full text-slate-500 text-xs font-bold py-3 mt-2 hover:text-slate-700 transition-colors">
-                  Save Draft &amp; Close
-                </button>
-              </div>
-            </div>
-
-            {/* Recent Broadcasts */}
-            <div className="mt-12">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-                Recent Broadcasts
-              </h4>
-              <div className="space-y-4">
-                {broadcasts.map((b, idx) => (
-                  <div key={idx} className="flex gap-3">
-                    <div
-                      className={`size-2 rounded-full mt-1.5 shrink-0 ${
-                        b.live ? 'bg-green-500' : 'bg-slate-300'
-                      }`}
-                    />
-                    <div>
-                      <p className="text-xs font-bold">{b.title}</p>
-                      <p className="text-[10px] text-slate-400">{b.meta}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="text-center">
+              <h3 className="font-bold text-slate-900 text-lg">No Ticket Selected</h3>
+              <p className="text-sm">Select a ticket from the sidebar to view details</p>
             </div>
           </div>
-        </aside>
+        )}
       </div>
     </div>
   );

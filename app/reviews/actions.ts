@@ -9,6 +9,7 @@ export interface UserToReview {
   avatar_url: string;
   connection_id: string;
   average_score?: number;
+  lifestyle_tags?: string[];
 }
 
 export interface ReviewCriterion {
@@ -21,6 +22,7 @@ export interface ReviewCriterion {
 export interface ExistingReview {
   overall_comment: string;
   scores: Record<string, number>;
+  average_score: number;
   status: string;
 }
 
@@ -39,8 +41,8 @@ export async function getUsersToReview(): Promise<UserToReview[]> {
       id,
       user_1_id,
       user_2_id,
-      profiles_1:user_1_id (id, full_name, avatar_url),
-      profiles_2:user_2_id (id, full_name, avatar_url)
+      profiles_1:user_1_id (id, full_name, avatar_url, lifestyle_tags),
+      profiles_2:user_2_id (id, full_name, avatar_url, lifestyle_tags)
     `,
     )
     .eq("can_review", true)
@@ -54,14 +56,14 @@ export async function getUsersToReview(): Promise<UserToReview[]> {
   const revieweeIds = data.map((conn: any) =>
     conn.user_1_id === user.id ? conn.user_2_id : conn.user_1_id,
   );
-  const { data: reviewsData } = await supabase
+  const { data: reviewsData } = (await supabase
     .from("reviews")
     .select("reviewee_id, average_score")
     .eq("reviewer_id", user.id)
-    .in("reviewee_id", revieweeIds);
+    .in("reviewee_id", revieweeIds)) as any;
 
   const scoreMap = new Map(
-    reviewsData?.map((r) => [r.reviewee_id, Number(r.average_score)]),
+    reviewsData?.map((r: any) => [r.reviewee_id, Number(r.average_score)]),
   );
 
   return data.map((conn: any) => {
@@ -72,9 +74,25 @@ export async function getUsersToReview(): Promise<UserToReview[]> {
       full_name: otherUser.full_name || "Anonymous User",
       avatar_url: otherUser.avatar_url || "",
       connection_id: conn.id,
-      average_score: scoreMap.get(otherUser.id) || 0,
+      average_score: (scoreMap.get(otherUser.id) as number) || 0,
+      lifestyle_tags: (otherUser as any).lifestyle_tags || [],
     };
   });
+}
+
+export async function getRevieweeTags(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("lifestyle_tags")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching user tags:", error);
+    return [];
+  }
+  return data.lifestyle_tags || [];
 }
 
 export async function getReviewCriteria(): Promise<ReviewCriterion[]> {
@@ -102,12 +120,13 @@ export async function getExistingReview(
 
   if (!user) return null;
 
-  const { data: review, error: reviewError } = await supabase
+  const { data: review, error: reviewError } = (await supabase
     .from("reviews")
     .select(
       `
       id,
       overall_comment,
+      average_score,
       status,
       review_scores (criteria_id, score)
     `,
@@ -115,7 +134,7 @@ export async function getExistingReview(
     .eq("reviewer_id", user.id)
     .eq("reviewee_id", revieweeId)
     .neq("status", "deleted") // Ignore deleted reviews
-    .maybeSingle();
+    .maybeSingle()) as any;
 
   if (reviewError || !review) return null;
 
@@ -126,6 +145,7 @@ export async function getExistingReview(
 
   return {
     overall_comment: review.overall_comment || "",
+    average_score: Number(review.average_score) || 0,
     scores,
     status: review.status || "active",
   };
@@ -135,18 +155,19 @@ export async function submitReview(
   revieweeId: string,
   overallComment: string,
   scores: { criteriaId: string; score: number }[],
+  starRating: number,
 ) {
   console.log("--- START submitReview ---");
-  console.log("Reviewer:", (await (await createClient()).auth.getUser()).data.user?.id);
-  console.log("Reviewee:", revieweeId);
-  console.log("Scores count:", scores.length);
-
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Unauthorized" };
+
+  console.log("Reviewer:", user.id);
+  console.log("Reviewee:", revieweeId);
+  console.log("Star Rating (average_score):", starRating);
 
   // 1. Upsert the main review record
   const { data: review, error: reviewError } = await supabase
@@ -156,7 +177,9 @@ export async function submitReview(
         reviewer_id: user.id,
         reviewee_id: revieweeId,
         overall_comment: overallComment,
-        status: 'active' // Ensure it's active when updated
+        overall_rating: Math.round(starRating), // New explicit integer rating column (1-5)
+        average_score: starRating, // Keep decimal score for backward compatibility
+        status: 'active'
       },
       { onConflict: "reviewer_id, reviewee_id" },
     )
@@ -169,11 +192,8 @@ export async function submitReview(
   }
 
   if (!review) {
-    console.error("Review upsert succeeded but no data returned");
     return { error: "Failed to retrieve review ID after save" };
   }
-
-  console.log("Review record created/updated, ID:", review.id);
 
   // 2. Prepare score data
   const scoreData = scores.map((s) => ({
@@ -183,7 +203,6 @@ export async function submitReview(
   }));
 
   if (scoreData.length > 0) {
-    console.log("Upserting scores...");
     const { error: scoresError } = await supabase
       .from("review_scores")
       .upsert(scoreData, { onConflict: "review_id, criteria_id" });
@@ -192,16 +211,14 @@ export async function submitReview(
       console.error("Error saving scores:", scoresError);
       return { error: scoresError.message };
     }
-    console.log("Scores saved successfully");
   }
 
-  console.log("Revalidating paths...");
   revalidatePath("/reviews");
   revalidatePath("/matches");
   revalidatePath(`/profile/${revieweeId}`);
   
-  console.log("--- END submitReview SUCCESS ---");
-  return { success: true };
+  console.log('Saved review', { reviewId: review.id, scoresSaved: scoreData.length });
+  return { success: true, reviewId: review.id, scoresSaved: scoreData.length };
 }
 
 export async function deleteReview(revieweeId: string): Promise<{ success: boolean; error?: string }> {
@@ -209,7 +226,6 @@ export async function deleteReview(revieweeId: string): Promise<{ success: boole
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Unauthorized" };
 
-  // Perform a soft delete by updating status to 'deleted'
   const { error } = await supabase
     .from("reviews")
     .update({ status: "deleted" })
@@ -233,66 +249,26 @@ export async function reportReview(
   reviewerId: string,
   reviewText: string,
 ): Promise<{ success: boolean; error?: string }> {
-  console.log("--- START reportReview ---");
-  console.log("1. Received reviewId from frontend:", reviewId);
-  console.log("2. Target reviewerId:", reviewerId);
-
   const supabase = await createClient();
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return {
-      success: false,
-      error: "You must be logged in to report a review.",
-    };
-  }
+  if (!user) return { success: false, error: "Unauthorized" };
 
-  console.log("3. Authenticated User ID:", user.id);
-
-  // 1. Update the review status
-  const { data: updatedRows, error: updateError } = await supabase
+  const { error: updateError } = await supabase
     .from("reviews")
     .update({ status: "reported" })
-    .eq("id", reviewId)
-    .select();
+    .eq("id", reviewId);
 
-  if (updateError) {
-    console.error("Update error:", updateError);
-    return {
-      success: false,
-      error: `Failed to report review: ${updateError.message}`,
-    };
-  }
+  if (updateError) return { success: false, error: updateError.message };
 
-  if (!updatedRows || updatedRows.length === 0) {
-    console.warn(
-      "4. WARNING: 0 rows updated! Either the ID is wrong, or RLS blocked it.",
-    );
-    return {
-      success: false,
-      error:
-        "Could not update the review. It may not exist, or you do not have permission (RLS block).",
-    };
-  }
-
-  // 2. Insert into user_reports to track as a formal report
-  const { error: reportError } = await supabase.from("user_reports").insert({
+  await supabase.from("user_reports").insert({
     reporter_id: user.id,
     reported_user_id: reviewerId,
     reason: "Inappropriate Content",
-    description: `Flagged malicious review (ID: ${reviewId}). Content: "${reviewText.substring(0, 100)}${reviewText.length > 100 ? "..." : ""}"`,
+    description: `Flagged review ID: ${reviewId}. Content: "${reviewText.substring(0, 100)}"`,
   });
 
-  if (reportError) {
-    console.error("Failed to insert into user_reports:", reportError);
-    // We don't return error here because the status was already updated successfully
-  }
-
-  console.log("5. Success! Revalidating path...");
-
   revalidatePath("/profile/[id]", "page");
-
   return { success: true };
 }

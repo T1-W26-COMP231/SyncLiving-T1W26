@@ -112,6 +112,14 @@ const CONFLICT_DESCRIPTIONS: Record<string, string> = {
   Temperature: "may cause disagreements on heating or cooling",
 };
 
+// Mapping criteria to verification labels for display
+const VERIFICATION_MAPPING: Record<string, { label: string; icon: string }> = {
+  "Paid bills on time": { label: "Paid bills on time", icon: "💰" },
+  "Cleaned kitchen after use": { label: "Cleaned kitchen after use", icon: "🍳" },
+  "Handled trash on schedule": { label: "Handled trash on schedule", icon: "♻️" },
+  "Respected house rules": { label: "Respected house rules", icon: "🤫" }
+};
+
 export default function ProfileDetailsPage({
   profile,
   initialRequestStatus = null,
@@ -812,6 +820,41 @@ export default function ProfileDetailsPage({
                       </div>
 
                       <StarRating rating={review.rating} />
+
+                      {/* Verifications in preview */}
+                      {(() => {
+                        const verified = (review.scores || []).filter((s: any) => {
+                          const key = s.label ?? s.criteria_label;
+                          if (!key || !VERIFICATION_MAPPING[key]) return false;
+                          const val = s.score;
+                          if (val === null || val === undefined) return false;
+                          if (typeof val === 'number') return Number(val) === 5;
+                          if (typeof val === 'boolean') return val === true;
+                          if (typeof val === 'string') {
+                            const lower = val.toLowerCase();
+                            return lower === 'true' || lower === '5' || lower === 'yes';
+                          }
+                          if (Array.isArray(val)) return val.length > 0;
+                          return Boolean(val);
+                        });
+                        return verified.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {verified.map((s: any) => {
+                              const key = s.label ?? s.criteria_label;
+                              const v = VERIFICATION_MAPPING[key];
+                              return (
+                                <div key={key} className="bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                  <span className="text-[10px]">{v.icon}</span>
+                                  <span className="text-[9px] font-black text-slate-600 uppercase tracking-wider">
+                                    {v.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null;
+                      })()}
+
                       <p className="text-slate-600 text-sm leading-relaxed mt-2">
                         &ldquo;{review.text}&rdquo;
                       </p>

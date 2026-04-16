@@ -117,6 +117,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab = 'Listings' }) => {
             {/* <NavLink label="Rooms"      href="/rooms"              active={activeTab === 'Rooms'} /> */}
             <NavLink label="Reviews"    href="/matches"              active={activeTab === 'Matches' || activeTab === 'Reviews'} />
             <NavLink label="Messages"   href="/messages" badge={unreadCount > 0 ? String(unreadCount) : undefined} active={activeTab === 'Messages'} />
+            <NavLink label="Support"    href="/support"             active={activeTab === 'Support'} />
           </nav>
 
           {/* Right Actions */}
