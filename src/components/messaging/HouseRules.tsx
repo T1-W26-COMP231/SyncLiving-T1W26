@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Handshake, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { Plus, Handshake, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/utils/supabase/client';
 import {
@@ -9,6 +9,7 @@ import {
   getConversationDetails,
   proposeRule,
   signAgreement,
+  reopenAgreement,
   RuleData,
   ConversationDetails,
 } from '../../../app/messages/actions';
@@ -19,12 +20,18 @@ interface HouseRulesProps {
   currentUserId: string;
   /** Called whenever accepted/total rule counts change, for the sidebar progress bar */
   onStatsChange?: (accepted: number, total: number) => void;
+  /** Controls whether the panel is visible */
+  visible: boolean;
+  /** Called when the user closes the panel */
+  onClose: () => void;
 }
 
 export const HouseRules: React.FC<HouseRulesProps> = ({
   conversationId,
   currentUserId,
   onStatsChange,
+  visible,
+  onClose,
 }) => {
   const [rules, setRules]             = useState<RuleData[]>([]);
   const [convDetails, setConvDetails] = useState<ConversationDetails | null>(null);
@@ -33,9 +40,16 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
   const [proposeDesc, setProposeDesc]   = useState('');
   const [proposing, setProposing]       = useState(false);
   const [signing, setSigning]           = useState(false);
+  const [reopening, setReopening]       = useState(false);
 
   // Stable supabase client reference — avoids tearing down realtime on each render
   const supabaseRef = useRef(createClient());
+
+  // Keep a stable ref to onStatsChange so refreshRules doesn't depend on the
+  // prop reference (which callers often pass as an inline arrow function,
+  // causing an infinite re-render loop if included in useCallback deps).
+  const onStatsChangeRef = useRef(onStatsChange);
+  useLayoutEffect(() => { onStatsChangeRef.current = onStatsChange; });
 
   const refreshRules = useCallback(async () => {
     if (!conversationId) return;
@@ -46,8 +60,8 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
     setRules(rulesData);
     setConvDetails(details);
     const accepted = rulesData.filter(r => r.status === 'accepted').length;
-    onStatsChange?.(accepted, rulesData.length);
-  }, [conversationId, onStatsChange]);
+    onStatsChangeRef.current?.(accepted, rulesData.length);
+  }, [conversationId]);
 
   // Initial fetch + real-time subscription whenever the conversation changes
   useEffect(() => {
@@ -63,13 +77,20 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
       .channel(`realtime:rules:${conversationId}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversation_rules',
-          filter: `conversation_id=eq.${conversationId}`,
+        // No row-level filter — filtered UPDATE subscriptions are unreliable in Supabase.
+        // We receive all events for the table and discard ones for other conversations.
+        { event: '*', schema: 'public', table: 'conversation_rules' },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as any;
+          if (row?.conversation_id === conversationId) refreshRules();
         },
-        () => refreshRules(),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'conversations' },
+        (payload) => {
+          if ((payload.new as any)?.id === conversationId) refreshRules();
+        },
       )
       .subscribe();
 
@@ -85,6 +106,15 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
     setProposeTitle('');
     setProposeDesc('');
     setShowProposeForm(false);
+    refreshRules();
+  }
+
+  async function handleReopen() {
+    if (!conversationId) return;
+    setReopening(true);
+    const result = await reopenAgreement(conversationId);
+    setReopening(false);
+    if (result.error) { alert(result.error); return; }
     refreshRules();
   }
 
@@ -129,18 +159,29 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
     'Drafting':       'bg-yellow-100 text-yellow-700',
   };
 
+  if (!visible) return null;
+
   return (
-    <aside className="w-80 border-l border-primary/10 bg-white dark:bg-slate-900 flex-col overflow-hidden hidden xl:flex">
+    <aside className="w-80 border-l border-primary/10 bg-white dark:bg-slate-900 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-primary/10 flex items-center justify-between flex-shrink-0">
         <h3 className="font-bold text-slate-800 dark:text-slate-100">House Rules</h3>
-        <span
-          className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide ${
-            statusBadgeCls[statusLabel] ?? 'bg-yellow-100 text-yellow-700'
-          }`}
-        >
-          {statusLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide ${
+              statusBadgeCls[statusLabel] ?? 'bg-yellow-100 text-yellow-700'
+            }`}
+          >
+            {statusLabel}
+          </span>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Close house rules"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Rules list */}
@@ -160,6 +201,7 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
               rule={rule}
               currentUserId={currentUserId}
               conversationId={conversationId}
+              isFinalized={isFinalized}
               onRuleUpdated={refreshRules}
             />
           ))
@@ -216,12 +258,20 @@ export const HouseRules: React.FC<HouseRulesProps> = ({
       {/* Digital Handshake footer */}
       <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-primary/10 flex-shrink-0">
         {isFinalized ? (
-          <div className="flex flex-col items-center gap-2 py-2">
+          <div className="flex flex-col items-center gap-3 py-2">
             <CheckCircle2 size={24} className="text-emerald-500" />
             <p className="text-sm font-bold text-emerald-600">Agreement Finalized</p>
             <p className="text-[10px] text-slate-400 text-center">
               All house rules are now binding for both parties.
             </p>
+            {/* Re-open resets both signatures so rules can be edited again (Test 3) */}
+            <button
+              onClick={handleReopen}
+              disabled={reopening}
+              className="text-[10px] font-bold text-slate-500 hover:text-amber-600 underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {reopening ? 'Re-opening…' : 'Re-open Agreement'}
+            </button>
           </div>
         ) : hasSigned ? (
           <>

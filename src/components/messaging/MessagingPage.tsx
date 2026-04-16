@@ -30,6 +30,7 @@ export default function MessagingPage({
   const [ruleStats, setRuleStats] = useState<
     { accepted: number; total: number } | undefined
   >();
+  const [showHouseRules, setShowHouseRules] = useState(false);
 
   // Stable client reference — createClient() must not be called on every render
   // or it will create a new instance each time, causing the realtime subscription
@@ -92,7 +93,12 @@ export default function MessagingPage({
           filter: `conversation_id=eq.${currentId}`,
         },
         (payload) => {
-          const newMessage = payload.new as MessageData;
+          // Derive actionData from metadata so action messages render correctly,
+          // matching what getMessages() returns for server-fetched rows.
+          const newMessage = {
+            ...payload.new,
+            actionData: (payload.new as any).metadata?.actionData ?? undefined,
+          } as MessageData;
           setMessages((prev) => {
             // Avoid duplicate messages if the sender already added it optimistically
             if (prev.find((m) => m.id === newMessage.id)) return prev;
@@ -140,16 +146,21 @@ export default function MessagingPage({
           onSelectMatch={setSelectedMatchId}
           loading={loading}
           ruleStats={ruleStats}
+          showHouseRules={showHouseRules}
+          onHouseRulesToggle={() => setShowHouseRules(v => !v)}
         />
         <ChatArea
           messages={messages}
           onSendMessage={handleSendMessage}
           selectedMatch={selectedMatch}
+          onViewRule={() => setShowHouseRules(true)}
         />
         <HouseRules
           conversationId={selectedMatchId}
           currentUserId={currentUserId}
           onStatsChange={handleStatsChange}
+          visible={showHouseRules}
+          onClose={() => setShowHouseRules(false)}
         />
       </main>
     </div>

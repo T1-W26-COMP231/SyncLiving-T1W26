@@ -38,6 +38,13 @@ USING (
     )
 );
 
+-- Authenticated users can insert alerts (e.g. triggered by keyword detection)
+CREATE POLICY "Allow authenticated to insert alerts"
+ON public.admin_alerts
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
 -- 5. Message Reports Policies
 -- Any authenticated user can submit a report
 CREATE POLICY "Users can submit message reports"
