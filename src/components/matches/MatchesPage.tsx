@@ -479,7 +479,7 @@ function ReviewPreviewCard({ review, onDelete }: ReviewPreviewCardProps) {
           <div className="relative pl-6">
             <MessageSquare size={16} className="absolute left-0 top-1 text-slate-100" />
             <p className="text-slate-600 text-sm italic leading-relaxed">
-              "{review.overall_comment}"
+              &quot;{review.overall_comment}&quot;
             </p>
           </div>
         )}

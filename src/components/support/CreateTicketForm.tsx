@@ -64,7 +64,7 @@ export default function CreateTicketForm() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-dark">Submit a Support Ticket</h1>
-              <p className="text-slate-500 text-sm">We're here to help. Tell us what's happening.</p>
+              <p className="text-slate-500 text-sm">We&apos;re here to help. Tell us what&apos;s happening.</p>
             </div>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function CreateTicketForm() {
 
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-400 font-medium">
-            Typical response time is within 24 hours. For urgent safety issues, please use the 'Safety' category.
+            Typical response time is within 24 hours. For urgent safety issues, please use the &apos;Safety&apos; category.
           </p>
         </div>
       </div>

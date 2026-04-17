@@ -4,12 +4,10 @@ import React, { useState, useTransition, useRef, useEffect } from "react";
 import { 
   ArrowLeft, 
   Send, 
-  User, 
   Clock, 
   ShieldCheck,
   Archive,
-  Loader2,
-  LifeBuoy
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { sendTicketMessage } from "../../../app/support/actions";
@@ -58,7 +56,7 @@ export default function UserSupportTicketDetail({ ticket }: { ticket: Ticket }) 
         await sendTicketMessage(ticket.id, reply);
         setReply("");
         router.refresh();
-      } catch (error) {
+      } catch {
         alert("Failed to send reply. Please try again.");
       }
     });

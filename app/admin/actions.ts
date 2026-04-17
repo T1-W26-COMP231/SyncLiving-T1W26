@@ -2,8 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 // import { createClient as createStandardClient } from "@supabase/supabase-js";
-import { log } from "console";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 /**
  * Security helper to verify if the current user is an admin.

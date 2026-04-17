@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import SyncLivingLogo from "@/components/ui/SyncLivingLogo";
 import { sendMatchRequest } from "../../../app/discovery/actions";
-import { unmatchUser, reportUser } from "../../../app/matches/actions";
+import { unmatchUser } from "../../../app/matches/actions";
 import ReviewDetailsModal from "./ReviewDetailsModal";
 import { ReportUserModal } from "../matches/ReportUserModal";
 import OnboardingForm from "@/components/onboarding/OnboardingForm";
@@ -30,7 +30,6 @@ import { createClient } from "@/utils/supabase/client";
 import {
   type ProfileData,
   type ReviewData,
-  type CompatibilityItem,
 } from "./types";
 
 interface ProfileDetailsPageProps {
