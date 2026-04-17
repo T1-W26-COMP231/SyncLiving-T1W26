@@ -351,7 +351,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialData, isModal, o
   const [morePhotoUrls,    setMorePhotoUrls]    = useState<string[]>(initialData?.photos || []);
   const [morePhotoFiles,   setMorePhotoFiles]   = useState<File[]>([]);
   const [spacePhotoUrls,   setSpacePhotoUrls]   = useState<(string | null)[]>(Array(4).fill(null));
-
+  const [spacePhotoFiles,  setSpacePhotoFiles]  = useState<(File | null)[]>(Array(4).fill(null));
+  
   // ── Photo pickers ─────────────────────────────────────────────────────────────
   const pickProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

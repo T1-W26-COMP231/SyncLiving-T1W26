@@ -41,6 +41,7 @@ interface Props {
   matches: MatchedProfile[];
   roomListings: MatchedListing[];
   userRole: string | null;
+  preferredTagNames: string[];
   userBinaryPrefs: string[];
   userPreferredGender: string | null;
   prefAgeMin: number | null;
@@ -829,4 +830,3 @@ const RoommateDiscovery: React.FC<Props> = ({
 };
 
 export default RoommateDiscovery;
-scovery;
