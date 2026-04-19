@@ -1,4 +1,3 @@
-import React from "react";
 import { createClient } from "@/utils/supabase/server";
 import ProviderDashboardClient from "@/components/dashboard/ProviderDashboardClient";
 import { ListingType } from "@/components/dashboard/ListingCard";
@@ -27,10 +26,6 @@ export default async function ProviderDashboard() {
   if (profile?.is_admin) {
     redirect("/admin/dashboard");
   }
-
-  const userName = user.email?.split('@')[0] || 'User';
-  const name = profile?.full_name || user.email?.split('@')[0] || 'User';
-
 
   // Fetch real listings for this provider (exclude deleted via allowlist to avoid enum cast errors)
   const { data: listingsData, error } = await supabase
