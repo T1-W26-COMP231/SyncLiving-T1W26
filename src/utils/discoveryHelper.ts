@@ -1,7 +1,13 @@
 import type { MatchedProfile } from "../../app/discovery/actions";
 
+/**
+ * Valid filter types for discovery results.
+ */
 export type FilterKey = "roommate" | "roommate_with_room" | "room" | "all";
 
+/**
+ * Filter configuration for UI display.
+ */
 export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "roommate", label: "Roommate" },
@@ -9,18 +15,38 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "room", label: "Room" },
 ];
 
+/**
+ * Returns default active filters based on user role.
+ * 
+ * @param role - Current user's role ('seeker' or 'provider')
+ * @returns Array of default filter keys
+ */
 export function defaultFilters(role: string | null): FilterKey[] {
   if (role === "provider") return ["roommate"];
   return ["all"];
 }
 
+/**
+ * Earth's radius in kilometers.
+ */
+const EARTH_RADIUS_KM = 6371;
+
+/**
+ * Calculates the great-circle distance between two points on a sphere
+ * using the Haversine formula.
+ * 
+ * @param lat1 - Latitude of point 1
+ * @param lng1 - Longitude of point 1
+ * @param lat2 - Latitude of point 2
+ * @param lng2 - Longitude of point 2
+ * @returns Distance in kilometers
+ */
 export function haversineKm(
   lat1: number,
   lng1: number,
   lat2: number,
   lng2: number,
 ): number {
-  const R = 6371; // Radius of the Earth in kilometers
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLng = (lng2 - lng1) * (Math.PI / 180);
   const a =
@@ -28,9 +54,30 @@ export function haversineKm(
     Math.cos(lat1 * (Math.PI / 180)) *
       Math.cos(lat2 * (Math.PI / 180)) *
       Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * Applies a comprehensive set of filters to the matched profiles.
+ * Includes role-based filtering, tag/gender filtering, age range,
+ * budget overlap, and geographic distance.
+ * 
+ * @param matches - List of candidate profiles
+ * @param active - Active role filters
+ * @param savedIds - Set of IDs the user has saved
+ * @param showSaved - Whether to only show saved profiles
+ * @param activeTagFilters - List of lifestyle tags to filter by
+ * @param userPreferredGender - User's own gender preference
+ * @param filterAgeMin - Minimum age limit
+ * @param filterAgeMax - Maximum age limit
+ * @param filterBudgetMin - Minimum budget threshold
+ * @param filterBudgetMax - Maximum budget threshold
+ * @param filterMaxDist - Maximum allowed distance (km)
+ * @param userLat - User's current latitude
+ * @param userLng - User's current longitude
+ * @param showIncompatible - Whether to include 'incompatible' tier results
+ * @returns Filtered list of profiles
+ */
 export function applyFilters(
   matches: MatchedProfile[],
   active: FilterKey[],
@@ -85,13 +132,14 @@ export function applyFilters(
     });
   }
 
-  // Budget overlap filter
+  // Budget overlap filter (§4.1 Logic)
+  // Two budget ranges [minA, maxA] and [minB, maxB] overlap if
+  // minA <= maxB AND maxA >= minB
   if (filterBudgetMin !== null && filterBudgetMax !== null) {
     result = result.filter((p) => {
       if (p.budget_min === null && p.budget_max === null) return true;
       const cMin = p.budget_min ?? 0;
       const cMax = p.budget_max ?? 999999;
-      // Ranges overlap when: candidate_min <= filter_max AND candidate_max >= filter_min
       return cMin <= filterBudgetMax && cMax >= filterBudgetMin;
     });
   }
@@ -113,16 +161,26 @@ export function applyFilters(
   return result;
 }
 
+/**
+ * Core set of lifestyle tags that can be treated as binary preferences.
+ */
 export const BINARY_TAGS = [
   "Pet Allowed",
   "Non-Smoker",
   "LGBTQ+ Friendly",
   "Vegan",
 ];
+
+/**
+ * Extracts only binary (boolean) preference tags from a list.
+ */
 export function getBinaryTags(tags: string[]): string[] {
   return tags.filter((t) => BINARY_TAGS.includes(t));
 }
 
+/**
+ * Returns a user-friendly label for a match tier.
+ */
 export function tierLabel(tier: MatchedProfile["tier"]): string {
   switch (tier) {
     case "strong":
@@ -138,6 +196,9 @@ export function tierLabel(tier: MatchedProfile["tier"]): string {
   }
 }
 
+/**
+ * Provides a short summary hint based on the conflict type.
+ */
 export function conflictHint(type: string): string {
   switch (type) {
     case "Social Density":
@@ -159,6 +220,9 @@ export function conflictHint(type: string): string {
   }
 }
 
+/**
+ * Returns Tailwind CSS classes for match tier badges.
+ */
 export function tierBadgeClass(tier: MatchedProfile["tier"]): string {
   switch (tier) {
     case "strong":
@@ -174,6 +238,9 @@ export function tierBadgeClass(tier: MatchedProfile["tier"]): string {
   }
 }
 
+/**
+ * Predefined set of tags for quick filtering in the discovery UI.
+ */
 export const QUICK_FILTER_TAGS = [
   { tag: "Pet Allowed", label: "Pet Allowed" },
   { tag: "Non-Smoker", label: "Non-Smoker" },

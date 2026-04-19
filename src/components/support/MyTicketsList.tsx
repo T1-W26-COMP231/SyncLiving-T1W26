@@ -4,14 +4,6 @@ import React from 'react';
 import { MessageSquare, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
-interface Ticket {
-  id: string;
-  subject: string;
-  status: string;
-  priority: string;
-  created_at: string;
-}
-
 export default function MyTicketsList({ tickets }: { tickets: any[] }) {
   if (tickets.length === 0) return null;
 

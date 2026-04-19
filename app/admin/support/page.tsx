@@ -1,4 +1,3 @@
-import AdminLayout from '@/components/admin/AdminLayout';
 import { getSupportTickets } from '../actions';
 import Link from 'next/link';
 import { 

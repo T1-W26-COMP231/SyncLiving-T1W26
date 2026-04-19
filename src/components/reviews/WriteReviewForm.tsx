@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
 import { ReviewCriterion, UserToReview, submitReview, ExistingReview } from '../../../app/reviews/actions';
 import { useRouter } from 'next/navigation';
-import { Star, Send, Check, X } from 'lucide-react';
+import { Star, Send, Check } from 'lucide-react';
 
 interface WriteReviewFormProps {
   targetUser: UserToReview;

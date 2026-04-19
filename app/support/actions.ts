@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
 import { logActivity } from "@/utils/activity-logger";
 import { revalidatePath } from "next/cache";
 

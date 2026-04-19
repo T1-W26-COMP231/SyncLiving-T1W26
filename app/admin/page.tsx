@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import { searchUsers, getUserFullDetails, updateUserStatus } from './actions';
-import { Search, User, Home, Link as LinkIcon, Star, ShieldCheck, Mail, Calendar, MapPin, AlertCircle, CheckCircle2, Ban, Clock } from 'lucide-react';
+import { Search, Home, Link as LinkIcon, Star, ShieldCheck, Mail, Calendar, MapPin, AlertCircle, CheckCircle2, Ban, Clock } from 'lucide-react';
 
 export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -228,7 +228,7 @@ export default function AdminPage() {
                     <div className="space-y-1">
                       <p className="text-sm font-bold dark:text-white">Status Information</p>
                       <p className="text-xs text-slate-500">
-                        Reason: <span className="text-slate-700 dark:text-slate-300 italic">"{userDetails.profile.status_reason || 'No reason provided'}"</span>
+                        Reason: <span className="text-slate-700 dark:text-slate-300 italic">&quot;{userDetails.profile.status_reason || 'No reason provided'}&quot;</span>
                       </p>
                       {userDetails.profile.account_status === 'suspended' && userDetails.profile.suspended_until && (
                         <p className="text-xs text-slate-500">

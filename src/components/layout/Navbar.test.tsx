@@ -41,27 +41,31 @@ vi.mock('../../../app/messages/actions', () => ({
 }));
 
 // Mock the Supabase client used in Navbar
-const mockSupabase = {
-  auth: {
-    getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-id', email: 'test@example.com' } } })
-  },
-  from: vi.fn().mockReturnThis(),
-  select: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockReturnThis(),
-  or: vi.fn().mockReturnThis(),
-  order: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockReturnThis(),
-  single: vi.fn().mockResolvedValue({ data: { full_name: 'Test User' } }),
-  channel: vi.fn().mockReturnValue({
-    on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn().mockReturnThis(),
-  }),
-  removeChannel: vi.fn(),
-};
-
-vi.mock('@/utils/supabase/client', () => ({
-  createClient: vi.fn(() => mockSupabase)
-}));
+// Mock the Supabase client used in Navbar
+vi.mock('@/utils/supabase/client', () => {
+  const mockSupabase = {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user-id', email: 'test@example.com' } } }),
+    },
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { full_name: 'Test User', id: 'test-user-id' } }), // 結合兩邊的資料
+    channel: vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+    }),
+    removeChannel: vi.fn(),
+  };
+  
+  return {
+    createClient: vi.fn(() => mockSupabase),
+  };
+});
 
 describe('Navbar component', () => {
   beforeEach(() => {
