@@ -1,9 +1,15 @@
-// FCRM Engine — Fuzzy Centroid Roommate Matching v1.1
-// Implements the full pipeline from matchingAlgorithm.md §3.5
+/**
+ * FCRM Engine — Fuzzy Centroid Roommate Matching v1.1
+ * Implements the full pipeline from matchingAlgorithm.md §3.5
+ * 
+ * The algorithm uses weighted Euclidean distance between 5-dimensional lifestyle vectors
+ * representing Social, Acoustic, Sanitary, Rhythm, and Boundary preferences.
+ */
 
 // Dimension weights: [Social, Acoustic, Sanitary, Rhythm, Boundary]
+// Defined in matchingAlgorithm.md §3.1
 const WEIGHTS = [0.25, 0.35, 0.20, 0.15, 0.05];
-const D_MAX = 0.8;
+const D_MAX = 0.8; // Maximum theoretical distance for normalization
 const ACOUSTIC_IDX = 1;
 const ACOUSTIC_GATE = 0.4;
 const ACOUSTIC_PENALTY = 0.80;
@@ -11,25 +17,47 @@ export const SURFACE_THRESHOLD = 65;
 
 export type MatchTier = 'strong' | 'good' | 'borderline' | 'incompatible';
 
+/**
+ * Represents a conflict identified by the matching engine.
+ */
 export interface ConflictTrigger {
   type: string;
   clause: string;
 }
 
+/**
+ * The final result of a match calculation.
+ */
 export interface MatchResult {
   score: number;
   tier: MatchTier;
   conflicts: ConflictTrigger[];
 }
 
-// Step 1–2: Weighted Euclidean distance between two 5-element vectors
+/**
+ * Calculates the weighted Euclidean distance between two 5-element vectors.
+ * Implements Step 1–2 of the FCRM pipeline.
+ * 
+ * @param A - Vector A
+ * @param B - Vector B
+ * @returns The weighted distance
+ */
 function euclideanDist(A: number[], B: number[]): number {
   return Math.sqrt(
     WEIGHTS.reduce((sum, w, i) => sum + w * (A[i] - B[i]) ** 2, 0)
   );
 }
 
-// Steps 1–6: Full FCRM pipeline
+/**
+ * Computes the temporal aggregated matching score between two users.
+ * Implements Steps 1–6 of the FCRM pipeline (§3.5).
+ * 
+ * @param vWd_A - Weekday vector of user A
+ * @param vWe_A - Weekend vector of user A
+ * @param vWd_B - Weekday vector of user B
+ * @param vWe_B - Weekend vector of user B
+ * @returns A normalized score from 0 to 100
+ */
 export function computeScore(
   vWd_A: number[],
   vWe_A: number[],
@@ -39,21 +67,31 @@ export function computeScore(
   const D_wd = euclideanDist(vWd_A, vWd_B);
   const D_we = euclideanDist(vWe_A, vWe_B);
 
-  // Step 3: Temporal aggregation (70/30 weekday/weekend)
+  // Step 3: Temporal aggregation (70/30 weekday/weekend weight)
   const finalDist = D_wd * 0.70 + D_we * 0.30;
 
-  // Step 4: Normalise to [0, 100]
+  // Step 4: Normalise to [0, 100] scale
   let score = (1 - finalDist / D_MAX) * 100;
 
-  // Step 5: Acoustic hard-gate penalty
+  // Step 5: Acoustic hard-gate penalty (§3.4)
+  // If noise preference gap exceeds the gate, apply a 20% penalty
   const acousticGap = Math.abs(vWd_A[ACOUSTIC_IDX] - vWd_B[ACOUSTIC_IDX]);
   if (acousticGap > ACOUSTIC_GATE) score *= ACOUSTIC_PENALTY;
 
-  // Step 6: Clamp
+  // Step 6: Clamp result to [0, 100]
   return Math.max(0, Math.min(100, score));
 }
 
-// §4.2: Evaluate conflict triggers for a matched pair
+/**
+ * Evaluates lifestyle conflict triggers for a matched pair (§4.2).
+ * Identifies specific dimensions where users' habits significantly diverge.
+ * 
+ * @param vWd_A - Weekday vector of user A
+ * @param vWe_A - Weekend vector of user A
+ * @param vWd_B - Weekday vector of user B
+ * @param vWe_B - Weekend vector of user B
+ * @returns Array of identified conflict triggers with suggested house rules
+ */
 export function computeConflicts(
   vWd_A: number[],
   vWe_A: number[],
@@ -119,7 +157,12 @@ export function computeConflicts(
   return triggers;
 }
 
-// §5.2: Score → tier
+/**
+ * Maps a numerical score to a categorical match tier (§5.2).
+ * 
+ * @param score - Computed match score
+ * @returns Categorical tier
+ */
 export function getMatchTier(score: number): MatchTier {
   if (score >= 80) return 'strong';
   if (score >= 65) return 'good';
@@ -127,7 +170,15 @@ export function getMatchTier(score: number): MatchTier {
   return 'incompatible';
 }
 
-// Full result including tier and conflicts
+/**
+ * Computes the full match result including score, tier, and conflict triggers.
+ * 
+ * @param vWd_A - Weekday vector of user A
+ * @param vWe_A - Weekend vector of user A
+ * @param vWd_B - Weekday vector of user B
+ * @param vWe_B - Weekend vector of user B
+ * @returns Comprehensive match result object
+ */
 export function computeMatchResult(
   vWd_A: number[],
   vWe_A: number[],
