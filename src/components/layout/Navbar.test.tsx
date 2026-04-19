@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Navbar from './Navbar';
 import React from 'react';
 
@@ -12,6 +12,35 @@ vi.mock('@/components/settings/SettingsModal', () => ({
   default: () => <div data-testid="settings-modal" />
 }));
 
+vi.mock('@/components/layout/NotificationBell', () => ({
+  NotificationBell: () => <div data-testid="icon-bell" />
+}));
+
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>();
+  return {
+    ...actual,
+    Search: () => <div data-testid="icon-search" />,
+    Bell: () => <div data-testid="icon-bell" />,
+    ChevronDown: () => <div data-testid="icon-chevron-down" />,
+    Settings: () => <div data-testid="icon-settings" />,
+    LogOut: () => <div data-testid="icon-logout" />,
+    SlidersHorizontal: () => <div data-testid="icon-sliders" />,
+  };
+});
+
+// Mock the actions
+vi.mock('../../../app/auth/actions', () => ({
+  logout: vi.fn(),
+}));
+
+vi.mock('../../../app/messages/actions', () => ({
+  getUnreadMessageCount: vi.fn().mockResolvedValue(0),
+  getPendingRequests: vi.fn().mockResolvedValue([]),
+  respondToMatchRequest: vi.fn().mockResolvedValue({ error: null }),
+}));
+
+// Mock the Supabase client used in Navbar
 // Mock the Supabase client used in Navbar
 vi.mock('@/utils/supabase/client', () => {
   const mockSupabase = {
@@ -22,37 +51,33 @@ vi.mock('@/utils/supabase/client', () => {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: { full_name: 'Test User', id: 'test-user-id' } }),
+    single: vi.fn().mockResolvedValue({ data: { full_name: 'Test User', id: 'test-user-id' } }), // 結合兩邊的資料
     channel: vi.fn().mockReturnValue({
       on: vi.fn().mockReturnThis(),
       subscribe: vi.fn().mockReturnThis(),
     }),
     removeChannel: vi.fn(),
   };
+  
   return {
     createClient: vi.fn(() => mockSupabase),
   };
 });
 
-// Mock server actions
-vi.mock('../../../app/messages/actions', () => ({
-  getUnreadMessageCount: vi.fn().mockResolvedValue(0),
-  getPendingRequests: vi.fn().mockResolvedValue([]),
-  respondToMatchRequest: vi.fn().mockResolvedValue({ success: true }),
-}));
-
-vi.mock('../../../app/auth/actions', () => ({
-  logout: vi.fn(),
-}));
-
 describe('Navbar component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders the navbar with navigation links', async () => {
-    render(<Navbar activeTab="Listings" />);
+    await act(async () => {
+      render(<Navbar activeTab="Listings" />);
+    });
     
     // Use findBy to wait for the component to finish its initial async effects
-    // and avoid the "act" warning.
     const userButton = await screen.findByRole('button', { name: /Test User/i });
     expect(userButton).toBeInTheDocument();
 
@@ -65,7 +90,9 @@ describe('Navbar component', () => {
   });
 
   it('renders the user menu with initials', async () => {
-    render(<Navbar />);
+    await act(async () => {
+      render(<Navbar />);
+    });
     
     const userButton = await screen.findByRole('button', { name: /Test User/i });
     expect(userButton).toBeInTheDocument();
