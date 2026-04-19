@@ -27,6 +27,11 @@ export function defaultFilters(role: string | null): FilterKey[] {
 }
 
 /**
+ * Earth's radius in kilometers.
+ */
+const EARTH_RADIUS_KM = 6371;
+
+/**
  * Calculates the great-circle distance between two points on a sphere
  * using the Haversine formula.
  * 
@@ -42,7 +47,6 @@ export function haversineKm(
   lat2: number,
   lng2: number,
 ): number {
-  const R = 6371; // Radius of the Earth in kilometers
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLng = (lng2 - lng1) * (Math.PI / 180);
   const a =
@@ -50,7 +54,7 @@ export function haversineKm(
     Math.cos(lat1 * (Math.PI / 180)) *
       Math.cos(lat2 * (Math.PI / 180)) *
       Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /**

@@ -13,17 +13,38 @@ vi.mock('@/components/settings/SettingsModal', () => ({
 }));
 
 // Mock the Supabase client used in Navbar
-vi.mock('@/utils/supabase/client', () => ({
-  createClient: vi.fn(() => ({
+vi.mock('@/utils/supabase/client', () => {
+  const mockSupabase = {
     auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { email: 'test@example.com' } } })
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user-id', email: 'test@example.com' } } }),
     },
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: { full_name: 'Test User' } }),
-    order: vi.fn().mockResolvedValue({ data: [] }),
-  }))
+    in: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { full_name: 'Test User', id: 'test-user-id' } }),
+    channel: vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+    }),
+    removeChannel: vi.fn(),
+  };
+  return {
+    createClient: vi.fn(() => mockSupabase),
+  };
+});
+
+// Mock server actions
+vi.mock('../../../app/messages/actions', () => ({
+  getUnreadMessageCount: vi.fn().mockResolvedValue(0),
+  getPendingRequests: vi.fn().mockResolvedValue([]),
+  respondToMatchRequest: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+vi.mock('../../../app/auth/actions', () => ({
+  logout: vi.fn(),
 }));
 
 describe('Navbar component', () => {
